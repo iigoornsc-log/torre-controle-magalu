@@ -42,94 +42,56 @@ def conectar_google_sheets():
     client = gspread.authorize(creds)
     return client.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
 
-@st.cache_data(ttl=300) # O robô limpa a memória e atualiza os dados a cada 5 minutos!
+@st.cache_data(ttl=300)
 def carregar_dados():
-    pasta = 'C:/Users/ign_oliveira/Documents/Analises Agendas/'
-    caminho_agendas = pasta + 'Base_Dashboard_Agendas.csv'
-    caminho_itens = pasta + 'Base_Itens_Detalhado.csv'
-    caminho_apcfull = pasta + 'Apcfull.csv'
-    
-    # 1. Agendas (Ainda lendo do PC até a gente plugar 100% na Nuvem no próximo passo)
-    if not os.path.exists(caminho_agendas): return None, None, pd.DataFrame()
-    df = pd.read_csv(caminho_agendas, sep=';', encoding='utf-8-sig')
-    df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y')
-    df['Agenda_Texto'] = df['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-    df['Canal'] = df['Agenda_Texto'].apply(lambda x: 'Fulfillment' if len(x) >= 6 else '1P Fornecedor')
-    
-    # 2. APC Full
-    dict_apc_full = {}
-    if os.path.exists(caminho_apcfull):
-        try:
-            df_apcfull = pd.read_csv(caminho_apcfull, sep=None, engine='python', encoding='utf-8-sig')
-            df_apcfull.columns = df_apcfull.columns.str.strip().str.upper() 
-            if 'FORNECEDOR' in df_apcfull.columns and 'TEMPOAPC' in df_apcfull.columns:
-                df_apcfull['FORNECEDOR'] = df_apcfull['FORNECEDOR'].astype(str).str.strip().str.upper()
-                df_apcfull['TEMPOAPC'] = pd.to_numeric(df_apcfull['TEMPOAPC'], errors='coerce').fillna(0)
-                dict_apc_full = df_apcfull.groupby('FORNECEDOR')['TEMPOAPC'].mean().to_dict()
-        except Exception: pass
-
-    def calcular_minutos(row):
-        canal = row['Canal']
-        fornecedor = str(row['Fornecedor']).strip().upper()
-        if canal == 'Fulfillment':
-            return round(dict_apc_full.get(fornecedor, 60.0)) 
-        else:
-            linhas = str(row['Linhas']).upper().split(',')
-            maior_tempo = 0 
-            for l in linhas:
-                t = 90
-                if 'MADEIRA' in l: t = 180 if 'TUBRAX' in fornecedor else 427
-                elif 'PNEU' in l: t = 240
-                elif 'TRANSFERENCIA RUIM' in l: t = 40
-                elif 'TRANSFERENCIA' in l: t = 240
-                elif 'MERCADO' in l: t = 150
-                elif 'ELETRO' in l: t = 95
-                elif 'COFRE' in l: t = 90
-                elif 'IMAGEM' in l: t = 90
-                elif 'COLCHÃO' in l or 'ESTOFADO' in l: t = 60
-                if t > maior_tempo: maior_tempo = t
-            return maior_tempo
-    df['Tempo_APC_Minutos'] = df.apply(calcular_minutos, axis=1)
-    
-    # 3. Itens
+    # Agora não usamos mais caminhos de pasta 'C:/Users/...'
+    df = pd.DataFrame()
     df_itens = pd.DataFrame()
-    if os.path.exists(caminho_itens):
-        df_itens = pd.read_csv(caminho_itens, sep=';', encoding='utf-8-sig', dtype=str)
-        df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-
-    # 4. PLANEJAMENTO - AGORA LENDO DIRETO DO GOOGLE SHEETS! ☁️
     df_plan = pd.DataFrame()
+    
     try:
         planilha = conectar_google_sheets()
+        
+        # 1. Lê a aba CONSOLIDADO (Agendas) do Sheets
+        ws_consolidado = planilha.worksheet("CONSOLIDADO")
+        df = pd.DataFrame(ws_consolidado.get_all_records())
+        
+        # Ajustes de colunas do Consolidado
+        df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
+        df['Agenda_Texto'] = df['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+        df['Canal'] = df['Agenda_Texto'].apply(lambda x: 'Fulfillment' if len(x) >= 6 else '1P Fornecedor')
+
+        # 2. Lê a aba Item Agenda (Itens detalhados) do Sheets
+        ws_itens = planilha.worksheet("Item Agenda")
+        df_itens = pd.DataFrame(ws_itens.get_all_records())
+        df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+
+        # 3. Lê a aba PLANEJAMENTO do Sheets
         ws_plan = planilha.worksheet("PLANEJAMENTO")
         df_plan = pd.DataFrame(ws_plan.get_all_records())
         
+        # Tradução de Categorias (Lógica que já tínhamos)
         df_plan.columns = df_plan.columns.str.strip().str.lower()
         if 'data' in df_plan.columns:
             df_plan['data'] = pd.to_datetime(df_plan['data'], errors='coerce', dayfirst=True).dt.normalize()
-        if 'quantidade_planejado' in df_plan.columns:
-            df_plan['quantidade_planejado'] = pd.to_numeric(df_plan['quantidade_planejado'], errors='coerce').fillna(0)
-        if 'quantidade_real' in df_plan.columns:
-            df_plan['quantidade_real'] = pd.to_numeric(df_plan['quantidade_real'], errors='coerce').fillna(0)
         
-        if 'categoria' in df_plan.columns:
-            def traduzir_categoria(cat):
-                c = str(cat).upper().strip()
-                if 'MADEIRA SIMPLES' in c: return 'COLCHÕES/ESTOFADOS'
-                if 'COLCH' in c or 'ESTOFADO' in c or 'FREEPASS' in c: return 'COLCHÕES/ESTOFADOS'
-                if 'AR E VENTILA' in c or 'AUDIO' in c or 'BB/BR' in c or 'CLIENTE' in c or 'ECOMM' in c or 'FERRAMENTA' in c or 'DIVERSOS' in c or 'IMPORTADO' in c or 'LIVRO' in c or 'MODA' in c or 'MOVEIS ENCOMENDA' in c or 'MULTI CD' in c or 'PORTATEIS' in c or 'ROTEIRO' in c or 'UD/CM' in c: return 'DIVERSOS PEQUENOS'
-                if 'BELEZA' in c or 'BENS DE CONSUMO' in c or 'MERCADO' in c: return 'MERCADO'
-                if 'COFRE' in c: return 'COFRES'
-                if 'ELETRO PESADO' in c: return 'ELETRO PESADO'
-                if 'IMAGEM' in c: return 'IMAGEM'
-                if 'MADEIRA' in c or 'FRACIONADO' in c: return 'MADEIRA'
-                if 'PNEU' in c: return 'PNEUS'
-                return c 
-                
-            df_plan['categoria'] = df_plan['categoria'].apply(traduzir_categoria)
-            
-    except Exception as e: 
-        st.warning(f"⚠️ Não foi possível ler a aba 'PLANEJAMENTO' no Google Sheets: {e}")
+        def traduzir_categoria(cat):
+            c = str(cat).upper().strip()
+            if 'MADEIRA SIMPLES' in c: return 'COLCHÕES/ESTOFADOS'
+            if 'COLCH' in c or 'ESTOFADO' in c or 'FREEPASS' in c: return 'COLCHÕES/ESTOFADOS'
+            if any(x in c for x in ['AR E VENTILA', 'AUDIO', 'BB/BR', 'CLIENTE', 'ECOMM', 'FERRAMENTA', 'DIVERSOS', 'LIVRO', 'MODA', 'PORTATEIS']): return 'DIVERSOS PEQUENOS'
+            if any(x in c for x in ['BELEZA', 'BENS DE CONSUMO', 'MERCADO']): return 'MERCADO'
+            if 'COFRE' in c: return 'COFRES'
+            if 'ELETRO PESADO' in c: return 'ELETRO PESADO'
+            if 'IMAGEM' in c: return 'IMAGEM'
+            if 'MADEIRA' in c or 'FRACIONADO' in c: return 'MADEIRA'
+            if 'PNEU' in c: return 'PNEUS'
+            return c
+        
+        df_plan['categoria'] = df_plan['categoria'].apply(traduzir_categoria)
+
+    except Exception as e:
+        st.error(f"🚨 Erro ao carregar dados do Google Sheets: {e}")
         
     return df, df_itens, df_plan
 
@@ -445,4 +407,5 @@ elif pagina == "🧩 Matriz de Planejamento":
             st.info("Nenhum dado encontrado para o período filtrado.")
     else:
         st.warning("⚠️ Planilha 'PLANEJAMENTO' vazia ou não encontrada no Google Sheets.")
+
 
