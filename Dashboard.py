@@ -38,7 +38,7 @@ def conectar_google_sheets():
     client = gspread.authorize(creds)
     return client.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
 
-# --- EXTRAÇÃO DOS DADOS DO GOOGLE SHEETS ---
+# --- EXTRAÇÃO DOS DADOS DO GOOGLE SHEETS (BLINDADO CONTRA COLUNAS VAZIAS) ---
 @st.cache_data(ttl=300) # Atualiza a cada 5 minutos
 def carregar_dados():
     df = pd.DataFrame()
@@ -48,13 +48,17 @@ def carregar_dados():
     try:
         planilha = conectar_google_sheets()
         
-        # 1. ABA CONSOLIDADO (Agendas) - COM LIMPEZA AUTOMÁTICA
+        # 1. ABA CONSOLIDADO (Agendas)
         ws_consolidado = planilha.worksheet("CONSOLIDADO")
-        df_raw = pd.DataFrame(ws_consolidado.get_all_records())
+        dados_consolidado = ws_consolidado.get_all_values() # Puxa tudo como texto puro
         
-        if not df_raw.empty:
-            df_raw.columns = df_raw.columns.str.strip()
+        if dados_consolidado and len(dados_consolidado) > 1:
+            # Monta a tabela ignorando colunas duplicadas ou sem nome ('')
+            df_raw = pd.DataFrame(dados_consolidado[1:], columns=dados_consolidado[0])
+            df_raw = df_raw.loc[:, ~df_raw.columns.duplicated()]
+            df_raw = df_raw.loc[:, df_raw.columns != '']
             
+            df_raw.columns = df_raw.columns.str.strip()
             mapeamento = {
                 'Status_Traduzido': 'Status',
                 'Status Carga': 'Status',
@@ -65,7 +69,7 @@ def carregar_dados():
             }
             df_raw = df_raw.rename(columns=mapeamento)
             
-            # Garante que as colunas existam para não quebrar o código
+            # Garante que as colunas existam
             for col in ['Status', 'É Ofensor?', 'Linhas', 'Fornecedor', 'Data', 'Agenda']:
                 if col not in df_raw.columns:
                     df_raw[col] = ''
@@ -74,6 +78,9 @@ def carregar_dados():
                     df_raw[col] = 0
                 else:
                     df_raw[col] = pd.to_numeric(df_raw[col], errors='coerce').fillna(0)
+
+            # Remove linhas 100% vazias
+            df_raw = df_raw[df_raw['Agenda'].astype(str).str.strip() != '']
 
             # Agrupa para não contar a mesma agenda de 1P duas vezes
             df = df_raw.groupby(['Data', 'Agenda']).agg({
@@ -116,18 +123,26 @@ def carregar_dados():
         # 2. ABA ITEM AGENDA (Itens detalhados)
         try:
             ws_itens = planilha.worksheet("Item Agenda")
-            df_itens = pd.DataFrame(ws_itens.get_all_records())
-            if not df_itens.empty:
-                df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+            dados_itens = ws_itens.get_all_values()
+            if dados_itens and len(dados_itens) > 1:
+                df_itens = pd.DataFrame(dados_itens[1:], columns=dados_itens[0])
+                df_itens = df_itens.loc[:, ~df_itens.columns.duplicated()]
+                df_itens = df_itens.loc[:, df_itens.columns != '']
+                if 'Agenda' in df_itens.columns:
+                    df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
         except:
             pass 
 
         # 3. ABA PLANEJAMENTO
         try:
             ws_plan = planilha.worksheet("PLANEJAMENTO")
-            df_plan = pd.DataFrame(ws_plan.get_all_records())
+            dados_plan = ws_plan.get_all_values()
             
-            if not df_plan.empty:
+            if dados_plan and len(dados_plan) > 1:
+                df_plan = pd.DataFrame(dados_plan[1:], columns=dados_plan[0])
+                df_plan = df_plan.loc[:, ~df_plan.columns.duplicated()]
+                df_plan = df_plan.loc[:, df_plan.columns != '']
+                
                 df_plan.columns = df_plan.columns.str.strip().str.lower()
                 if 'data' in df_plan.columns:
                     df_plan['data'] = pd.to_datetime(df_plan['data'], format='%d/%m/%Y', errors='coerce').dt.normalize()
@@ -166,7 +181,7 @@ if df.empty:
     st.stop()
 
 # --- BARRA LATERAL (MENU & FILTROS) ---
-st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
+st.sidebar.image("https://logodownload.org/wp-content/uploads/2014/09/magalu-logo-0.png", width=150)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
@@ -356,9 +371,14 @@ elif pagina == "🧩 Matriz de Planejamento":
         try:
             planilha = conectar_google_sheets()
             ws_metas = planilha.worksheet("METAS_LEGO")
-            dados_salvos = ws_metas.get_all_records()
-            if dados_salvos:
-                df_salvo = pd.DataFrame(dados_salvos)
+            dados_salvos = ws_metas.get_all_values()
+            
+            if dados_salvos and len(dados_salvos) > 1:
+                df_salvo = pd.DataFrame(dados_salvos[1:], columns=dados_salvos[0])
+                df_salvo = df_salvo.loc[:, ~df_salvo.columns.duplicated()]
+                df_salvo = df_salvo.loc[:, df_salvo.columns != '']
+                if 'LEGO (Meta)' in df_salvo.columns:
+                    df_salvo['LEGO (Meta)'] = pd.to_numeric(df_salvo['LEGO (Meta)'], errors='coerce').fillna(0)
                 df_metas_iniciais = pd.merge(df_base_categorias, df_salvo, on='CATEGORIA', how='left').fillna(0)
             else:
                 df_metas_iniciais = df_base_categorias.copy()
@@ -481,4 +501,3 @@ elif pagina == "🧩 Matriz de Planejamento":
             st.info("Nenhum dado encontrado para o período filtrado.")
     else:
         st.warning("⚠️ Planilha 'PLANEJAMENTO' vazia ou não encontrada no Google Sheets.")
-
