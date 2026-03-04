@@ -38,7 +38,7 @@ def conectar_google_sheets():
     client = gspread.authorize(creds)
     return client.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
 
-# --- EXTRAÇÃO DOS DADOS DO GOOGLE SHEETS (BLINDADO CONTRA COLUNAS VAZIAS) ---
+# --- EXTRAÇÃO DOS DADOS DO GOOGLE SHEETS (BLINDADO) ---
 @st.cache_data(ttl=300) # Atualiza a cada 5 minutos
 def carregar_dados():
     df = pd.DataFrame()
@@ -50,15 +50,16 @@ def carregar_dados():
         
         # 1. ABA CONSOLIDADO (Agendas)
         ws_consolidado = planilha.worksheet("CONSOLIDADO")
-        dados_consolidado = ws_consolidado.get_all_values() # Puxa tudo como texto puro
+        dados_consolidado = ws_consolidado.get_all_values() 
         
         if dados_consolidado and len(dados_consolidado) > 1:
-            # Monta a tabela ignorando colunas duplicadas ou sem nome ('')
             df_raw = pd.DataFrame(dados_consolidado[1:], columns=dados_consolidado[0])
             df_raw = df_raw.loc[:, ~df_raw.columns.duplicated()]
             df_raw = df_raw.loc[:, df_raw.columns != '']
             
+            # Limpa espaços invisíveis das colunas
             df_raw.columns = df_raw.columns.str.strip()
+            
             mapeamento = {
                 'Status_Traduzido': 'Status',
                 'Status Carga': 'Status',
@@ -79,10 +80,16 @@ def carregar_dados():
                 else:
                     df_raw[col] = pd.to_numeric(df_raw[col], errors='coerce').fillna(0)
 
-            # Remove linhas 100% vazias
+            # --- LIMPEZA DE ESPAÇOS INVISÍVEIS PARA OS KPIs FUNCIONAREM ---
+            df_raw['Status'] = df_raw['Status'].astype(str).str.strip()
+            df_raw['É Ofensor?'] = df_raw['É Ofensor?'].astype(str).str.strip()
+            df_raw['Fornecedor'] = df_raw['Fornecedor'].astype(str).str.strip()
+            df_raw['Data'] = pd.to_datetime(df_raw['Data'], errors='coerce', dayfirst=True)
+
+            # Remove linhas vazias
             df_raw = df_raw[df_raw['Agenda'].astype(str).str.strip() != '']
 
-            # Agrupa para não contar a mesma agenda de 1P duas vezes
+            # Agrupa para não contar a mesma agenda duas vezes
             df = df_raw.groupby(['Data', 'Agenda']).agg({
                 'Fornecedor': 'first',
                 'Status': 'first',
@@ -92,7 +99,8 @@ def carregar_dados():
                 'É Ofensor?': 'first'
             }).reset_index()
 
-            df['Data'] = pd.to_datetime(df['Data'], format='%d/%m/%Y', errors='coerce')
+            # Normaliza dados finais
+            df['Data'] = pd.to_datetime(df['Data'], errors='coerce').dt.normalize()
             df['Agenda_Texto'] = df['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
             df['Canal'] = df['Agenda_Texto'].apply(lambda x: 'Fulfillment' if len(x) >= 6 else '1P Fornecedor')
 
@@ -120,7 +128,7 @@ def carregar_dados():
             
             df['Tempo_APC_Minutos'] = df.apply(calcular_minutos, axis=1)
 
-        # 2. ABA ITEM AGENDA (Itens detalhados)
+        # 2. ABA ITEM AGENDA (Itens detalhados) - BLINDADO CONTRA ERRO DE CHAVE
         try:
             ws_itens = planilha.worksheet("Item Agenda")
             dados_itens = ws_itens.get_all_values()
@@ -128,8 +136,15 @@ def carregar_dados():
                 df_itens = pd.DataFrame(dados_itens[1:], columns=dados_itens[0])
                 df_itens = df_itens.loc[:, ~df_itens.columns.duplicated()]
                 df_itens = df_itens.loc[:, df_itens.columns != '']
-                if 'Agenda' in df_itens.columns:
-                    df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+                
+                # Tira espaços dos nomes das colunas
+                df_itens.columns = df_itens.columns.str.strip()
+                
+                # Previne o erro "KeyError: Agenda" criando a coluna caso o sistema não envie
+                if 'Agenda' not in df_itens.columns:
+                    df_itens['Agenda'] = ''
+                    
+                df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
         except:
             pass 
 
@@ -345,10 +360,18 @@ if pagina == "🏠 Painel Operacional":
 
         st.markdown("### 📦 Inspecionar Carga")
         agenda_selecionada = st.selectbox("Escolha uma agenda do dia para ver a lista de SKUs embarcados:", df_dia_critico['Agenda_Texto'].unique())
-        if not df_itens.empty:
-            df_produtos_agenda = df_itens[df_itens['Agenda'] == agenda_selecionada]
-            if not df_produtos_agenda.empty: st.dataframe(df_produtos_agenda.groupby(['SKU', 'Descrição', 'Linha', 'Categoria']).size().reset_index(name='Qtd Itens'), use_container_width=True, hide_index=True)
-            else: st.warning("Itens não encontrados na base detalhada.")
+        
+        # Blindagem extra no momento de procurar os itens
+        if not df_itens.empty and 'Agenda' in df_itens.columns:
+            df_produtos_agenda = df_itens[df_itens['Agenda'] == str(agenda_selecionada)]
+            if not df_produtos_agenda.empty: 
+                # Se faltar alguma coluna, ele mostra o que tem
+                colunas_exibir = [c for c in ['SKU', 'Descrição', 'Linha', 'Categoria'] if c in df_produtos_agenda.columns]
+                st.dataframe(df_produtos_agenda.groupby(colunas_exibir).size().reset_index(name='Qtd Itens'), use_container_width=True, hide_index=True)
+            else: 
+                st.warning("Itens não encontrados na base detalhada.")
+        else:
+            st.warning("Base de Itens indisponível ou vazia no Google Sheets.")
     else: st.success("✅ A operação fluiu sem gargalos no período analisado!")
 
 
@@ -361,7 +384,6 @@ elif pagina == "🧩 Matriz de Planejamento":
     if not df_plan.empty:
         df_plan_filtrado = df_plan[(df_plan['data'] >= pd.to_datetime(data_inicio)) & (df_plan['data'] <= pd.to_datetime(data_fim))].copy()
 
-        # --- 1. LENDO E SALVANDO METAS DIRETO NO GOOGLE SHEETS ---
         st.markdown("### 🎯 Prévia Mensal do Comercial")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
         
@@ -392,7 +414,6 @@ elif pagina == "🧩 Matriz de Planejamento":
         with st.expander("📝 CLIQUE AQUI PARA PREENCHER AS METAS DO MÊS", expanded=False):
             df_metas_editadas = st.data_editor(df_metas_iniciais, use_container_width=True, hide_index=True)
             
-            # BOTÃO DE SALVAR NA NUVEM!
             if st.button("💾 Salvar Metas na Nuvem"):
                 try:
                     df_para_salvar = df_metas_editadas.copy()
@@ -415,14 +436,12 @@ elif pagina == "🧩 Matriz de Planejamento":
                 except Exception as e:
                     st.error(f"🚨 Erro ao salvar na nuvem: {e}")
 
-        # --- 2. CÁLCULOS DO RESUMO EXECUTIVO ---
         resumo_real = df_plan_filtrado.groupby('categoria')['quantidade_real'].sum().reset_index()
         resumo_real.rename(columns={'categoria': 'CATEGORIA', 'quantidade_real': 'CARROS (Realizado)'}, inplace=True)
         
         df_executivo = pd.merge(df_metas_editadas, resumo_real, on='CATEGORIA', how='left').fillna(0)
         df_executivo['VAGAS (Saldo)'] = df_executivo['LEGO (Meta)'] - df_executivo['CARROS (Realizado)']
         
-        # --- 3. KPIs DE ALTA GESTÃO ---
         st.markdown("---")
         st.markdown("### 📊 Balanço Geral do Período")
         
@@ -437,7 +456,6 @@ elif pagina == "🧩 Matriz de Planejamento":
         col_e3.metric("Saldo de Vagas Restantes", f"{saldo_total:,.0f}".replace(',', '.'), "Risco Global" if saldo_total < 0 else "Capacidade Livre", delta_color="normal" if saldo_total >= 0 else "inverse")
         col_e4.metric("Categorias Estouradas", estouradas, "Acima da Meta", delta_color="inverse")
 
-        # --- 4. A TABELA EXECUTIVA COLORIDA ---
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("#### 🔍 Fechamento por Categoria")
         
@@ -457,7 +475,6 @@ elif pagina == "🧩 Matriz de Planejamento":
 
         st.markdown("---")
         
-        # --- 5. O CALENDÁRIO MATRICIAL (LEGO ORIGINAL) ---
         st.markdown("### 🧩 Tabela Matricial Diária (LEGO)")
         if not df_plan_filtrado.empty:
             pivot = pd.pivot_table(
