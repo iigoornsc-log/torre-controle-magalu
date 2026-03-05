@@ -206,7 +206,7 @@ if df.empty:
     st.stop()
 
 # --- BARRA LATERAL (MENU & FILTROS) ---
-st.sidebar.image("https://logodownload.org/wp-content/uploads/2014/09/magalu-logo-0.png", width=150)
+st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=200)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
@@ -526,3 +526,4 @@ elif pagina == "🧩 Matriz de Planejamento":
             st.info("Nenhum dado encontrado para o período filtrado.")
     else:
         st.warning("⚠️ Planilha 'PLANEJAMENTO' vazia ou não encontrada no Google Sheets.")
+
