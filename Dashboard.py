@@ -64,7 +64,7 @@ def conectar_google():
     
     return gspread.authorize(creds)
 
-# --- EXTRAÇÃO DE DADOS ---
+# --- EXTRAÇÃO DE DADOS (MULTIPLAS PLANILHAS & AGRUPAMENTOS) ---
 @st.cache_data(ttl=300)
 def carregar_dados():
     df = pd.DataFrame()
@@ -94,7 +94,7 @@ def carregar_dados():
         except: pass
 
         # ==============================================================================
-        # 1. ABA CONSOLIDADO (COM UNIFICAÇÃO DE AGENDAS & REGRA DA MADEIRA)
+        # 1. ABA CONSOLIDADO
         # ==============================================================================
         ws_consolidado = planilha_principal.worksheet("CONSOLIDADO")
         dados_consolidado = ws_consolidado.get_all_values() 
@@ -149,7 +149,7 @@ def carregar_dados():
                 Fornecedor=('Fornecedor', 'first'),
                 Status=('Status', 'first'),
                 Linhas=('Linhas', lambda x: ', '.join(sorted(set([str(i).strip() for i in x.dropna() if str(i).strip()])))),
-                Qtd_SKUs=('Agenda', 'count'),
+                Qtd_SKUs=('Agenda', 'count'), 
                 Qtd_Pecas=('Qtd Peças', 'sum'),
                 Pecas_Madeira=('Pecas_Madeira', 'sum'),
                 E_Ofensor=('É Ofensor?', 'first')
@@ -258,7 +258,7 @@ def carregar_dados():
         except: pass 
 
         # ==============================================================================
-        # 4. PLANILHA DE TRANSFERÊNCIAS (DIA/MÊS/ANO INTELIGENTE)
+        # 4. PLANILHA DE TRANSFERÊNCIAS (LENDO A COLUNA V - POSIÇÃO 21)
         # ==============================================================================
         try:
             planilha_transf = cliente_google.open_by_key('1PMgqjZr2nieniRShicaPyxAe6J6j7I04FFE5aNWnm_s')
@@ -274,11 +274,15 @@ def carregar_dados():
                 if 'QTDE' in df_transf.columns:
                     df_transf['QTDE'] = pd.to_numeric(df_transf['QTDE'], errors='coerce').fillna(0)
                 
-                # Inteligência de parsing para aceitar múltiplos formatos sem gerar erro
-                if 'DATA REF' in df_transf.columns:
-                    df_transf['DATA_FILTRO'] = pd.to_datetime(df_transf['DATA REF'], errors='coerce', dayfirst=True).dt.normalize()
+                # FORÇANDO A LEITURA DA COLUNA V (Índice 21, considerando que A=0)
+                if df_transf.shape[1] >= 22:
+                    col_v_nome = df_transf.columns[21]
+                    df_transf['DATA_FILTRO'] = pd.to_datetime(df_transf[col_v_nome], errors='coerce', dayfirst=True).dt.normalize()
+                    df_transf['NOME_COL_V'] = col_v_nome
                 else:
+                    # Backup de segurança caso a planilha perca colunas
                     df_transf['DATA_FILTRO'] = pd.NaT
+                    df_transf['NOME_COL_V'] = 'DATA_FILTRO'
         except Exception as e:
             pass 
 
@@ -302,22 +306,23 @@ pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "🧩 Planejam
 st.sidebar.markdown("---")
 
 # ==============================================================================
-# INTELIGÊNCIA DO FILTRO DE DATAS (LIVRE DE TRAVAS)
+# INTELIGÊNCIA DO FILTRO DE DATAS (MÊS ATUAL PADRÃO)
 # ==============================================================================
 st.sidebar.header("📅 Período de Análise")
 
-# Prepara os valores padrão
-if pagina == "🚛 Histórico325" and not df_transf.empty and not df_transf['DATA_FILTRO'].isna().all():
-    data_min_padrao = df_transf['DATA_FILTRO'].min().date()
-    data_max_padrao = df_transf['DATA_FILTRO'].max().date()
-else:
-    data_min_padrao = df['Data'].min().date() if not df.empty else pd.to_datetime('today').date()
-    data_max_padrao = df['Data'].max().date() if not df.empty else pd.to_datetime('today').date()
+# Define as datas padrão como o mês vigente (Do dia 01 até o último dia do mês)
+hoje = pd.Timestamp.now(tz='America/Sao_Paulo').date()
+primeiro_dia_mes = hoje.replace(day=1)
 
-# O Calendário destravado (sem min_value e max_value)
+if hoje.month == 12:
+    ultimo_dia_mes = hoje.replace(day=31)
+else:
+    ultimo_dia_mes = (hoje.replace(month=hoje.month+1, day=1) - pd.Timedelta(days=1))
+
+# O Calendário não tem mais limite!
 datas_selecionadas = st.sidebar.date_input(
     "Selecione o Início e o Fim:", 
-    value=(data_min_padrao, data_max_padrao), 
+    value=(primeiro_dia_mes, ultimo_dia_mes), 
     format="DD/MM/YYYY"
 )
 
@@ -674,6 +679,8 @@ elif pagina == "🚛 Histórico325":
             def compor_modalidade(series):
                 return ' | '.join(sorted([str(x).strip() for x in series.dropna().unique() if str(x).strip() != '']))
 
+            nome_col_v = df_transf_periodo['NOME_COL_V'].iloc[0] if 'NOME_COL_V' in df_transf_periodo.columns else 'DATA_FILTRO'
+
             resumo_tabela = df_transf_periodo.groupby('ID_CARGA_PCP').agg(
                 DATA_PRODUCAO=('DATA SEPARACAO', 'first') if 'DATA SEPARACAO' in df_transf_periodo.columns else ('DATA_FILTRO', 'first'),
                 LIBERACAO=('DATA LIBERAÇÃO', 'first') if 'DATA LIBERAÇÃO' in df_transf_periodo.columns else ('DATA_FILTRO', 'first'),
@@ -682,7 +689,7 @@ elif pagina == "🚛 Histórico325":
                 MODALIDADE=('MODAL2', compor_modalidade) if 'MODAL2' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'first'),
                 SKUS=('PRODUTO', 'nunique') if 'PRODUTO' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'nunique'),
                 PECAS=('QTDE', 'sum') if 'QTDE' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'count'),
-                DATA_CD=('DATA REF', 'first') if 'DATA REF' in df_transf_periodo.columns else ('DATA_FILTRO', 'first')
+                DATA_CD=(nome_col_v, 'first')
             ).reset_index()
 
             resumo_tabela['CD_ORIGEM'] = 'CD ' + resumo_tabela['CD_ORIGEM'].astype(str)
