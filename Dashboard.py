@@ -302,7 +302,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "🧩 Planejamento Lego", "🚛 Histórico325"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "🧩 Planejamento Lego", "🚛 Transferências"])
 st.sidebar.markdown("---")
 
 # ==============================================================================
@@ -744,3 +744,4 @@ elif pagina == "🚛 Histórico325":
             st.warning("A coluna 'ID_CARGA_PCP' não foi encontrada na planilha de Transferências.")
     else:
         st.warning("⚠️ Planilha de Transferências não carregou. O e-mail do robô está como Leitor nela?")
+
