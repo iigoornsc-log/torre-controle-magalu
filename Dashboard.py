@@ -94,13 +94,20 @@ def carregar_dados():
                     apc_full_dict[str(row.iloc[0]).strip().upper()] = pd.to_numeric(row.iloc[1], errors='coerce')
             except: pass
             
+        # --- CARREGAMENTO DAS EXCEÇÕES (MUITO MAIS BLINDADO AGORA) ---
         try:
             ws_excecoes = planilha_principal.worksheet("EXCECOES_1P")
             dados_excecoes = ws_excecoes.get_all_values()
             if len(dados_excecoes) > 1:
                 df_excecoes = pd.DataFrame(dados_excecoes[1:], columns=dados_excecoes[0])
-                df_excecoes['Data da Vaga'] = pd.to_datetime(df_excecoes['Data da Vaga'], format='%d/%m/%Y', errors='coerce').dt.normalize()
-        except: pass
+                # Remove os espaços invisíveis no começo e no fim dos nomes das colunas
+                df_excecoes.columns = df_excecoes.columns.str.strip() 
+                
+                # Tratamento Inteligente da Coluna Data
+                if 'Data da Vaga' in df_excecoes.columns:
+                    df_excecoes['Data da Vaga'] = pd.to_datetime(df_excecoes['Data da Vaga'], dayfirst=True, errors='coerce').dt.normalize()
+        except: 
+            pass
 
         # ==============================================================================
         # 1. ABA CONSOLIDADO
@@ -267,7 +274,7 @@ def carregar_dados():
         except: pass 
 
         # ==============================================================================
-        # 4. PLANILHA DE TRANSFERÊNCIAS 
+        # 4. PLANILHA DE TRANSFERÊNCIAS (LENDO A COLUNA V - POSIÇÃO 21)
         # ==============================================================================
         try:
             planilha_transf = cliente_google.open_by_key('1PMgqjZr2nieniRShicaPyxAe6J6j7I04FFE5aNWnm_s')
@@ -419,13 +426,15 @@ if pagina == "🏠 Painel Operacional":
             fig_1p.update_layout(xaxis=dict(tickformat="%d/%m/%Y"), showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_1p, use_container_width=True)
             
-            # --- O PULO DO GATO: JUSTIFICATIVAS APARECEM AQUI ---
-            if not df_excecoes.empty:
+            # --- O PULO DO GATO (BLINDADO CONTRA KEY ERROR) ---
+            if not df_excecoes.empty and 'Data da Vaga' in df_excecoes.columns:
                 df_ex_filtro = df_excecoes[(df_excecoes['Data da Vaga'].dt.date >= data_inicio) & (df_excecoes['Data da Vaga'].dt.date <= data_fim)].copy()
                 if not df_ex_filtro.empty:
                     df_ex_filtro['Data da Vaga'] = df_ex_filtro['Data da Vaga'].dt.strftime('%d/%m/%Y')
                     with st.expander("💡 Visualizar Justificativas de Vagas Extras no Período", expanded=False):
-                        st.dataframe(df_ex_filtro[['Data da Vaga', 'Fornecedor', 'Solicitante', 'Qtd Peças', 'Qtd SKUs']], use_container_width=True, hide_index=True)
+                        colunas_desejadas = ['Data da Vaga', 'Fornecedor', 'Solicitante', 'Qtd Peças', 'Qtd SKUs']
+                        colunas_existentes = [c for c in colunas_desejadas if c in df_ex_filtro.columns]
+                        st.dataframe(df_ex_filtro[colunas_existentes], use_container_width=True, hide_index=True)
 
         with col_1p_2:
             st.subheader("Balanço 1P")
@@ -756,7 +765,6 @@ elif pagina == "🚛 Histórico325":
     else:
         st.warning("⚠️ Planilha de Transferências não carregou. O e-mail do robô está como Leitor nela?")
 
-
 # ==============================================================================
 # PÁGINA 4: REGISTRO DE SOLICITAÇÕES EXTRAS (NOVA)
 # ==============================================================================
@@ -788,11 +796,9 @@ elif pagina == "📝 Solicitações Extras":
                     try:
                         ws_excecoes = ws_principal.worksheet("EXCECOES_1P")
                     except:
-                        # Cria a aba se ela não existir
                         ws_excecoes = ws_principal.add_worksheet(title="EXCECOES_1P", rows="100", cols="6")
                         ws_excecoes.append_row(["Data da Vaga", "Fornecedor", "Solicitante", "Qtd Peças", "Qtd SKUs", "Data do Registro"])
                     
-                    # Salva a linha nova
                     ws_excecoes.append_row([
                         data_vaga.strftime("%d/%m/%Y"), 
                         fornecedor_extra.strip().upper(), 
@@ -809,9 +815,9 @@ elif pagina == "📝 Solicitações Extras":
     st.markdown("---")
     st.markdown("### 📚 Histórico de Exceções")
     
-    if not df_excecoes.empty:
+    if not df_excecoes.empty and 'Data da Vaga' in df_excecoes.columns:
         df_exibir = df_excecoes.copy()
         df_exibir['Data da Vaga'] = df_exibir['Data da Vaga'].dt.strftime('%d/%m/%Y')
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
-        st.info("Nenhuma exceção registrada até o momento.")
+        st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
