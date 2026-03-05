@@ -64,7 +64,7 @@ def conectar_google():
     
     return gspread.authorize(creds)
 
-# --- EXTRAÇÃO DE DADOS (MULTIPLAS PLANILHAS & AGRUPAMENTOS) ---
+# --- EXTRAÇÃO DE DADOS ---
 @st.cache_data(ttl=300)
 def carregar_dados():
     df = pd.DataFrame()
@@ -118,14 +118,12 @@ def carregar_dados():
             df_raw = df_raw.rename(columns=map_cons)
             df_raw = df_raw.loc[:, ~df_raw.columns.duplicated()]
             
-            # Garantias de colunas e limpeza
             for col in ['Agenda', 'Data', 'Fornecedor', 'Linhas', 'Categoria', 'Status']:
                 if col not in df_raw.columns: df_raw[col] = ''
             if 'Qtd Peças' not in df_raw.columns: df_raw['Qtd Peças'] = 0
             else: df_raw['Qtd Peças'] = pd.to_numeric(df_raw['Qtd Peças'], errors='coerce').fillna(0)
             if 'É Ofensor?' not in df_raw.columns: df_raw['É Ofensor?'] = 'Não'
 
-            # Identifica as peças de madeira antes de agrupar
             df_raw['Pecas_Madeira'] = df_raw.apply(
                 lambda r: r['Qtd Peças'] if 'MADEIRA' in str(r.get('Linhas', '')).upper() else 0, 
                 axis=1
@@ -147,24 +145,21 @@ def carregar_dados():
 
             df_raw['Status'] = df_raw['Status'].apply(padronizar_status)
 
-            # AGRUPAMENTO MESTRE: Unifica as linhas da mesma agenda (Fim do erro do bagatolionline)
             df = df_raw.groupby(['Data', 'Agenda']).agg(
                 Fornecedor=('Fornecedor', 'first'),
                 Status=('Status', 'first'),
                 Linhas=('Linhas', lambda x: ', '.join(sorted(set([str(i).strip() for i in x.dropna() if str(i).strip()])))),
-                Qtd_SKUs=('Agenda', 'count'), # Quantidade de linhas originais
+                Qtd_SKUs=('Agenda', 'count'),
                 Qtd_Pecas=('Qtd Peças', 'sum'),
                 Pecas_Madeira=('Pecas_Madeira', 'sum'),
                 E_Ofensor=('É Ofensor?', 'first')
             ).reset_index()
 
-            # Renomeia de volta para o padrão do painel
             df = df.rename(columns={'Qtd_SKUs': 'Qtd SKUs', 'Qtd_Pecas': 'Qtd Peças', 'E_Ofensor': 'É Ofensor?'})
 
             df['Agenda_Texto'] = df['Agenda']
             df['Canal'] = df['Agenda_Texto'].apply(lambda x: 'Fulfillment' if len(str(x)) >= 6 else '1P Fornecedor')
 
-            # --- NOVO CÁLCULO DE TEMPO: APROXIMAÇÃO + TRAVA 300 + REGRA MADEIRA > 10 ---
             def calcular_minutos(row):
                 try:
                     canal = row.get('Canal', '')
@@ -173,7 +168,6 @@ def carregar_dados():
                     if canal == 'Fulfillment':
                         for chave_forn, tempo in apc_full_dict.items():
                             if chave_forn in forn_original:
-                                # Trava de Segurança: Se for maior que 300, é erro sistêmico, força 60.
                                 if tempo > 300:
                                     return 60.0
                                 return float(tempo)
@@ -183,9 +177,7 @@ def carregar_dados():
                         maior_tempo = 0 
                         
                         for l in linhas.split(','):
-                            t = 90 # Base 1P
-                            
-                            # Regra da Madeira: Só conta carga longa se tiver MAIS de 10 peças
+                            t = 90
                             if 'MADEIRA' in l: 
                                 if row.get('Pecas_Madeira', 0) > 10:
                                     t = 180 if 'TUBRAX' in forn_original else 427
@@ -202,15 +194,14 @@ def carregar_dados():
                             
                             if t > maior_tempo: maior_tempo = t
                         
-                        # Retorna o maior tempo ou 60 em caso de erro residual
                         return float(maior_tempo) if maior_tempo > 0 else 60.0
                 except:
-                    return 60.0 # Nunca retorna None
+                    return 60.0
             
             df['Tempo_APC_Minutos'] = df.apply(calcular_minutos, axis=1)
 
         # ==============================================================================
-        # 2. ABA ITEM AGENDA (A Mágica do "Inspecionar Cargas")
+        # 2. ABA ITEM AGENDA
         # ==============================================================================
         try:
             ws_itens = planilha_principal.worksheet("Item Agenda")
@@ -267,7 +258,7 @@ def carregar_dados():
         except: pass 
 
         # ==============================================================================
-        # 4. PLANILHA 2: HISTÓRICO DE TRANSFERÊNCIAS 325
+        # 4. PLANILHA DE TRANSFERÊNCIAS (DIA/MÊS/ANO INTELIGENTE)
         # ==============================================================================
         try:
             planilha_transf = cliente_google.open_by_key('1PMgqjZr2nieniRShicaPyxAe6J6j7I04FFE5aNWnm_s')
@@ -283,8 +274,9 @@ def carregar_dados():
                 if 'QTDE' in df_transf.columns:
                     df_transf['QTDE'] = pd.to_numeric(df_transf['QTDE'], errors='coerce').fillna(0)
                 
+                # Inteligência de parsing para aceitar múltiplos formatos sem gerar erro
                 if 'DATA REF' in df_transf.columns:
-                    df_transf['DATA_FILTRO'] = pd.to_datetime(df_transf['DATA REF'], format='%d/%m/%Y', errors='coerce').dt.normalize()
+                    df_transf['DATA_FILTRO'] = pd.to_datetime(df_transf['DATA REF'], errors='coerce', dayfirst=True).dt.normalize()
                 else:
                     df_transf['DATA_FILTRO'] = pd.NaT
         except Exception as e:
@@ -310,18 +302,24 @@ pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "🧩 Planejam
 st.sidebar.markdown("---")
 
 # ==============================================================================
-# INTELIGÊNCIA DO FILTRO DE DATAS
+# INTELIGÊNCIA DO FILTRO DE DATAS (LIVRE DE TRAVAS)
 # ==============================================================================
 st.sidebar.header("📅 Período de Análise")
 
+# Prepara os valores padrão
 if pagina == "🚛 Histórico325" and not df_transf.empty and not df_transf['DATA_FILTRO'].isna().all():
-    data_min = df_transf['DATA_FILTRO'].min().date()
-    data_max = df_transf['DATA_FILTRO'].max().date()
+    data_min_padrao = df_transf['DATA_FILTRO'].min().date()
+    data_max_padrao = df_transf['DATA_FILTRO'].max().date()
 else:
-    data_min = df['Data'].min().date() if not df.empty else pd.to_datetime('today').date()
-    data_max = df['Data'].max().date() if not df.empty else pd.to_datetime('today').date()
+    data_min_padrao = df['Data'].min().date() if not df.empty else pd.to_datetime('today').date()
+    data_max_padrao = df['Data'].max().date() if not df.empty else pd.to_datetime('today').date()
 
-datas_selecionadas = st.sidebar.date_input("Selecione o Início e o Fim:", value=(data_min, data_max), min_value=data_min, max_value=data_max, format="DD/MM/YYYY")
+# O Calendário destravado (sem min_value e max_value)
+datas_selecionadas = st.sidebar.date_input(
+    "Selecione o Início e o Fim:", 
+    value=(data_min_padrao, data_max_padrao), 
+    format="DD/MM/YYYY"
+)
 
 if len(datas_selecionadas) == 2: data_inicio, data_fim = datas_selecionadas
 else: data_inicio = data_fim = datas_selecionadas[0]
