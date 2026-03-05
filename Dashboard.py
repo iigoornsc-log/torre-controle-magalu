@@ -274,13 +274,11 @@ def carregar_dados():
                 if 'QTDE' in df_transf.columns:
                     df_transf['QTDE'] = pd.to_numeric(df_transf['QTDE'], errors='coerce').fillna(0)
                 
-                # FORÇANDO A LEITURA DA COLUNA V (Índice 21, considerando que A=0)
                 if df_transf.shape[1] >= 22:
                     col_v_nome = df_transf.columns[21]
                     df_transf['DATA_FILTRO'] = pd.to_datetime(df_transf[col_v_nome], errors='coerce', dayfirst=True).dt.normalize()
                     df_transf['NOME_COL_V'] = col_v_nome
                 else:
-                    # Backup de segurança caso a planilha perca colunas
                     df_transf['DATA_FILTRO'] = pd.NaT
                     df_transf['NOME_COL_V'] = 'DATA_FILTRO'
         except Exception as e:
@@ -302,7 +300,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "🧩 Planejamento Lego", "🚛 Transferências"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "🧩 Planejamento Lego", "🚛 Histórico325"])
 st.sidebar.markdown("---")
 
 # ==============================================================================
@@ -310,7 +308,6 @@ st.sidebar.markdown("---")
 # ==============================================================================
 st.sidebar.header("📅 Período de Análise")
 
-# Define as datas padrão como o mês vigente (Do dia 01 até o último dia do mês)
 hoje = pd.Timestamp.now(tz='America/Sao_Paulo').date()
 primeiro_dia_mes = hoje.replace(day=1)
 
@@ -319,7 +316,6 @@ if hoje.month == 12:
 else:
     ultimo_dia_mes = (hoje.replace(month=hoje.month+1, day=1) - pd.Timedelta(days=1))
 
-# O Calendário não tem mais limite!
 datas_selecionadas = st.sidebar.date_input(
     "Selecione o Início e o Fim:", 
     value=(primeiro_dia_mes, ultimo_dia_mes), 
@@ -338,6 +334,10 @@ if pagina == "🏠 Painel Operacional":
     st.sidebar.markdown("---")
     st.sidebar.header("⚙️ Parâmetros Operacionais")
     capacidade_diaria = st.sidebar.number_input("Equipes Disponíveis/Dia", min_value=1, max_value=30, value=6)
+    
+    # --- NOVO CAMPO: PESSOAS POR EQUIPE ---
+    pessoas_por_equipe = st.sidebar.number_input("Pessoas por Equipe", min_value=1, max_value=20, value=6)
+    
     custo_hora_extra = st.sidebar.number_input("Custo da Hora Extra (R$)", min_value=1.0, value=9.0, format="%.2f")
     limite_agendas_1p = st.sidebar.number_input("Teto Agendas 1P/Dia", min_value=1, max_value=50, value=14)
 
@@ -434,7 +434,9 @@ if pagina == "🏠 Painel Operacional":
     df_apc['Minutos_Disponiveis'] = capacidade_diaria * 427
     df_apc['Deficit_Minutos'] = df_apc.apply(lambda row: max(0, row['Minutos Totais'] - row['Minutos_Disponiveis']), axis=1)
     df_apc['Horas_Extras'] = (df_apc['Deficit_Minutos'] / 60).apply(math.ceil)
-    df_apc['Custo_HE'] = df_apc['Horas_Extras'] * custo_hora_extra
+    
+    # --- NOVO CÁLCULO DE CUSTO COM O TAMANHO DA EQUIPE ---
+    df_apc['Custo_HE'] = df_apc['Horas_Extras'] * pessoas_por_equipe * custo_hora_extra
 
     if not df_apc.empty:
         st.markdown("### 📊 Visão Acumulada")
@@ -659,8 +661,8 @@ elif pagina == "🧩 Planejamento Lego":
 # ==============================================================================
 # PÁGINA 3: HISTÓRICO 325 (TRANSFERÊNCIAS)
 # ==============================================================================
-elif pagina == "🚛 Transferências":
-    st.title("🚛 Visão de Transferências ")
+elif pagina == "🚛 Histórico325":
+    st.title("🚛 Visão de Transferências | Histórico325")
     
     if not df_transf.empty:
         df_transf_periodo = df_transf[(df_transf['DATA_FILTRO'].dt.date >= data_inicio) & (df_transf['DATA_FILTRO'].dt.date <= data_fim)].copy()
@@ -744,6 +746,3 @@ elif pagina == "🚛 Transferências":
             st.warning("A coluna 'ID_CARGA_PCP' não foi encontrada na planilha de Transferências.")
     else:
         st.warning("⚠️ Planilha de Transferências não carregou. O e-mail do robô está como Leitor nela?")
-
-
-
