@@ -53,7 +53,7 @@ def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
     </div>
     """, unsafe_allow_html=True)
 
-# --- CONEXÃO INTELIGENTE ---
+# --- CONEXÃO INTELIGENTE COM O GOOGLE ---
 def conectar_google():
     try:
         cred_dict = json.loads(st.secrets["google_json"])
@@ -222,7 +222,6 @@ def carregar_dados():
                 if 'QTDE' in df_transf.columns:
                     df_transf['QTDE'] = pd.to_numeric(df_transf['QTDE'], errors='coerce').fillna(0)
                 
-                # Usa DATA REF como base do filtro
                 if 'DATA REF' in df_transf.columns:
                     df_transf['DATA_FILTRO'] = pd.to_datetime(df_transf['DATA REF'], format='%d/%m/%Y', errors='coerce').dt.normalize()
                 else:
@@ -250,7 +249,7 @@ pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "🧩 Planejam
 st.sidebar.markdown("---")
 
 # ==============================================================================
-# INTELIGÊNCIA DO FILTRO DE DATAS (Muda conforme a página escolhida!)
+# INTELIGÊNCIA DO FILTRO DE DATAS
 # ==============================================================================
 st.sidebar.header("📅 Período de Análise")
 
@@ -386,6 +385,67 @@ if pagina == "🏠 Painel Operacional":
         fig_equipes.update_traces(textposition='outside')
         fig_equipes.update_layout(xaxis=dict(tickformat="%d/%m/%Y"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis_title="Qtd Equipes", title="Necessidade Diária de Mão de Obra")
         st.plotly_chart(fig_equipes, use_container_width=True)
+
+    st.markdown("---")
+    st.header("🔥 Possíveis Gargalos")
+    df_apc_sobrecarga = df_apc[df_apc['Gap_Equipes'] > 0]
+
+    if not df_apc_sobrecarga.empty:
+        col_sel1, col_sel2 = st.columns([1, 3])
+        with col_sel1: dia_selecionado = st.selectbox("Inspecionar dia crítico:", df_apc_sobrecarga['Data'].dt.strftime('%d/%m/%Y').tolist())
+        
+        df_dia_critico = df_filtrado_op[df_filtrado_op['Data'].dt.strftime('%d/%m/%Y') == dia_selecionado].copy()
+        dados_apc_dia = df_apc[df_apc['Data'].dt.strftime('%d/%m/%Y') == dia_selecionado].iloc[0]
+        
+        st.markdown(f"### 🎯 Analise Operacional: {dia_selecionado}")
+        met_col1, met_col2, met_col3, met_col4 = st.columns(4)
+        with met_col1: exibir_kpi("Equipes Necessárias", dados_apc_dia['Equipes Necessárias'], "Demanda do dia", "#3498DB")
+        with met_col2: exibir_kpi("Capacidade Atual", capacidade_diaria, "Headcount Fixo", "#95A5A6")
+        with met_col3: exibir_kpi("🚨 H.E. Projetadas", f"{dados_apc_dia['Horas_Extras']} h", f"Custo: {formatar_moeda(dados_apc_dia['Custo_HE'])}", "#E74C3C")
+        with met_col4: exibir_kpi("Volume de Peças", f"{df_dia_critico['Qtd Peças'].sum():,.0f}".replace(',', '.'), "Físico", "#9B59B6")
+        
+        col_chart, col_tab = st.columns([1, 2])
+        with col_chart:
+            fig_canais = px.pie(df_dia_critico.groupby('Canal')['Tempo_APC_Minutos'].sum().reset_index(), values='Tempo_APC_Minutos', names='Canal', hole=0.4, color_discrete_map={'Fulfillment': '#3498DB', '1P Fornecedor': '#F39C12'})
+            fig_canais.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig_canais, use_container_width=True)
+        with col_tab:
+            st.dataframe(df_dia_critico[['Status', 'Canal', 'Linhas', 'Agenda_Texto', 'Fornecedor', 'Qtd Peças', 'Tempo_APC_Minutos']].rename(columns={'Agenda_Texto': 'Agenda', 'Tempo_APC_Minutos': 'APC (Min)'}).sort_values(by='APC (Min)', ascending=False), use_container_width=True, hide_index=True)
+
+        st.markdown("### 📦 Inspecionar Carga")
+        agenda_selecionada = st.selectbox("Escolha uma agenda do dia para ver o detalhamento:", df_dia_critico['Agenda_Texto'].unique())
+        
+        if not df_itens.empty and 'Agenda' in df_itens.columns:
+            agenda_limpa = str(agenda_selecionada).split('.')[0].strip()
+            df_produtos_agenda = df_itens[df_itens['Agenda'] == agenda_limpa].copy()
+            
+            if not df_produtos_agenda.empty: 
+                colunas_exibir = [c for c in ['SKU', 'Descrição', 'Linhas', 'Categoria'] if c in df_produtos_agenda.columns]
+                
+                if 'Qtd Peças' in df_produtos_agenda.columns:
+                    df_produtos_agenda['Qtd Peças'] = pd.to_numeric(df_produtos_agenda['Qtd Peças'], errors='coerce').fillna(0)
+                    resumo_itens = df_produtos_agenda.groupby(colunas_exibir)['Qtd Peças'].sum().reset_index()
+                    total_pecas = resumo_itens['Qtd Peças'].sum()
+                else:
+                    resumo_itens = df_produtos_agenda.groupby(colunas_exibir).size().reset_index(name='Qtd Itens')
+                    total_pecas = resumo_itens['Qtd Itens'].sum()
+                
+                total_skus = len(resumo_itens)
+                df_fornecedor_temp = df_dia_critico[df_dia_critico['Agenda_Texto'] == agenda_selecionada]
+                fornecedor_nome = df_fornecedor_temp['Fornecedor'].iloc[0] if not df_fornecedor_temp.empty else "Não Informado"
+
+                st.markdown(f"#### Resumo da Agenda: {agenda_limpa}")
+                kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
+                with kpi_c1: exibir_kpi("📦 Qtd de SKUs", f"{total_skus}", "Itens distintos", "#3498DB")
+                with kpi_c2: exibir_kpi("🔢 Qtd Peças Totais", f"{total_pecas:,.0f}".replace(',', '.'), "Volume da carga", "#9B59B6")
+                with kpi_c3: exibir_kpi("🏢 Fornecedor", f"{fornecedor_nome[:22]}", "Origem", "#F39C12")
+                
+                st.dataframe(resumo_itens, use_container_width=True, hide_index=True)
+            else: 
+                st.warning(f"Os itens da agenda {agenda_limpa} não foram encontrados na base.")
+        else:
+            st.warning("Base de Itens indisponível.")
+    else: st.success("✅ A operação fluiu sem gargalos no período analisado!")
 
 
 # ==============================================================================
@@ -533,7 +593,7 @@ elif pagina == "🧩 Planejamento Lego":
 
 
 # ==============================================================================
-# PÁGINA 3: HISTÓRICO 325 (A NOVA VISÃO DE TRANSFERÊNCIAS)
+# PÁGINA 3: HISTÓRICO 325 (TRANSFERÊNCIAS)
 # ==============================================================================
 elif pagina == "🚛 Histórico325":
     st.title("🚛 Visão de Transferências | Histórico325")
@@ -544,7 +604,8 @@ elif pagina == "🚛 Histórico325":
         st.sidebar.markdown("---")
         st.sidebar.header("🔍 Filtros de Transferência")
         
-        opcoes_modal = df_transf_periodo['MODAL2'].unique() if 'MODAL2' in df_transf_periodo.columns else []
+        # Filtro de Modal usa a composição inteira se quisermos, ou podemos criar uma lista limpa
+        opcoes_modal = sorted(df_transf_periodo['MODAL2'].dropna().unique()) if 'MODAL2' in df_transf_periodo.columns else []
         modal_selecionado = st.sidebar.multiselect("Tipo de Carga (Modal)", options=opcoes_modal, default=opcoes_modal)
         
         if 'MODAL2' in df_transf_periodo.columns:
@@ -552,16 +613,19 @@ elif pagina == "🚛 Histórico325":
 
         if 'ID_CARGA_PCP' in df_transf_periodo.columns:
             
-            # --- A TABELA ESTILO SENIOR (IGUAL AO SEU PRINT) ---
+            # INTELIGÊNCIA DE AGRUPAMENTO: Compõe todos os modais da carga, separados por " | "
+            def compor_modalidade(series):
+                return ' | '.join(sorted([str(x).strip() for x in series.dropna().unique() if str(x).strip() != '']))
+
+            # --- A TABELA ESTILO SENIOR ---
             resumo_tabela = df_transf_periodo.groupby('ID_CARGA_PCP').agg(
                 DATA_PRODUCAO=('DATA SEPARACAO', 'first') if 'DATA SEPARACAO' in df_transf_periodo.columns else ('DATA_FILTRO', 'first'),
                 LIBERACAO=('DATA LIBERAÇÃO', 'first') if 'DATA LIBERAÇÃO' in df_transf_periodo.columns else ('DATA_FILTRO', 'first'),
                 CD_ORIGEM=('CD_EMPRESA', 'first') if 'CD_EMPRESA' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'first'),
                 DATA_ENTREGA=('DATA ENTREGA CLIENTE', 'first') if 'DATA ENTREGA CLIENTE' in df_transf_periodo.columns else ('DATA_FILTRO', 'first'),
-                MODALIDADE=('MODAL2', 'first') if 'MODAL2' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'first'),
+                MODALIDADE=('MODAL2', compor_modalidade) if 'MODAL2' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'first'),
                 SKUS=('PRODUTO', 'nunique') if 'PRODUTO' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'nunique'),
                 PECAS=('QTDE', 'sum') if 'QTDE' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'count'),
-                MODAL_TORRE=('CLASSE AJ', 'first') if 'CLASSE AJ' in df_transf_periodo.columns else ('ID_CARGA_PCP', 'first'),
                 DATA_CD=('DATA REF', 'first') if 'DATA REF' in df_transf_periodo.columns else ('DATA_FILTRO', 'first')
             ).reset_index()
 
@@ -571,7 +635,6 @@ elif pagina == "🚛 Histórico325":
                 if col in resumo_tabela.columns:
                     resumo_tabela[col] = pd.to_datetime(resumo_tabela[col], errors='coerce').dt.strftime('%d/%m/%Y').fillna('-')
             
-            # Ajustando nomes das colunas para ficar idêntico ao Print
             resumo_tabela = resumo_tabela.rename(columns={
                 'ID_CARGA_PCP': 'ID2900 (Carga)',
                 'DATA_PRODUCAO': 'Data Produção',
@@ -581,7 +644,6 @@ elif pagina == "🚛 Histórico325":
                 'MODALIDADE': 'Modalidade',
                 'SKUS': 'Skus',
                 'PECAS': 'Peças',
-                'MODAL_TORRE': 'MODAL TORRE',
                 'DATA_CD': 'DATA CD'
             })
 
@@ -592,9 +654,9 @@ elif pagina == "🚛 Histórico325":
             
             st.markdown("### 📊 Indicadores de Transferência")
             col_t1, col_t2, col_t3 = st.columns(3)
-            with col_t1: exibir_kpi("🚛 Cargas Esperadas", total_cargas, "Veículos de transf.", "#9B59B6") # Roxo
-            with col_t2: exibir_kpi("📦 Mix de Produtos", total_skus, "SKUs distintos", "#3498DB")         # Azul
-            with col_t3: exibir_kpi("🔢 Volume Físico", f"{total_pecas:,.0f}".replace(',', '.'), "Peças a receber", "#2ECC71") # Verde
+            with col_t1: exibir_kpi("🚛 Cargas Esperadas", total_cargas, "Veículos de transf.", "#9B59B6") 
+            with col_t2: exibir_kpi("📦 Mix de Produtos", total_skus, "SKUs distintos", "#3498DB")         
+            with col_t3: exibir_kpi("🔢 Volume Físico", f"{total_pecas:,.0f}".replace(',', '.'), "Peças a receber", "#2ECC71")
 
             st.markdown("---")
             
@@ -607,7 +669,6 @@ elif pagina == "🚛 Histórico325":
             
             graf_col1, graf_col2 = st.columns([2, 1])
             with graf_col1:
-                # Usa a tabela resumo para o gráfico
                 evolucao = resumo_tabela.groupby('Data Produção')['Peças'].sum().reset_index()
                 fig_transf = px.bar(evolucao, x='Data Produção', y='Peças', text='Peças', title="Volume de Peças por Dia", color_discrete_sequence=['#9B59B6'])
                 fig_transf.update_traces(textposition='outside')
@@ -615,7 +676,7 @@ elif pagina == "🚛 Histórico325":
                 st.plotly_chart(fig_transf, use_container_width=True)
             
             with graf_col2:
-                # O Erro do Agal foi corrigido usando uma paleta robusta do Plotly (Purples)
+                # O Erro de digitação da cor foi corrigido!
                 fig_modal = px.pie(resumo_tabela, values='Peças', names='Modalidade', title="Distribuição por Modal", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r)
                 fig_modal.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_modal, use_container_width=True)
