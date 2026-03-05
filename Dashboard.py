@@ -244,7 +244,7 @@ if pagina == "🏠 Painel Operacional":
         (df_filtrado['Status'].isin(status_operacao))
     ]
 
-    st.title("📦 Torre de Controle CD | Magalu")
+    st.title("📦 Torre de Controle Inbound | CD2900")
     st.markdown(f"**Visão Executiva:** {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
     st.markdown("---")
 
@@ -386,7 +386,7 @@ if pagina == "🏠 Painel Operacional":
 # ==============================================================================
 # PÁGINA 2: MATRIZ DE PLANEJAMENTO (S&OP COMERCIAL)
 # ==============================================================================
-elif pagina == "🧩 Matriz de Planejamento":
+elif pagina == "🧩 Planejamento Lego":
     st.title("🧩 Matriz S&OP: Comercial vs Operação")
 
     if not df_plan.empty:
@@ -526,6 +526,7 @@ elif pagina == "🧩 Matriz de Planejamento":
             st.info("Nenhum dado encontrado para o período filtrado.")
     else:
         st.warning("⚠️ Planilha 'PLANEJAMENTO' vazia ou não encontrada no Google Sheets.")
+
 
 
 
