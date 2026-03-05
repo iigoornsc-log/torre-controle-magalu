@@ -74,13 +74,38 @@ def carregar_dados():
     
     try:
         cliente_google = conectar_google()
-        
-        # ==============================================================================
-        # PLANILHA 1: OPERACIONAL E PLANEJAMENTO
-        # ==============================================================================
         planilha_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
         
+        # ==============================================================================
+        # NOVO: RECUPERANDO A BASE DE MINUTOS DO APC FULL
+        # ==============================================================================
+        apc_full_dict = {}
+        try:
+            try:
+                # Tenta ler do Google Sheets primeiro (Recomendado: Crie uma aba "APC_FULL")
+                ws_apc = planilha_principal.worksheet("APC_FULL")
+                dados_apc = ws_apc.get_all_values()
+                if len(dados_apc) > 1:
+                    for row in dados_apc[1:]:
+                        fornecedor_apc = str(row[0]).strip().upper()
+                        minutos_apc = pd.to_numeric(row[1], errors='coerce')
+                        if pd.notna(minutos_apc):
+                            apc_full_dict[fornecedor_apc] = minutos_apc
+            except:
+                # Se não achar a aba no Sheets, tenta ler o arquivo Apcfull.csv do GitHub
+                df_apc = pd.read_csv('Apcfull.csv', sep=None, engine='python') 
+                for _, row in df_apc.iterrows():
+                    fornecedor_apc = str(row.iloc[0]).strip().upper()
+                    minutos_apc = pd.to_numeric(row.iloc[1], errors='coerce')
+                    if pd.notna(minutos_apc):
+                        apc_full_dict[fornecedor_apc] = minutos_apc
+        except Exception as e:
+            pass # Se não encontrar base de APC FULL em lugar nenhum, ignora (vai usar 60)
+
+
+        # ==============================================================================
         # 1. ABA CONSOLIDADO
+        # ==============================================================================
         ws_consolidado = planilha_principal.worksheet("CONSOLIDADO")
         dados_consolidado = ws_consolidado.get_all_values() 
         if dados_consolidado and len(dados_consolidado) > 1:
@@ -129,10 +154,14 @@ def carregar_dados():
             df['Agenda_Texto'] = df['Agenda']
             df['Canal'] = df['Agenda_Texto'].apply(lambda x: 'Fulfillment' if len(x) >= 6 else '1P Fornecedor')
 
+            # --- O CÁLCULO DE TEMPO (AGORA COM OS MINUTOS DO FULL) ---
             def calcular_minutos(row):
                 canal = row.get('Canal', '')
                 fornecedor = str(row.get('Fornecedor', '')).strip().upper()
-                if canal == 'Fulfillment': return 60.0 
+                
+                if canal == 'Fulfillment': 
+                    # Se achar o fornecedor na base, puxa o tempo real. Se não achar, joga 60 padrão!
+                    return apc_full_dict.get(fornecedor, 60.0)
                 else:
                     linhas = str(row.get('Linhas', '')).upper().split(',')
                     maior_tempo = 0 
@@ -604,7 +633,6 @@ elif pagina == "🚛 Histórico325":
         st.sidebar.markdown("---")
         st.sidebar.header("🔍 Filtros de Transferência")
         
-        # Filtro de Modal usa a composição inteira se quisermos, ou podemos criar uma lista limpa
         opcoes_modal = sorted(df_transf_periodo['MODAL2'].dropna().unique()) if 'MODAL2' in df_transf_periodo.columns else []
         modal_selecionado = st.sidebar.multiselect("Tipo de Carga (Modal)", options=opcoes_modal, default=opcoes_modal)
         
@@ -613,11 +641,9 @@ elif pagina == "🚛 Histórico325":
 
         if 'ID_CARGA_PCP' in df_transf_periodo.columns:
             
-            # INTELIGÊNCIA DE AGRUPAMENTO: Compõe todos os modais da carga, separados por " | "
             def compor_modalidade(series):
                 return ' | '.join(sorted([str(x).strip() for x in series.dropna().unique() if str(x).strip() != '']))
 
-            # --- A TABELA ESTILO SENIOR ---
             resumo_tabela = df_transf_periodo.groupby('ID_CARGA_PCP').agg(
                 DATA_PRODUCAO=('DATA SEPARACAO', 'first') if 'DATA SEPARACAO' in df_transf_periodo.columns else ('DATA_FILTRO', 'first'),
                 LIBERACAO=('DATA LIBERAÇÃO', 'first') if 'DATA LIBERAÇÃO' in df_transf_periodo.columns else ('DATA_FILTRO', 'first'),
@@ -629,7 +655,6 @@ elif pagina == "🚛 Histórico325":
                 DATA_CD=('DATA REF', 'first') if 'DATA REF' in df_transf_periodo.columns else ('DATA_FILTRO', 'first')
             ).reset_index()
 
-            # Formatações Bonitas para a Tabela
             resumo_tabela['CD_ORIGEM'] = 'CD ' + resumo_tabela['CD_ORIGEM'].astype(str)
             for col in ['DATA_PRODUCAO', 'LIBERACAO', 'DATA_ENTREGA', 'DATA_CD']:
                 if col in resumo_tabela.columns:
@@ -647,7 +672,6 @@ elif pagina == "🚛 Histórico325":
                 'DATA_CD': 'DATA CD'
             })
 
-            # --- KPIs DA TELA ---
             total_cargas = len(resumo_tabela)
             total_skus = df_transf_periodo['PRODUTO'].nunique() if 'PRODUTO' in df_transf_periodo.columns else 0
             total_pecas = resumo_tabela['Peças'].sum()
@@ -660,7 +684,6 @@ elif pagina == "🚛 Histórico325":
 
             st.markdown("---")
             
-            # --- EXIBE A TABELA MASTER ---
             st.markdown("### 📑 Tabela de Acompanhamento (Master)")
             st.dataframe(resumo_tabela, use_container_width=True, hide_index=True)
 
@@ -676,7 +699,6 @@ elif pagina == "🚛 Histórico325":
                 st.plotly_chart(fig_transf, use_container_width=True)
             
             with graf_col2:
-                # O Erro de digitação da cor foi corrigido!
                 fig_modal = px.pie(resumo_tabela, values='Peças', names='Modalidade', title="Distribuição por Modal", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r)
                 fig_modal.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig_modal, use_container_width=True)
