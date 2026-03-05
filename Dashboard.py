@@ -113,8 +113,7 @@ def carregar_dados():
 
             # Normaliza dados finais
             df['Data'] = pd.to_datetime(df['Data'], errors='coerce').dt.normalize()
-            # Limpeza bruta da numeração da agenda (remove decimais .0)
-            df['Agenda_Texto'] = df['Agenda'].astype(str).str.split('.').str[0].str.strip()
+            df['Agenda_Texto'] = df['Agenda'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
             df['Canal'] = df['Agenda_Texto'].apply(lambda x: 'Fulfillment' if len(x) >= 6 else '1P Fornecedor')
 
             def calcular_minutos(row):
@@ -160,15 +159,29 @@ def carregar_dados():
                 else:
                     df_itens['Agenda'] = ''
 
-                # Mapeia outras colunas chaves que podem vir com nomes estranhos
+                # Mapeia outras colunas chaves (Com regra anti-duplicidade!)
                 mapeamento_itens = {}
+                alvos_usados = set()
+                
                 for c in df_itens.columns:
-                    if 'SKU' in c or 'CODIGO' in c or 'CÓDIGO' in c: mapeamento_itens[c] = 'SKU'
-                    elif 'DESCRI' in c or 'PRODUTO' in c: mapeamento_itens[c] = 'Descrição'
-                    elif 'LINHA' in c: mapeamento_itens[c] = 'Linha'
-                    elif 'CATEGORIA' in c or 'MACRO' in c: mapeamento_itens[c] = 'Categoria'
+                    if c == 'Agenda': continue
+                    if ('SKU' in c or 'CODIGO' in c or 'CÓDIGO' in c) and 'SKU' not in alvos_usados: 
+                        mapeamento_itens[c] = 'SKU'
+                        alvos_usados.add('SKU')
+                    elif ('DESCRI' in c or 'PRODUTO' in c) and 'Descrição' not in alvos_usados: 
+                        mapeamento_itens[c] = 'Descrição'
+                        alvos_usados.add('Descrição')
+                    elif ('LINHA' in c) and 'Linha' not in alvos_usados: 
+                        mapeamento_itens[c] = 'Linha'
+                        alvos_usados.add('Linha')
+                    elif ('CATEGORIA' in c or 'MACRO' in c) and 'Categoria' not in alvos_usados: 
+                        mapeamento_itens[c] = 'Categoria'
+                        alvos_usados.add('Categoria')
                 
                 df_itens = df_itens.rename(columns=mapeamento_itens)
+                
+                # A FACA AQUI: Remove colunas com nomes idênticos após o renomeio!
+                df_itens = df_itens.loc[:, ~df_itens.columns.duplicated()]
                     
                 # Limpeza agressiva: Quebra o número no ponto e pega só a parte inteira
                 df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.split('.').str[0].str.strip()
@@ -389,7 +402,6 @@ if pagina == "🏠 Painel Operacional":
         agenda_selecionada = st.selectbox("Escolha uma agenda do dia para ver a lista de SKUs embarcados:", df_dia_critico['Agenda_Texto'].unique())
         
         if not df_itens.empty and 'Agenda' in df_itens.columns:
-            # Pega só o número limpo da seleção para comparar certinho
             agenda_limpa = str(agenda_selecionada).split('.')[0].strip()
             df_produtos_agenda = df_itens[df_itens['Agenda'] == agenda_limpa]
             
