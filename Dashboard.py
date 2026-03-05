@@ -387,12 +387,12 @@ if pagina == "🏠 Painel Operacional":
 # PÁGINA 2: MATRIZ DE PLANEJAMENTO (S&OP COMERCIAL)
 # ==============================================================================
 elif pagina == "🧩 Planejamento Lego":
-    st.title("🧩 Matriz S&OP: Comercial vs Operação")
+    st.title("🧩 Visão planejamento capacidade LEGO")
 
     if not df_plan.empty:
         df_plan_filtrado = df_plan[(df_plan['data'] >= pd.to_datetime(data_inicio)) & (df_plan['data'] <= pd.to_datetime(data_fim))].copy()
 
-        st.markdown("### 🎯 Prévia Mensal do Comercial")
+        st.markdown("### 🎯 Planejamento Mensal do Comercial")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
         
         categorias_existentes = sorted([c for c in df_plan['categoria'].unique() if pd.notna(c) and str(c).strip() != ''])
@@ -526,6 +526,7 @@ elif pagina == "🧩 Planejamento Lego":
             st.info("Nenhum dado encontrado para o período filtrado.")
     else:
         st.warning("⚠️ Planilha 'PLANEJAMENTO' vazia ou não encontrada no Google Sheets.")
+
 
 
 
