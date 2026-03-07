@@ -743,11 +743,11 @@ elif pagina == "🧩 Planejamento Lego":
         estouradas = len(df_executivo[df_executivo['VAGAS (Saldo)'] < 0])
         
         col_e1, col_e2, col_e3, col_e4 = st.columns(4)
-        with col_e1: exibir_kpi("Meta (LEGO)", f"{meta_total:,.0f}".replace(',', '.'), "Alvo Comercial", "#3498DB")
-        with col_e2: exibir_kpi("Agendado", f"{realizado_total:,.0f}".replace(',', '.'), "Realidade", "#9B59B6")
+        with col_e1: exibir_kpi("Meta (LEGO)", f"{meta_total:,.0f}".replace(',', '.'), "Plano do Mês", "#3498DB")
+        with col_e2: exibir_kpi("Agendado", f"{realizado_total:,.0f}".replace(',', '.'), "Agendamentos Realizados", "#9B59B6")
         
         cor_saldo = "#2ECC71" if saldo_total >= 0 else "#E74C3C"
-        texto_saldo = "Capacidade Livre" if saldo_total >= 0 else "Risco Global"
+        texto_saldo = "Vagas Livres" if saldo_total >= 0 else "Risco Global"
         with col_e3: exibir_kpi("Saldo de Vagas", f"{saldo_total:,.0f}".replace(',', '.'), texto_saldo, cor_saldo)
         with col_e4: exibir_kpi("Categorias Estouradas", estouradas, "Acima da Meta", "#E74C3C")
 
@@ -770,7 +770,7 @@ elif pagina == "🧩 Planejamento Lego":
 
         st.markdown("---")
         
-        st.markdown("### 🧩 Tabela Matricial Diária (LEGO)")
+        st.markdown("### 🧩 Distribução Planejado x Realizado (LEGO)")
         if not df_plan_filtrado.empty:
             pivot = pd.pivot_table(
                 df_plan_filtrado, index='categoria', columns='data', 
@@ -818,8 +818,8 @@ elif pagina == "🧩 Planejamento Lego":
 # ==============================================================================
 # PÁGINA 5: HISTÓRICO 325 (TRANSFERÊNCIAS)
 # ==============================================================================
-elif pagina == "🚛 Histórico325":
-    st.title("🚛 Visão de Transferências | Histórico325")
+elif pagina == "🚛 Transferências":
+    st.title("🚛 Visão de Transferências")
     
     if not df_transf.empty:
         df_transf_periodo = df_transf[(df_transf['DATA_FILTRO'] >= ts_inicio) & (df_transf['DATA_FILTRO'] <= ts_fim)].copy()
@@ -961,6 +961,7 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
 
 
