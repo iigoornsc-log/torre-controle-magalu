@@ -559,7 +559,7 @@ elif pagina == "👷 Simulador Mão de Obra":
         def nomear_equipe(i):
             if i <= eq_transf: return f'Eq. {i} 👷 (Transf)'
             elif i <= eq_transf + eq_madeira: return f'Eq. {i} 👷 (Madeira)'
-            else: return f'Eq. {i} 🥵 (Misto/Sobra)'
+            else: return f'Eq. {i} 👷 Misto'
             
         nomes_equipes = {i: nomear_equipe(i) for i in range(1, total_equipes + 1)}
         
@@ -961,6 +961,7 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
 
 
