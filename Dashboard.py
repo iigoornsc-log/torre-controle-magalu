@@ -535,37 +535,43 @@ if pagina == "🏠 Painel Operacional":
 # ==============================================================================
 elif pagina == "⚖️ Prova de Sobrecarga":
     st.title("⚖️ Análise de Viabilidade (Comercial)")
-    st.markdown("Esta visão demonstra de forma algorítmica que, mesmo **equalizando perfeitamente** todas as docas e utilizando 100% da ociosidade das 6 equipes, o volume de carga agendado excede a capacidade física diária (427 minutos por equipe).")
+    st.markdown("Esta visão demonstra de forma algorítmica que, mesmo **equalizando perfeitamente** todas as docas e utilizando 100% da ociosidade das equipes, o volume de carga agendado pode exceder a capacidade física diária (427 minutos por equipe).")
     
     dias_disponiveis = sorted(df[df['Data'].notna()]['Data'].dt.strftime('%d/%m/%Y').unique())
     
     if dias_disponiveis:
         st.sidebar.markdown("---")
-        st.sidebar.header("⚙️ Dia da Simulação")
+        st.sidebar.header("⚙️ Parâmetros da Simulação")
         dia_simulacao = st.sidebar.selectbox("Escolha um dia para balancear as cargas:", dias_disponiveis)
+        
+        # --- NOVOS FILTROS DINÂMICOS ---
+        total_equipes = st.sidebar.number_input("Total de Equipes Disponíveis", min_value=1, max_value=20, value=6)
+        eq_transf = st.sidebar.number_input("Equipes focadas em Transferência", min_value=0, max_value=total_equipes, value=min(3, total_equipes))
+        
+        max_madeira = max(0, total_equipes - eq_transf) 
+        eq_madeira = st.sidebar.number_input("Equipes focadas em Madeira", min_value=0, max_value=max_madeira, value=min(2, max_madeira))
         
         df_simulacao = df[df['Data'].dt.strftime('%d/%m/%Y') == dia_simulacao].copy()
         
-        # Inicia as 6 equipes zeradas
-        tempo_equipes = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0}
+        # Inicia as equipes zeradas de forma dinâmica
+        tempo_equipes = {i: 0 for i in range(1, total_equipes + 1)}
         
-        nomes_equipes = {
-            1: 'Dayner 👷 (Transf)',
-            2: 'Ingrid 👷 (Transf)',
-            3: 'Efrain 👷 (Transf Full)',
-            4: 'Equipe 4 👷 (Madeira)',
-            5: 'Equipe 5 👷 (Madeira)',
-            6: 'Equipe 6 👷 (Misto)'
-        }
+        def nomear_equipe(i):
+            if i <= eq_transf: return f'Eq. {i} 👷 (Transf)'
+            elif i <= eq_transf + eq_madeira: return f'Eq. {i} 👷 (Madeira)'
+            else: return f'Eq. {i} 🥵 (Misto/Sobra)'
+            
+        nomes_equipes = {i: nomear_equipe(i) for i in range(1, total_equipes + 1)}
         
         cargas_alocadas = []
         data_obj = pd.to_datetime(dia_simulacao, format='%d/%m/%Y')
         
-        # 1. Aloca as 5 Transferências nas Equipes 1, 2 e 3 (Se for dia de semana)
+        # 1. Aloca as 5 Transferências nas Equipes Dedicadas (se existirem)
+        eq_disponiveis_transf = list(range(1, eq_transf + 1)) if eq_transf > 0 else list(tempo_equipes.keys())
+        
         if data_obj.weekday() < 5:
             for i in range(5):
-                # Acha a equipe (entre 1 e 3) com MENOS tempo no momento para equalizar
-                eq_num = min([1, 2, 3], key=lambda k: tempo_equipes[k])
+                eq_num = min(eq_disponiveis_transf, key=lambda k: tempo_equipes[k])
                 tempo_equipes[eq_num] += 240
                 cargas_alocadas.append({
                     'Equipe': nomes_equipes[eq_num],
@@ -574,8 +580,8 @@ elif pagina == "⚖️ Prova de Sobrecarga":
                     'Detalhe': f'Transf CD Origem {i+1}'
                 })
         
-        # 2. Separa as cargas de Madeira do restante (Full/1P Misto)
-        cargas_madeira = []
+        # 2. Separa as cargas do dia
+        cargas_madeira_lista = []
         cargas_restante = []
         for _, row in df_simulacao.iterrows():
             minutos = row['Tempo_APC_Minutos']
@@ -584,17 +590,21 @@ elif pagina == "⚖️ Prova de Sobrecarga":
             tipo = 'Carga Fulfillment' if row['Canal'] == 'Fulfillment' else 'Carga 1P/Misto'
             
             if 'MADEIRA' in linhas and row.get('Pecas_Madeira', 0) > 10:
-                cargas_madeira.append((minutos, 'Carga Madeira', f'Madeira: {forn[:15]}'))
+                cargas_madeira_lista.append((minutos, 'Carga Madeira', f'Madeira: {forn[:15]}'))
             else:
                 cargas_restante.append((minutos, tipo, forn[:15]))
                 
-        # Ordena do maior para o menor (LPT - Longest Processing Time First) para o encaixe perfeito no gráfico
-        cargas_madeira.sort(key=lambda x: x[0], reverse=True)
+        # Ordena do maior para o menor para encaixar os blocos grandes primeiro
+        cargas_madeira_lista.sort(key=lambda x: x[0], reverse=True)
         cargas_restante.sort(key=lambda x: x[0], reverse=True)
         
-        # 3. Aloca a Madeira preenchendo as Equipes 4 e 5 de forma igualitária
-        for min_val, tipo, det in cargas_madeira:
-            eq_num = min([4, 5], key=lambda k: tempo_equipes[k])
+        # 3. Aloca a Madeira nas Equipes Dedicadas
+        inicio_madeira = eq_transf + 1
+        fim_madeira = eq_transf + eq_madeira
+        eq_disponiveis_madeira = list(range(inicio_madeira, fim_madeira + 1)) if eq_madeira > 0 else list(tempo_equipes.keys())
+        
+        for min_val, tipo, det in cargas_madeira_lista:
+            eq_num = min(eq_disponiveis_madeira, key=lambda k: tempo_equipes[k])
             tempo_equipes[eq_num] += min_val
             cargas_alocadas.append({
                 'Equipe': nomes_equipes[eq_num],
@@ -603,9 +613,8 @@ elif pagina == "⚖️ Prova de Sobrecarga":
                 'Detalhe': det
             })
             
-        # 4. A MÁGICA: Distribui todo o resto preenchendo os "buracos" de TODAS as equipes (1 a 6)
+        # 4. A MÁGICA: Distribui o resto para QUALQUER equipe que tenha a mochila mais vazia
         for min_val, tipo, det in cargas_restante:
-            # Encontra QUALQUER equipe que tenha a mochila mais vazia no momento
             eq_num = min(tempo_equipes.keys(), key=lambda k: tempo_equipes[k])
             tempo_equipes[eq_num] += min_val
             cargas_alocadas.append({
@@ -618,48 +627,43 @@ elif pagina == "⚖️ Prova de Sobrecarga":
         df_mochila = pd.DataFrame(cargas_alocadas)
         
         if not df_mochila.empty:
-            df_mochila = df_mochila.sort_values(by="Equipe")
+            # Ordena graficamente de 1 até o total de equipes
+            df_mochila['Ordem'] = df_mochila['Equipe'].str.extract(r'(\d+)').astype(int)
+            df_mochila = df_mochila.sort_values(by="Ordem")
             
-            # --- CÁLCULO DE RESULTADOS GLOBAIS ---
+            # --- KPIs ---
             minutos_totais = sum(tempo_equipes.values())
-            capacidade_total_cd = 6 * 427
+            capacidade_total_cd = total_equipes * 427
             equipes_estouradas = sum(1 for v in tempo_equipes.values() if v > 427)
             
             st.markdown("---")
             col_s1, col_s2, col_s3 = st.columns(3)
-            with col_s1: exibir_kpi("Equipes em Sobrecarga", f"{equipes_estouradas} de 6", "Mesmo equalizando 100%", "#E74C3C")
+            with col_s1: exibir_kpi("Equipes em Sobrecarga", f"{equipes_estouradas} de {total_equipes}", "Mesmo equalizando 100%", "#E74C3C")
             with col_s2: exibir_kpi("Demanda Exigida no Dia", f"{int(minutos_totais)} min", f"Capacidade Real: {capacidade_total_cd} min", "#9B59B6")
             
             saldo = minutos_totais - capacidade_total_cd
             if saldo > 0:
-                with col_s3: exibir_kpi("Déficit Inevitável", f"+{int(saldo)} min", "Tempo que falta para fechar a conta", "#E74C3C")
+                with col_s3: exibir_kpi("Déficit Inevitável", f"+{int(saldo)} min", "Tempo faltante", "#E74C3C")
             else:
                 with col_s3: exibir_kpi("Déficit Inevitável", "0 min", "Operação dentro do limite", "#2ECC71")
 
-            # --- GRÁFICO MOCHILA ESTOURADA (EQUALIZADA) ---
+            # --- GRÁFICO ---
             fig_mochila = px.bar(
-                df_mochila, 
-                x='Equipe', 
-                y='Minutos', 
-                color='Tipo Carga',
-                text='Detalhe',
-                title=f"Balanceamento Perfeito de Cargas - Dia {dia_simulacao}",
+                df_mochila, x='Equipe', y='Minutos', color='Tipo Carga', text='Detalhe',
+                title=f"Balanceamento Dinâmico de Cargas - Dia {dia_simulacao}",
                 color_discrete_map={
-                    'Transferência Fixa (240m)': '#8E44AD', 
-                    'Carga Madeira': '#E67E22', 
-                    'Carga Fulfillment': '#3498DB', 
-                    'Carga 1P/Misto': '#2ECC71'
+                    'Transferência Fixa (240m)': '#8E44AD', 'Carga Madeira': '#E67E22', 
+                    'Carga Fulfillment': '#3498DB', 'Carga 1P/Misto': '#2ECC71'
                 }
             )
             
             fig_mochila.add_hline(y=427, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text="Capacidade Máxima do Turno (427 min)", annotation_position="top left", annotation_font_color="#E74C3C")
-            
             fig_mochila.update_traces(textposition='inside', insidetextanchor='middle')
             fig_mochila.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis_title="Tempo de Doca (Minutos)", height=650)
             
             st.plotly_chart(fig_mochila, use_container_width=True)
             
-            st.info("💡 **Argumento Comercial:** O algoritmo acima preencheu toda a capacidade ociosa das equipes de Transferência e Madeira com cargas convencionais. Mesmo distribuindo o trabalho de forma matematicamente perfeita (sem deixar ninguém parado), as colunas ultrapassam a linha vermelha. Isso prova que o problema não é a distribuição, e sim o volume absoluto planejado na malha versus o headcount disponível.")
+            st.info(f"💡 **Argumento Comercial:** Alterando o volume para {total_equipes} equipes, o algoritmo distribuiu de forma inteligente as Transferências e Madeiras. Todo o espaço ocioso restante foi preenchido com cargas convencionais. Se as colunas ultrapassam a linha vermelha, significa que o volume absoluto planejado é fisicamente incompatível com o headcount disponível.")
         else:
             st.warning("Nenhuma carga encontrada para o dia selecionado.")
     else:
@@ -958,4 +962,5 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
