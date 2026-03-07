@@ -312,7 +312,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "⚖️ Prova de Sobrecarga", "🧩 Planejamento Lego", "🚛 Histórico325", "📝 Solicitações Extras"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "⚖️ Prova de Sobrecarga", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
 st.sidebar.markdown("---")
 
 st.sidebar.header("📅 Período de Análise")
@@ -961,6 +961,7 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
 
 
