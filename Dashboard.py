@@ -192,7 +192,7 @@ def carregar_dados():
                             t = 90
                             if 'MADEIRA' in l: 
                                 if row.get('Pecas_Madeira', 0) > 10:
-                                    t = 180 if 'TUBRAX' in forn_original else 427
+                                    t = 110 if 'TUBRAX' in forn_original else 427
                                 else:
                                     t = 90
                             elif 'PNEU' in l: t = 240
@@ -992,6 +992,7 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
 
 
