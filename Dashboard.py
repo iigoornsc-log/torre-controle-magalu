@@ -709,7 +709,6 @@ elif pagina == "📅 Previsão de Agendas":
                     use_container_width=True, hide_index=True, height=350,
                     column_config={"Peças": st.column_config.ProgressColumn("Volume Físico (Peças)", format="%.0f", min_value=0, max_value=max_t)}
                 )
-            )
         else:
             st.info("Nenhuma transferência prevista no período.")
 
@@ -1180,4 +1179,5 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
