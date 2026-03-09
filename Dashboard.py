@@ -213,59 +213,127 @@ def carregar_dados():
             df['Tempo_APC_Minutos'] = df.apply(calcular_minutos, axis=1)
 
 # ==============================================================================
-        # 2. ABA ITEM AGENDA (1P E FULFILLMENT)
-        # ==============================================================================
-        df_itens_1p = pd.DataFrame()
-        df_itens_full = pd.DataFrame()
+# NOVA PÁGINA: PREVISÃO DE AGENDAS (CENÁRIO)
+# ==============================================================================
+elif pagina == "📅 Previsão de Agendas":
+    st.title("📅 Previsão de Agendas (Cenário)")
+    st.markdown(f"**Cenário Projetado para o período:** {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+    st.caption("💡 *Dica: Selecione a data de amanhã no filtro lateral para ter a visão exata do planejamento do próximo dia.*")
+    
+    # --- PREPARAÇÃO DE DADOS (CORREÇÃO DO ERRO DE ESCOPO AQUI) ---
+    df_filtrado_prev = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy() if not df.empty else pd.DataFrame()
+    
+    if not df_filtrado_prev.empty:
+        df_1p_prev = df_filtrado_prev[df_filtrado_prev['Canal'] == '1P Fornecedor']
+        df_full_prev = df_filtrado_prev[df_filtrado_prev['Canal'] == 'Fulfillment']
+    else:
+        df_1p_prev = pd.DataFrame()
+        df_full_prev = pd.DataFrame()
 
-        # A) Lê os itens de 1P Fornecedor
-        try:
-            ws_itens = planilha_principal.worksheet("Item Agenda")
-            dados_itens = ws_itens.get_all_values()
-            if dados_itens and len(dados_itens) > 1:
-                df_itens_1p = pd.DataFrame(dados_itens[1:], columns=dados_itens[0])
-                df_itens_1p = df_itens_1p.loc[:, ~df_itens_1p.columns.duplicated()]
-                df_itens_1p.columns = df_itens_1p.columns.str.strip().str.upper()
-                
-                map_itens = {}
-                alvos_itens = set()
-                for c in df_itens_1p.columns:
-                    if 'AGENDA' in c and 'Agenda' not in alvos_itens: map_itens[c] = 'Agenda'; alvos_itens.add('Agenda')
-                    elif ('SKU' in c or 'COMPITEM' in c or 'CÓDIGO' in c) and 'SKU' not in alvos_itens: map_itens[c] = 'SKU'; alvos_itens.add('SKU')
-                    elif ('DESCRI' in c or 'PRODUTO' in c) and 'Descrição' not in alvos_itens: map_itens[c] = 'Descrição'; alvos_itens.add('Descrição')
-                    elif 'LINHA' in c and 'Linhas' not in alvos_itens: map_itens[c] = 'Linhas'; alvos_itens.add('Linhas')
-                    elif 'CATEGORIA' in c and 'Categoria' not in alvos_itens: map_itens[c] = 'Categoria'; alvos_itens.add('Categoria')
-                    elif ('PEÇA' in c or 'PECA' in c or 'QTCOMP' in c) and 'Qtd Peças' not in alvos_itens: map_itens[c] = 'Qtd Peças'; alvos_itens.add('Qtd Peças')
-                
-                df_itens_1p = df_itens_1p.rename(columns=map_itens)
-        except: pass 
+    df_transf_prev = pd.DataFrame()
+    if not df_transf.empty and 'DATA_FILTRO' in df_transf.columns:
+        df_transf_prev = df_transf[(df_transf['DATA_FILTRO'] >= ts_inicio) & (df_transf['DATA_FILTRO'] <= ts_fim)].copy()
+    
+    # --- KPIs GLOBAIS ---
+    total_agendas = df_filtrado_prev['Agenda_Texto'].nunique() if not df_filtrado_prev.empty else 0
+    total_cargas_transf = df_transf_prev['ID_CARGA_PCP'].nunique() if not df_transf_prev.empty and 'ID_CARGA_PCP' in df_transf_prev.columns else 0
+    total_veiculos = total_agendas + total_cargas_transf
+    
+    total_pecas_op = df_filtrado_prev['Qtd Peças'].sum() if not df_filtrado_prev.empty else 0
+    total_pecas_transf = df_transf_prev['QTDE'].sum() if not df_transf_prev.empty and 'QTDE' in df_transf_prev.columns else 0
+    total_pecas_geral = total_pecas_op + total_pecas_transf
+    
+    min_op = df_filtrado_prev['Tempo_APC_Minutos'].sum() if not df_filtrado_prev.empty else 0
+    min_fixo = 1200 if pd.to_datetime(data_inicio).weekday() < 5 else 0 
+    eq_projetadas = math.ceil((min_op + min_fixo) / 427)
+    
+    col_k1, col_k2, col_k3, col_k4 = st.columns(4)
+    with col_k1: exibir_kpi("Equipes Necessárias", eq_projetadas, "Projeção APC", "#E74C3C")
+    with col_k2: exibir_kpi("Veículos Esperados", total_veiculos, f"{total_agendas} Agendas + {total_cargas_transf} Transf.", "#3498DB")
+    with col_k3: exibir_kpi("Volume Físico (Peças)", f"{total_pecas_geral:,.0f}".replace(',', '.'), "1P + Full + Transf", "#9B59B6")
+    with col_k4: exibir_kpi("Agendas de Full", df_full_prev['Agenda_Texto'].nunique() if not df_full_prev.empty else 0, "Cargas Seller", "#F39C12")
 
-        # B) Lê os itens de Fulfillment
-        try:
-            ws_itens_full = planilha_principal.worksheet("Item Agenda Seller")
-            dados_itens_full = ws_itens_full.get_all_values()
-            if dados_itens_full and len(dados_itens_full) > 1:
-                df_itens_full = pd.DataFrame(dados_itens_full[1:], columns=dados_itens_full[0])
-                df_itens_full = df_itens_full.loc[:, ~df_itens_full.columns.duplicated()]
-                df_itens_full.columns = df_itens_full.columns.str.strip().str.upper()
-                
-                # Mapeamento exato das colunas de Fulfillment
-                map_full = {
-                    'CODAGENDA': 'Agenda',
-                    'ITEM': 'SKU',
-                    'DESCRIÇÃO SKU': 'Descrição',
-                    'LINHA': 'Linhas',
-                    'ITEMS.LIST.ELEMENT.CATEGORY.FAMILY.NAME': 'Categoria',
-                    'QTAGENDA': 'Qtd Peças'
-                }
-                df_itens_full = df_itens_full.rename(columns=lambda x: map_full.get(x, x))
-        except: pass
-
-        # C) Junta as duas bases e limpa o número da agenda
-        df_itens = pd.concat([df_itens_1p, df_itens_full], ignore_index=True)
-        if not df_itens.empty and 'Agenda' in df_itens.columns:
-            df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.split('.').str[0].str.strip()
-
+    st.markdown("---")
+    
+    # --- VISÃO EM 3 COLUNAS (INSPIRADO NO PRINT) ---
+    col_1p, col_seller, col_transf = st.columns(3)
+    
+    # Função Mágica para criar as tabelas com barra de progresso embutida
+    def formatar_tabela_barras(df_agrupado, col_agrupamento, cor_barra):
+        if df_agrupado.empty: 
+            st.info("Sem dados para este canal.")
+            return
+        
+        df_show = df_agrupado.groupby(col_agrupamento).agg(
+            Agendas=('Agenda_Texto', 'nunique'),
+            SKUs=('Qtd SKUs', 'sum'),
+            Peças=('Qtd Peças', 'sum')
+        ).reset_index().sort_values(by='Peças', ascending=False)
+        
+        max_pecas = float(df_show['Peças'].max()) if not df_show.empty else 100.0
+        
+        st.dataframe(
+            df_show,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Peças": st.column_config.ProgressColumn(
+                    "Peças Real", format="%.0f", min_value=0, max_value=max_pecas
+                ),
+                col_agrupamento: st.column_config.TextColumn(col_agrupamento.upper())
+            }
+        )
+    
+    # 1. COLUNA 1P FORNECEDOR
+    with col_1p:
+        st.markdown("<h4 style='color: #0086FF; margin-bottom: 0px;'>📦 AGENDAS 1P</h4>", unsafe_allow_html=True)
+        st.caption("Detalhamento de Fornecedores Tradicionais")
+        
+        st.markdown("**1P (CATEGORIA)**")
+        formatar_tabela_barras(df_1p_prev, 'Linhas', '#0086FF')
+        
+        st.markdown("**1P (FORNECEDOR)**")
+        formatar_tabela_barras(df_1p_prev, 'Fornecedor', '#0086FF')
+        
+    # 2. COLUNA SELLER / FULLFILLMENT
+    with col_seller:
+        st.markdown("<h4 style='color: #F39C12; margin-bottom: 0px;'>🛍️ AGENDAS SELLER</h4>", unsafe_allow_html=True)
+        st.caption("Detalhamento de Fulfillment / MktPlace")
+        
+        st.markdown("**SELLER (CATEGORIA)**")
+        formatar_tabela_barras(df_full_prev, 'Linhas', '#F39C12')
+        
+        st.markdown("**SELLER (FORNECEDOR)**")
+        formatar_tabela_barras(df_full_prev, 'Fornecedor', '#F39C12')
+        
+    # 3. COLUNA TRANSFERÊNCIAS
+    with col_transf:
+        st.markdown("<h4 style='color: #9B59B6; margin-bottom: 0px;'>🚛 AGENDAS TRANSFERÊNCIA</h4>", unsafe_allow_html=True)
+        st.caption("Detalhamento de Malha / CD a CD")
+        
+        if not df_transf_prev.empty and 'ID_CARGA_PCP' in df_transf_prev.columns:
+            # Transferência por Modalidade
+            st.markdown("**TRANSFERÊNCIA (MODALIDADE)**")
+            df_t_modal = df_transf_prev.groupby('MODAL2').agg(
+                Cargas=('ID_CARGA_PCP', 'nunique'),
+                SKUs=('PRODUTO', 'nunique') if 'PRODUTO' in df_transf_prev.columns else ('ID_CARGA_PCP', 'count'),
+                Peças=('QTDE', 'sum')
+            ).reset_index().sort_values(by='Peças', ascending=False)
+            
+            max_t_pecas = float(df_t_modal['Peças'].max()) if not df_t_modal.empty else 100.0
+            
+            st.dataframe(
+                df_t_modal.rename(columns={'MODAL2': 'Modalidade'}),
+                use_container_width=True, hide_index=True,
+                column_config={"Peças": st.column_config.ProgressColumn("Peças Real", format="%.0f", min_value=0, max_value=max_t_pecas)}
+            )
+            
+            # Transferência por ID de Carga
+            st.markdown("**TRANSFERÊNCIA (ID DA CARGA)**")
+            df_t_id = df_transf_prev.groupby('ID_CARGA_PCP').agg(
+                Origem=('CD_EMPRESA', 'first') if 'CD_EMPRESA' in df_transf_prev.columns else ('ID_CARGA_PCP', 'first'),
+                Modalidade=('MODAL2', 'first') if 'MODAL2' in df_transf_prev.columns else ('ID_CARGA_PCP', 'first'),
+                SKUs
         # ==============================================================================
         # 3. ABA PLANEJAMENTO
         # ==============================================================================
@@ -1210,6 +1278,7 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
 
 
