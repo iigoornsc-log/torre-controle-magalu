@@ -175,18 +175,11 @@ def carregar_dados():
                 try:
                     canal = row.get('Canal', '')
                     forn_original = str(row.get('Fornecedor', '')).strip().upper()
+                    linhas = str(row.get('Linhas', '')).upper()
                     
-                    if canal == 'Fulfillment':
-                        for chave_forn, tempo in apc_full_dict.items():
-                            if chave_forn in forn_original:
-                                if tempo > 300:
-                                    return 60.0
-                                return float(tempo)
-                        return 60.0
-                    else:
-                        linhas = str(row.get('Linhas', '')).upper()
+                    # 1. CRIAMOS UMA REGRA ÚNICA DE CATEGORIAS (BACKUP)
+                    def calcular_pela_categoria():
                         maior_tempo = 0 
-                        
                         for l in linhas.split(','):
                             t = 90
                             if 'MADEIRA' in l: 
@@ -206,6 +199,23 @@ def carregar_dados():
                             if t > maior_tempo: maior_tempo = t
                         
                         return float(maior_tempo) if maior_tempo > 0 else 60.0
+
+                    # 2. APLICAÇÃO DA LÓGICA
+                    if canal == 'Fulfillment':
+                        # A) Tenta achar o histórico do fornecedor na base APC_FULL
+                        for chave_forn, tempo in apc_full_dict.items():
+                            if chave_forn in forn_original:
+                                if tempo > 300: # Trava de segurança para tempos absurdos na APC_FULL
+                                    return 60.0
+                                return float(tempo)
+                        
+                        # B) GAP CORRIGIDO: Se não achou na APC_FULL, não joga 60 direto. Lê a categoria!
+                        return calcular_pela_categoria()
+                        
+                    else:
+                        # C) Se for 1P Fornecedor, sempre calcula direto pela categoria da carga
+                        return calcular_pela_categoria()
+                        
                 except:
                     return 60.0
             
@@ -1165,6 +1175,7 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
 
 
