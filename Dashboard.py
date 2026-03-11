@@ -9,18 +9,34 @@ import json
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="🛍️", layout="wide", initial_sidebar_state="expanded")
 
-# --- INJEÇÃO DE CSS (DESIGN: SOFT UI) ---
+# --- INJEÇÃO DE CSS PREMIUM (RELEVO E SOMBRAS) ---
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; color: #2C3E50; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     h1, h2, h3 { color: #2C3E50 !important; font-weight: 800; letter-spacing: -0.5px; }
     hr { border-top: 2px solid #EAEDED; border-radius: 2px; }
+    
+    /* Tabelas com borda arredondada e sombra */
     [data-testid="stDataFrame"] { 
         border: none !important; 
         border-radius: 12px !important; 
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important; 
         overflow: hidden !important; 
     }
+    
+    /* EFEITO RELEVO NOS GRÁFICOS (NOVO) */
+    [data-testid="stPlotlyChart"] {
+        background-color: #FFFFFF;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        padding: 15px 10px 5px 10px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    [data-testid="stPlotlyChart"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    }
+
     [data-testid="stSidebar"] {
         background-color: #FFFFFF;
         box-shadow: 2px 0 15px rgba(0, 0, 0, 0.03);
@@ -34,6 +50,32 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# --- FUNÇÃO DE ESTILIZAÇÃO DE GRÁFICOS (NOVO) ---
+def aplicar_estilo_premium(fig):
+    """Aplica bordas brancas, transparência e grid clean para visual de relevo/3D."""
+    fig.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Segoe UI, Roboto, sans-serif", color='#2C3E50'),
+        hovermode="x unified",
+        hoverlabel=dict(
+            bgcolor="rgba(255, 255, 255, 0.95)",
+            font_size=13,
+            font_family="Segoe UI",
+            bordercolor="#EAEDED"
+        ),
+        margin=dict(t=40, b=20, l=20, r=20)
+    )
+    # Borda branca grossa e opacidade dão o efeito de peças separadas (Modern UI)
+    fig.update_traces(
+        marker=dict(line=dict(width=2, color='#FFFFFF')),
+        opacity=0.88
+    )
+    # Grid sutil apenas no eixo Y para não poluir
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F0F3F4', griddash='dot')
+    fig.update_xaxes(showgrid=False)
+    return fig
 
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -177,7 +219,6 @@ def carregar_dados():
                     forn_original = str(row.get('Fornecedor', '')).strip().upper()
                     linhas = str(row.get('Linhas', '')).upper()
                     
-                    # 1. CRIAMOS UMA REGRA ÚNICA DE CATEGORIAS (BACKUP)
                     def calcular_pela_categoria():
                         maior_tempo = 0 
                         for l in linhas.split(','):
@@ -200,22 +241,15 @@ def carregar_dados():
                         
                         return float(maior_tempo) if maior_tempo > 0 else 60.0
 
-                    # 2. APLICAÇÃO DA LÓGICA
                     if canal == 'Fulfillment':
-                        # A) Tenta achar o histórico do fornecedor na base APC_FULL
                         for chave_forn, tempo in apc_full_dict.items():
                             if chave_forn in forn_original:
-                                if tempo > 300: # Trava de segurança para tempos absurdos na APC_FULL
+                                if tempo > 300: 
                                     return 60.0
                                 return float(tempo)
-                        
-                        # B) GAP CORRIGIDO: Se não achou na APC_FULL, não joga 60 direto. Lê a categoria!
                         return calcular_pela_categoria()
-                        
                     else:
-                        # C) Se for 1P Fornecedor, sempre calcula direto pela categoria da carga
                         return calcular_pela_categoria()
-                        
                 except:
                     return 60.0
             
@@ -417,7 +451,7 @@ if pagina == "🏠 Painel Operacional":
     with col_kpi3: exibir_kpi("⏳ Pátio", qtd_aguardando, "Aguardando doca", "#F39C12")
     with col_kpi4: exibir_kpi("⚙️ Em Descarga", qtd_descarga, "Operação rodando", "#1ABC9C")
     with col_kpi5: exibir_kpi("✅ Recebido", qtd_recebido, "Finalizados", "#2ECC71")
-    with col_kpi6: exibir_kpi("❌ No-Show", qtd_noshow, f"{taxa_noshow:.1f}% de ausências", "#E74C3C")
+    with col_kpi6: exibir_kpi("❌ No-Show", qtd_noshow, f"{taxa_noshow:.1f}% de quebra", "#E74C3C")
 
     st.markdown("---")
 
@@ -455,10 +489,10 @@ if pagina == "🏠 Painel Operacional":
         
         col_1p_1, col_1p_2 = st.columns([2, 1])
         with col_1p_1:
-            fig_1p = px.bar(df_limite_1p, x='Data', y='Agendas_Validas', text='Agendas_Validas', color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, labels={'Agendas_Validas': 'Agendas', 'Estourou_Limite': 'Acima do Limite?'})
-            fig_1p.add_hline(y=limite_agendas_1p, line_dash="dot", line_color="#E74C3C", annotation_text=f"Capacidade: {limite_agendas_1p}")
+            fig_1p = px.bar(df_limite_1p, x='Data', y='Agendas_Validas', text='Agendas_Validas', color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, labels={'Agendas_Validas': 'Agendas', 'Estourou_Limite': 'Acima do Limite?'}, title="Consumo da Capacidade Diária (1P)")
+            fig_1p.add_hline(y=limite_agendas_1p, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text=f"Capacidade: {limite_agendas_1p}")
             fig_1p.update_traces(textposition='outside')
-            fig_1p.update_layout(xaxis=dict(tickformat="%d/%m/%Y"), showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+            fig_1p = aplicar_estilo_premium(fig_1p) # <- ESTILO APLICADO AQUI
             st.plotly_chart(fig_1p, use_container_width=True)
             
             if not df_excecoes.empty and 'Data da Vaga' in df_excecoes.columns:
@@ -472,9 +506,9 @@ if pagina == "🏠 Painel Operacional":
 
         with col_1p_2:
             st.subheader("Balanço 1P")
-            exibir_kpi("Dias Acima do Limite", df_limite_1p['Estourou_Limite'].sum(), "Necessita Analise", "#E74C3C")
+            exibir_kpi("Dias Acima do Limite", df_limite_1p['Estourou_Limite'].sum(), "Necessita adequação", "#E74C3C")
             exibir_kpi("Volume 1P", df_limite_1p['Total_1P'].sum(), "Total de agendas 1P", "#3498DB")
-            exibir_kpi("Isentos (Cofres)", df_limite_1p['Qtd_Cofres'].sum(), "Não medido em carros, limite peças 6 mil", "#95A5A6")
+            exibir_kpi("Isentos (Cofres)", df_limite_1p['Qtd_Cofres'].sum(), "Não consomem doca padrão", "#95A5A6")
     else: st.info("Nenhuma agenda do canal 1P Fornecedor encontrada.")
 
     st.markdown("---")
@@ -498,10 +532,10 @@ if pagina == "🏠 Painel Operacional":
         with col_m3: exibir_kpi("Déficit Projetado", f"{df_apc['Horas_Extras'].sum()} h", f"Custo HE: {formatar_moeda(df_apc['Custo_HE'].sum())}", "#E74C3C")
         with col_m4: exibir_kpi("Agendas Expostas", df_filtrado_op[df_filtrado_op['Data'].isin(df_apc[df_apc['Gap_Equipes'] > 0]['Data'])]['Agenda_Texto'].nunique(), "Cargas com risco", "#F39C12")
         
-        fig_equipes = px.bar(df_apc, x='Data', y='Equipes Necessárias', text='Equipes Necessárias', color_discrete_sequence=['#3498DB'])
-        fig_equipes.add_hline(y=capacidade_diaria, line_dash="solid", line_color="#E74C3C", annotation_text=f"Headcount Fixo ({capacidade_diaria})")
+        fig_equipes = px.bar(df_apc, x='Data', y='Equipes Necessárias', text='Equipes Necessárias', color_discrete_sequence=['#3498DB'], title="Necessidade Diária de Mão de Obra")
+        fig_equipes.add_hline(y=capacidade_diaria, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text=f"Headcount Fixo ({capacidade_diaria})")
         fig_equipes.update_traces(textposition='outside')
-        fig_equipes.update_layout(xaxis=dict(tickformat="%d/%m/%Y"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis_title="Qtd Equipes", title="Necessidade Diária de Mão de Obra")
+        fig_equipes = aplicar_estilo_premium(fig_equipes) # <- ESTILO APLICADO AQUI
         st.plotly_chart(fig_equipes, use_container_width=True)
 
     st.markdown("---")
@@ -524,8 +558,10 @@ if pagina == "🏠 Painel Operacional":
         
         col_chart, col_tab = st.columns([1, 2])
         with col_chart:
-            fig_canais = px.pie(df_dia_critico.groupby('Canal')['Tempo_APC_Minutos'].sum().reset_index(), values='Tempo_APC_Minutos', names='Canal', hole=0.4, color_discrete_map={'Fulfillment': '#3498DB', '1P Fornecedor': '#F39C12'})
-            fig_canais.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+            fig_canais = px.pie(df_dia_critico.groupby('Canal')['Tempo_APC_Minutos'].sum().reset_index(), values='Tempo_APC_Minutos', names='Canal', hole=0.5, color_discrete_map={'Fulfillment': '#3498DB', '1P Fornecedor': '#F39C12'}, title="Distribuição por Canal")
+            fig_canais.update_traces(textposition='inside', textinfo='percent+label')
+            fig_canais = aplicar_estilo_premium(fig_canais) # <- ESTILO APLICADO AQUI
+            fig_canais.update_layout(showlegend=False)
             st.plotly_chart(fig_canais, use_container_width=True)
             
         with col_tab:
@@ -586,7 +622,7 @@ if pagina == "🏠 Painel Operacional":
 # PÁGINA 2: PREVISÃO DE AGENDAS (CENÁRIO SÊNIOR)
 # ==============================================================================
 elif pagina == "📅 Previsão de Agendas":
-    st.title("📅 Previsão de Agendas")
+    st.title("📅 Previsão de Agendas | Visão Estratégica")
     st.markdown(f"**Projeção de Cenário para o período:** {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
     
     df_filtrado_prev = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy() if not df.empty else pd.DataFrame()
@@ -629,19 +665,21 @@ elif pagina == "📅 Previsão de Agendas":
     with col_g1:
         fig_v = px.pie(df_macro, values='Veiculos', names='Canal', title='Distribuição de Doca (Veículos)', hole=0.5, color='Canal', color_discrete_map=cores_canais)
         fig_v.update_traces(textposition='inside', textinfo='percent+label')
-        fig_v.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=0, l=0, r=0))
+        fig_v = aplicar_estilo_premium(fig_v) # <- ESTILO APLICADO AQUI
+        fig_v.update_layout(showlegend=False)
         st.plotly_chart(fig_v, use_container_width=True)
 
     with col_g2:
         fig_p = px.pie(df_macro, values='Pecas', names='Canal', title='Composição de Volume Físico (Peças)', hole=0.5, color='Canal', color_discrete_map=cores_canais)
         fig_p.update_traces(textposition='inside', textinfo='percent+label')
-        fig_p.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=40, b=0, l=0, r=0))
+        fig_p = aplicar_estilo_premium(fig_p) # <- ESTILO APLICADO AQUI
+        fig_p.update_layout(showlegend=False)
         st.plotly_chart(fig_p, use_container_width=True)
 
     st.markdown("---")
 
-    st.markdown("### 🔍 Detalhado Operacional")
-    tab_1p, tab_full, tab_transf = st.tabs(["📦 1P Fornecedor", "🛍️ Seller / Fulfillment", "🚛 Transferências"])
+    st.markdown("### 🔍 Drill-Down por Canal Operacional")
+    tab_1p, tab_full, tab_transf = st.tabs(["📦 1P Fornecedor", "🛍️ Seller / Fulfillment", "🚛 Malha / Transferências"])
 
     def renderizar_detalhe(df_dados, cor_hex, nome_canal):
         if df_dados.empty:
@@ -655,7 +693,8 @@ elif pagina == "📅 Previsão de Agendas":
             st.markdown(f"**Top Categorias ({nome_canal})**")
             fig_bar = px.bar(df_linha, x='Peças', y='Linhas', orientation='h', text='Peças', color_discrete_sequence=[cor_hex])
             fig_bar.update_traces(textposition='outside')
-            fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=0, b=0, l=0, r=0), xaxis_title="", yaxis_title="")
+            fig_bar = aplicar_estilo_premium(fig_bar) # <- ESTILO APLICADO AQUI
+            fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(t=0, b=0, l=0, r=0), xaxis_title="", yaxis_title="")
             st.plotly_chart(fig_bar, use_container_width=True)
         
         with c2:
@@ -688,7 +727,8 @@ elif pagina == "📅 Previsão de Agendas":
                 st.markdown("**Volume por Modalidade**")
                 fig_t = px.bar(df_modal, x='Peças', y='MODAL2', orientation='h', text='Peças', color_discrete_sequence=['#9B59B6'])
                 fig_t.update_traces(textposition='outside')
-                fig_t.update_layout(yaxis={'categoryorder':'total ascending'}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=0, b=0, l=0, r=0), xaxis_title="", yaxis_title="")
+                fig_t = aplicar_estilo_premium(fig_t) # <- ESTILO APLICADO AQUI
+                fig_t.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(t=0, b=0, l=0, r=0), xaxis_title="", yaxis_title="")
                 st.plotly_chart(fig_t, use_container_width=True)
             
             with c_t2:
@@ -712,7 +752,7 @@ elif pagina == "📅 Previsão de Agendas":
 # PÁGINA 3: PROVA DE SOBRECARGA (COMERCIAL)
 # ==============================================================================
 elif pagina == "👷 Simulador Mão de Obra":
-    st.title("👷 Análise de Mão de obra")
+    st.title("⚖️ Análise de Mão de obra")
     st.markdown("Esta visão simula o cenário do dia selecionado, balanceando as cargas de acordo com a quantidade de equipes disponíveis.")
     
     dias_disponiveis = sorted(df[df['Data'].notna()]['Data'].dt.strftime('%d/%m/%Y').unique())
@@ -826,8 +866,7 @@ elif pagina == "👷 Simulador Mão de Obra":
             
             fig_mochila.add_hline(y=427, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text="Capacidade Máxima do Turno (427 min)", annotation_position="top left", annotation_font_color="#E74C3C")
             fig_mochila.update_traces(textposition='inside', insidetextanchor='middle')
-            fig_mochila.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', yaxis_title="Tempo de Doca (Minutos)", height=650)
-            
+            fig_mochila = aplicar_estilo_premium(fig_mochila) # <- ESTILO APLICADO AQUI
             st.plotly_chart(fig_mochila, use_container_width=True)
         else:
             st.warning("Nenhuma carga encontrada para o dia selecionado.")
@@ -843,7 +882,7 @@ elif pagina == "🧩 Planejamento Lego":
     df_plan_filtrado = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy() if not df_plan.empty else pd.DataFrame()
 
     if not df_plan.empty:
-        st.markdown("### 🎯 Planejamento Mensal Supply")
+        st.markdown("### 🎯 Planejamento Mensal do Comercial")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
         
         categorias_existentes = sorted([c for c in df_plan['categoria'].unique() if pd.notna(c) and str(c).strip() != ''])
@@ -1043,7 +1082,7 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
             with col_t3: exibir_kpi("🔢 Volume Físico", f"{total_pecas:,.0f}".replace(',', '.'), "Peças a receber", "#2ECC71")
 
             st.markdown("---")
-            st.markdown("### 📑 Tabela de Acompanhamento")
+            st.markdown("### 📑 Tabela de Acompanhamento (Master)")
             st.caption("👈 Clique em qualquer linha da tabela abaixo para ver os itens da carga.")
             
             evento_tabela = st.dataframe(
@@ -1099,19 +1138,19 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
                 st.info("👆 Selecione uma carga na tabela acima para ver os detalhes dos produtos.")
 
             st.markdown("---")
-            st.markdown("### 📈 Análise")
+            st.markdown("### 📈 Análise de Fluxo")
             
             graf_col1, graf_col2 = st.columns([2, 1])
             with graf_col1:
                 evolucao = resumo_tabela.groupby('Data Produção')['Peças'].sum().reset_index()
                 fig_transf = px.bar(evolucao, x='Data Produção', y='Peças', text='Peças', title="Volume de Peças por Dia", color_discrete_sequence=['#9B59B6'])
                 fig_transf.update_traces(textposition='outside')
-                fig_transf.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                fig_transf = aplicar_estilo_premium(fig_transf) # <- ESTILO APLICADO AQUI
                 st.plotly_chart(fig_transf, use_container_width=True)
             
             with graf_col2:
                 fig_modal = px.pie(resumo_tabela, values='Peças', names='Modalidade', title="Distribuição por Modal", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r)
-                fig_modal.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                fig_modal = aplicar_estilo_premium(fig_modal) # <- ESTILO APLICADO AQUI
                 st.plotly_chart(fig_modal, use_container_width=True)
 
         else:
@@ -1175,8 +1214,3 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
-
-
-
-
-
