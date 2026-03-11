@@ -866,8 +866,21 @@ elif pagina == "👷 Simulador Mão de Obra":
             
             fig_mochila.add_hline(y=427, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text="Capacidade Máxima do Turno (427 min)", annotation_position="top left", annotation_font_color="#E74C3C")
             fig_mochila.update_traces(textposition='inside', insidetextanchor='middle')
-            fig_mochila = aplicar_estilo_premium(fig_mochila) # <- ESTILO APLICADO AQUI
-            st.plotly_chart(fig_mochila, use_container_width=True)
+            fig_mochila = aplicar_estilo_premium(fig_mochila)
+            
+            # --- AJUSTE DE DIMENSÕES (ALTURA E LARGURA DAS BARRAS) ---
+            fig_mochila.update_layout(
+                height=800,       # <-- AQUI VOCÊ CONTROLA A ALTURA (Aumentei para 800)
+                bargap=0.35       # <-- AQUI VOCÊ AFINA AS BARRAS (Quanto maior o número, mais finas)
+            )
+            
+            # --- AJUSTE DE LARGURA DO GRÁFICO NA TELA ---
+            # As colunas abaixo servem para "espremer" o gráfico no centro.
+            # Proporção [1, 5, 1] significa: 1 de margem esq, 5 de tamanho do gráfico, 1 de margem dir.
+            col_esq, col_central, col_dir = st.columns([1, 5, 1])
+            with col_central:
+                st.plotly_chart(fig_mochila, use_container_width=True)
+                
         else:
             st.warning("Nenhuma carga encontrada para o dia selecionado.")
     else:
@@ -1214,3 +1227,4 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
