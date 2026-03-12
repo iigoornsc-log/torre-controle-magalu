@@ -515,7 +515,7 @@ if pagina == "🏠 Painel Operacional":
     # NOVA VISÃO: PLANEJAMENTO LEGO LADO A LADO COM 1P
     # ====================================================================
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("####🧩 Planejamento Lego: Vagas Liberadas pelo Comercial")
+    st.markdown("🧩 Planejamento Lego: Vagas Liberadas pelo Comercial")
     
     if not df_plan.empty:
         # Filtra a base do Lego pelas mesmas datas do filtro lateral
@@ -1271,6 +1271,7 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
 
 
