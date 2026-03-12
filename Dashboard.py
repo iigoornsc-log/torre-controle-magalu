@@ -177,8 +177,36 @@ def carregar_dados():
             else: df_raw['Qtd Peças'] = pd.to_numeric(df_raw['Qtd Peças'], errors='coerce').fillna(0)
             if 'É Ofensor?' not in df_raw.columns: df_raw['É Ofensor?'] = 'Não'
 
+            # --- NOVO: TRADUTOR UNIVERSAL DE LINHAS PARA APC ---
+            def categorizar_linha(linha_raw):
+                l = str(linha_raw).upper()
+                # Regras prioritárias (ex: Madeira Simples é estofado, não madeira)
+                if 'MADEIRA SIMPLES' in l or 'COLCH' in l or 'ESTOFADO' in l or 'FREEPASS' in l:
+                    return 'COLCHAO/ESTOFADO'
+                if 'FRACIONADO' in l or 'MADEIRA' in l or 'MOVEIS ENCOMENDA' in l:
+                    return 'MADEIRA'
+                if 'BELEZA' in l or 'BENS DE CONSUMO' in l or 'MERCADO' in l or 'ALIMENT' in l:
+                    return 'MERCADO'
+                if 'COFRE' in l:
+                    return 'COFRE'
+                if 'ELETRO PESADO' in l or 'ELETRO' in l:
+                    return 'ELETRO PESADO'
+                if 'IMAGEM' in l:
+                    return 'IMAGEM'
+                if 'PNEU' in l:
+                    return 'PNEU'
+                if 'TRANSFERENCIA RUIM' in l:
+                    return 'TRANSFERENCIA RUIM'
+                if 'TRANSFERENCIA' in l:
+                    return 'TRANSFERENCIA'
+                return 'DIV PEQUENOS' # Default para UD/CM, Livros, Ferramentas, etc.
+
+            # Aplica o tradutor
+            df_raw['Categoria_Padrao'] = df_raw['Linhas'].apply(categorizar_linha)
+
+            # Agora conta as peças de madeira baseado na categoria traduzida!
             df_raw['Pecas_Madeira'] = df_raw.apply(
-                lambda r: r['Qtd Peças'] if 'MADEIRA' in str(r.get('Linhas', '')).upper() else 0, 
+                lambda r: r['Qtd Peças'] if r['Categoria_Padrao'] == 'MADEIRA' else 0, 
                 axis=1
             )
 
@@ -202,6 +230,7 @@ def carregar_dados():
                 Fornecedor=('Fornecedor', 'first'),
                 Status=('Status', 'first'),
                 Linhas=('Linhas', lambda x: ', '.join(sorted(set([str(i).strip() for i in x.dropna() if str(i).strip()])))),
+                Categorias=('Categoria_Padrao', lambda x: ', '.join(sorted(set([str(i).strip() for i in x.dropna() if str(i).strip()])))),
                 Qtd_SKUs=('Agenda', 'count'), 
                 Qtd_Pecas=('Qtd Peças', 'sum'),
                 Pecas_Madeira=('Pecas_Madeira', 'sum'),
@@ -217,25 +246,28 @@ def carregar_dados():
                 try:
                     canal = row.get('Canal', '')
                     forn_original = str(row.get('Fornecedor', '')).strip().upper()
-                    linhas = str(row.get('Linhas', '')).upper()
+                    categorias = str(row.get('Categorias', '')).upper()
                     
                     def calcular_pela_categoria():
                         maior_tempo = 0 
-                        for l in linhas.split(','):
-                            t = 90
-                            if 'MADEIRA' in l: 
+                        # Agora ele divide e verifica a categoria padrão, não a linha raw
+                        for cat in categorias.split(','):
+                            t = 90 
+                            cat = cat.strip()
+                            
+                            if 'MADEIRA' in cat: 
                                 if row.get('Pecas_Madeira', 0) > 10:
                                     t = 110 if 'TUBRAX' in forn_original else 427
                                 else:
                                     t = 90
-                            elif 'PNEU' in l: t = 240
-                            elif 'TRANSFERENCIA RUIM' in l: t = 40
-                            elif 'TRANSFERENCIA' in l: t = 240
-                            elif 'MERCADO' in l: t = 150
-                            elif 'ELETRO' in l: t = 95
-                            elif 'COFRE' in l: t = 90
-                            elif 'IMAGEM' in l: t = 90
-                            elif 'COLCHÃO' in l or 'ESTOFADO' in l: t = 60
+                            elif 'PNEU' in cat: t = 240
+                            elif 'TRANSFERENCIA RUIM' in cat: t = 40
+                            elif 'TRANSFERENCIA' in cat: t = 240
+                            elif 'MERCADO' in cat: t = 150
+                            elif 'ELETRO PESADO' in cat: t = 95
+                            elif 'COFRE' in cat: t = 90
+                            elif 'IMAGEM' in cat: t = 90
+                            elif 'COLCHAO/ESTOFADO' in cat: t = 60
                             
                             if t > maior_tempo: maior_tempo = t
                         
@@ -1271,6 +1303,7 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
 
 
 
