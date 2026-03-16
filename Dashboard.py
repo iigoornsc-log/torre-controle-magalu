@@ -521,7 +521,7 @@ if pagina == "🏠 Painel Operacional":
         
         col_1p_1, col_1p_2 = st.columns([2, 1])
         with col_1p_1:
-            fig_1p = px.bar(df_limite_1p, x='Data', y='Agendas_Validas', text='Agendas_Validas', color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, labels={'Agendas_Validas': 'Agendas', 'Estourou_Limite': 'Acima do Limite?'}, title="Consumo da Capacidade Diária (1P)")
+            fig_1p = px.bar(df_limite_1p, x='Data', y='Agendas_Validas', text='Agendas_Validas', color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, labels={'Agendas_Validas': 'Agendas', 'Estourou_Limite': 'Acima do Limite?'}, title="Veiculos agendados (1P)")
             fig_1p.add_hline(y=limite_agendas_1p, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text=f"Capacidade: {limite_agendas_1p}")
             fig_1p.update_traces(textposition='outside')
             fig_1p = aplicar_estilo_premium(fig_1p) # <- ESTILO APLICADO AQUI
@@ -547,7 +547,7 @@ if pagina == "🏠 Painel Operacional":
     # NOVA VISÃO: PLANEJAMENTO LEGO LADO A LADO COM 1P
     # ====================================================================
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("🧩 Planejamento Lego: Vagas Liberadas pelo Comercial")
+    st.markdown("🧩 Planejamento Lego: Vagas Liberadas Lego")
     
     if not df_plan.empty:
         # Filtra a base do Lego pelas mesmas datas do filtro lateral
