@@ -836,10 +836,33 @@ elif pagina == "📈 Simulador What-If":
     st.markdown("Simule a injeção de novas cargas em um dia específico e descubra instantaneamente o impacto na necessidade de mão de obra (APC). O sistema já considera o cenário real planejado para o dia.")
     
     # 1. Prepara a Base Real
-    df_filtrado_sim = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
+    df_base_periodo = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
     
-    if not df_filtrado_sim.empty:
-        df_apc_base = df_filtrado_sim.groupby('Data').agg({'Tempo_APC_Minutos': 'sum', 'Agenda_Texto': 'nunique'}).reset_index()
+    if not df_base_periodo.empty:
+        st.markdown("---")
+        st.markdown("### 🎛️ Filtro de Cenário Base")
+        canais_disponiveis = df_base_periodo['Canal'].unique().tolist()
+        
+        # Filtro mágico que o usuário pediu!
+        canais_selecionados = st.multiselect(
+            "Selecione quais canais você quer manter no cálculo ANTES de simular o estresse:", 
+            options=canais_disponiveis, 
+            default=canais_disponiveis
+        )
+        
+        df_filtrado_sim = df_base_periodo[df_base_periodo['Canal'].isin(canais_selecionados)]
+        
+        # Pega as datas originais para não sumir o gráfico se você tirar todos os filtros
+        df_apc_base = df_base_periodo[['Data']].drop_duplicates()
+        
+        if not df_filtrado_sim.empty:
+            df_agg = df_filtrado_sim.groupby('Data').agg({'Tempo_APC_Minutos': 'sum', 'Agenda_Texto': 'nunique'}).reset_index()
+            df_apc_base = pd.merge(df_apc_base, df_agg, on='Data', how='left').fillna(0)
+        else:
+            df_apc_base['Tempo_APC_Minutos'] = 0
+            df_apc_base['Agenda_Texto'] = 0
+            
+        # Adiciona a Transferência Fixa (Premissa do modelo atual)
         df_apc_base['Min_Transf_Fixa'] = df_apc_base['Data'].apply(lambda x: 1200 if x.weekday() < 5 else 0)
         df_apc_base['Minutos_Atuais'] = df_apc_base['Tempo_APC_Minutos'] + df_apc_base['Min_Transf_Fixa']
         df_apc_base['Equipes_Atuais'] = df_apc_base['Minutos_Atuais'].apply(lambda x: math.ceil(x / 427))
@@ -878,13 +901,13 @@ elif pagina == "📈 Simulador What-If":
         df_apc_simulado = df_apc_base.copy()
         df_apc_simulado.loc[df_apc_simulado['Data_Str'] == dia_alvo, 'Minutos_Atuais'] = minutos_simulados
         df_apc_simulado.loc[df_apc_simulado['Data_Str'] == dia_alvo, 'Equipes_Atuais'] = equipes_simuladas
-        df_apc_simulado['Cenario'] = df_apc_simulado['Data_Str'].apply(lambda x: 'Simulado' if x == dia_alvo else 'Real')
+        df_apc_simulado['Cenario'] = df_apc_simulado['Data_Str'].apply(lambda x: 'Simulado' if x == dia_alvo else 'Real Base')
         
         # 4. Resultado da Simulação
         with col_resumo:
             st.markdown(f"### 🎯 Impacto no dia {dia_alvo}")
             if minutos_injetados == 0:
-                st.info("Nenhuma carga extra injetada. O cenário reflete a realidade atual da doca.")
+                st.info("Nenhuma carga extra injetada. O cenário reflete a base atual com os filtros selecionados.")
             else:
                 cor_alerta = "#E74C3C" if delta_equipes > 0 else "#2ECC71"
                 txt_alerta = f"🚨 Requer +{delta_equipes} Equipe(s) extra" if delta_equipes > 0 else "✅ Absorvido pela ociosidade"
@@ -893,22 +916,22 @@ elif pagina == "📈 Simulador What-If":
                 exibir_kpi("Carga Horária Total", f"{minutos_simulados:,.0f} min", f"+{minutos_injetados} min adicionados", "#F39C12")
 
         st.markdown("---")
-        st.markdown("### 📈 Projeção da Semana (Real vs Simulado)")
+        st.markdown("### 📈 Projeção da Semana (Base vs Simulado)")
         
-        # Gráfico que muda de cor no dia estressado
+        # Gráfico dinâmico
         fig_sim = px.bar(
-            df_apc_simulado, 
+            df_apc_simulado.sort_values(by='Data'), 
             x='Data', 
             y='Equipes_Atuais', 
             text='Equipes_Atuais', 
             color='Cenario',
-            color_discrete_map={'Real': '#3498DB', 'Simulado': '#E74C3C'},
+            color_discrete_map={'Real Base': '#3498DB', 'Simulado': '#E74C3C'},
             title="Evolução de Mão de Obra Necessária"
         )
         fig_sim.update_traces(textposition='outside')
         fig_sim.update_layout(xaxis=dict(tickformat="%d/%m/%Y"))
         
-        # Aplica o estilo premium que criamos
+        # Aplica o estilo premium
         fig_sim = aplicar_estilo_premium(fig_sim)
         
         col_graf_esq, col_graf_dir = st.columns([5, 1])
@@ -916,7 +939,7 @@ elif pagina == "📈 Simulador What-If":
             st.plotly_chart(fig_sim, use_container_width=True)
             
     else:
-        st.warning("Não há dados carregados para gerar a simulação.")
+        st.warning("Não há dados carregados para gerar a simulação no período selecionado.")
 
 # ==============================================================================
 # PÁGINA 3: PROVA DE SOBRECARGA (COMERCIAL)
