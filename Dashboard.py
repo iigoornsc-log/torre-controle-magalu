@@ -410,7 +410,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador What-If", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador Cenário", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
 st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
@@ -829,12 +829,12 @@ elif pagina == "📅 Previsão de Agendas":
                 )
 
 # ==============================================================================
-# NOVA PÁGINA: SIMULADOR WHAT-IF (ESTRESSE DE MALHA CONTÍNUO)
+# NOVA PÁGINA: Simulador Cenário (ESTRESSE DE MALHA CONTÍNUO)
 # ==============================================================================
-elif pagina == "📈 Simulador What-If":
+elif pagina == "📈 Simulador Cenário":
     col_titulo, col_reset = st.columns([4, 1])
     with col_titulo:
-        st.title("📈 Simulador What-If | Estresse de Malha")
+        st.title("📈 Simulador Cenário ")
         st.markdown("Adicione novas cargas em múltiplos dias e veja o impacto cumulativo na semana inteira. O sistema **salva as suas adições** enquanto você navega pelas datas!")
     
     # --- INICIALIZA A MEMÓRIA PERSISTENTE DO ROBO ---
