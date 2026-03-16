@@ -410,7 +410,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador What-If", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
 st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
@@ -827,6 +827,96 @@ elif pagina == "📅 Previsão de Agendas":
                     use_container_width=True, hide_index=True, height=350,
                     column_config={"Peças": st.column_config.ProgressColumn("Volume Físico (Peças)", format="%.0f", min_value=0, max_value=max_t)}
                 )
+
+# ==============================================================================
+# NOVA PÁGINA: SIMULADOR WHAT-IF (ESTRESSE DE MALHA)
+# ==============================================================================
+elif pagina == "📈 Simulador What-If":
+    st.title("📈 Simulador What-If | Estresse de APC")
+    st.markdown("Simule a injeção de novas cargas em um dia específico e descubra instantaneamente o impacto na necessidade de mão de obra (APC). O sistema já considera o cenário real planejado para o dia.")
+    
+    # 1. Prepara a Base Real
+    df_filtrado_sim = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
+    
+    if not df_filtrado_sim.empty:
+        df_apc_base = df_filtrado_sim.groupby('Data').agg({'Tempo_APC_Minutos': 'sum', 'Agenda_Texto': 'nunique'}).reset_index()
+        df_apc_base['Min_Transf_Fixa'] = df_apc_base['Data'].apply(lambda x: 1200 if x.weekday() < 5 else 0)
+        df_apc_base['Minutos_Atuais'] = df_apc_base['Tempo_APC_Minutos'] + df_apc_base['Min_Transf_Fixa']
+        df_apc_base['Equipes_Atuais'] = df_apc_base['Minutos_Atuais'].apply(lambda x: math.ceil(x / 427))
+        df_apc_base['Data_Str'] = df_apc_base['Data'].dt.strftime('%d/%m/%Y')
+        
+        st.markdown("---")
+        
+        # 2. Painel de Injeção de Carga
+        col_painel, col_resumo = st.columns([2, 1])
+        
+        with col_painel:
+            st.markdown("### 🧪 Painel de Injeção de Cargas")
+            dia_alvo = st.selectbox("Selecione o Dia para estressar:", df_apc_base['Data_Str'].tolist())
+            
+            c_input1, c_input2, c_input3 = st.columns(3)
+            with c_input1:
+                add_madeira = st.number_input("🪵 Madeira (+427 min)", 0, 20, 0, help="Carros com mais de 10 peças de madeira")
+                add_eletro = st.number_input("📺 Eletro Pesado (+95 min)", 0, 20, 0)
+            with c_input2:
+                add_pneu = st.number_input("🛞 Pneus (+240 min)", 0, 20, 0)
+                add_mercado = st.number_input("🛒 Mercado (+150 min)", 0, 20, 0)
+            with c_input3:
+                add_cofre = st.number_input("🔒 Cofre / Imagem (+90 min)", 0, 20, 0)
+                add_div = st.number_input("📦 Diversos / Full (+60 min)", 0, 50, 0)
+                
+        # 3. Lógica de Simulação
+        minutos_injetados = (add_madeira * 427) + (add_pneu * 240) + (add_mercado * 150) + (add_eletro * 95) + (add_cofre * 90) + (add_div * 60)
+        veiculos_injetados = add_madeira + add_pneu + add_mercado + add_eletro + add_cofre + add_div
+        
+        dados_dia = df_apc_base[df_apc_base['Data_Str'] == dia_alvo].iloc[0]
+        minutos_simulados = dados_dia['Minutos_Atuais'] + minutos_injetados
+        equipes_simuladas = math.ceil(minutos_simulados / 427)
+        delta_equipes = equipes_simuladas - dados_dia['Equipes_Atuais']
+        
+        # Atualiza a base para o Gráfico
+        df_apc_simulado = df_apc_base.copy()
+        df_apc_simulado.loc[df_apc_simulado['Data_Str'] == dia_alvo, 'Minutos_Atuais'] = minutos_simulados
+        df_apc_simulado.loc[df_apc_simulado['Data_Str'] == dia_alvo, 'Equipes_Atuais'] = equipes_simuladas
+        df_apc_simulado['Cenario'] = df_apc_simulado['Data_Str'].apply(lambda x: 'Simulado' if x == dia_alvo else 'Real')
+        
+        # 4. Resultado da Simulação
+        with col_resumo:
+            st.markdown(f"### 🎯 Impacto no dia {dia_alvo}")
+            if minutos_injetados == 0:
+                st.info("Nenhuma carga extra injetada. O cenário reflete a realidade atual da doca.")
+            else:
+                cor_alerta = "#E74C3C" if delta_equipes > 0 else "#2ECC71"
+                txt_alerta = f"🚨 Requer +{delta_equipes} Equipe(s) extra" if delta_equipes > 0 else "✅ Absorvido pela ociosidade"
+                
+                exibir_kpi("Novo Headcount Necessário", equipes_simuladas, txt_alerta, cor_alerta)
+                exibir_kpi("Carga Horária Total", f"{minutos_simulados:,.0f} min", f"+{minutos_injetados} min adicionados", "#F39C12")
+
+        st.markdown("---")
+        st.markdown("### 📈 Projeção da Semana (Real vs Simulado)")
+        
+        # Gráfico que muda de cor no dia estressado
+        fig_sim = px.bar(
+            df_apc_simulado, 
+            x='Data', 
+            y='Equipes_Atuais', 
+            text='Equipes_Atuais', 
+            color='Cenario',
+            color_discrete_map={'Real': '#3498DB', 'Simulado': '#E74C3C'},
+            title="Evolução de Mão de Obra Necessária"
+        )
+        fig_sim.update_traces(textposition='outside')
+        fig_sim.update_layout(xaxis=dict(tickformat="%d/%m/%Y"))
+        
+        # Aplica o estilo premium que criamos
+        fig_sim = aplicar_estilo_premium(fig_sim)
+        
+        col_graf_esq, col_graf_dir = st.columns([5, 1])
+        with col_graf_esq:
+            st.plotly_chart(fig_sim, use_container_width=True)
+            
+    else:
+        st.warning("Não há dados carregados para gerar a simulação.")
 
 # ==============================================================================
 # PÁGINA 3: PROVA DE SOBRECARGA (COMERCIAL)
