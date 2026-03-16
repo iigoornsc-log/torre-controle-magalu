@@ -829,12 +829,24 @@ elif pagina == "📅 Previsão de Agendas":
                 )
 
 # ==============================================================================
-# NOVA PÁGINA: SIMULADOR WHAT-IF (ESTRESSE DE MALHA)
+# NOVA PÁGINA: SIMULADOR WHAT-IF (ESTRESSE DE MALHA CONTÍNUO)
 # ==============================================================================
 elif pagina == "📈 Simulador What-If":
-    st.title("📈 Simulador What-If | Estresse de APC")
-    st.markdown("Simule a injeção de novas cargas em um dia específico e descubra instantaneamente o impacto na necessidade de mão de obra (APC). O sistema já considera o cenário real planejado para o dia.")
+    col_titulo, col_reset = st.columns([4, 1])
+    with col_titulo:
+        st.title("📈 Simulador What-If | Estresse de Malha")
+        st.markdown("Adicione novas cargas em múltiplos dias e veja o impacto cumulativo na semana inteira. O sistema **salva as suas adições** enquanto você navega pelas datas!")
     
+    # --- INICIALIZA A MEMÓRIA PERSISTENTE DO ROBO ---
+    if 'simulador_cargas' not in st.session_state:
+        st.session_state['simulador_cargas'] = {}
+
+    with col_reset:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("🗑️ Limpar Simulação", use_container_width=True):
+            st.session_state['simulador_cargas'] = {} # Apaga a memória
+            st.rerun()
+
     # 1. Prepara a Base Real
     df_base_periodo = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
     
@@ -843,7 +855,6 @@ elif pagina == "📈 Simulador What-If":
         st.markdown("### 🎛️ Filtro de Cenário Base")
         canais_disponiveis = df_base_periodo['Canal'].unique().tolist()
         
-        # Filtro mágico que o usuário pediu!
         canais_selecionados = st.multiselect(
             "Selecione quais canais você quer manter no cálculo ANTES de simular o estresse:", 
             options=canais_disponiveis, 
@@ -852,7 +863,7 @@ elif pagina == "📈 Simulador What-If":
         
         df_filtrado_sim = df_base_periodo[df_base_periodo['Canal'].isin(canais_selecionados)]
         
-        # Pega as datas originais para não sumir o gráfico se você tirar todos os filtros
+        # Base de datas para não sumir o gráfico se tirar os filtros
         df_apc_base = df_base_periodo[['Data']].drop_duplicates()
         
         if not df_filtrado_sim.empty:
@@ -862,10 +873,10 @@ elif pagina == "📈 Simulador What-If":
             df_apc_base['Tempo_APC_Minutos'] = 0
             df_apc_base['Agenda_Texto'] = 0
             
-        # Adiciona a Transferência Fixa (Premissa do modelo atual)
+        # Adiciona a Transferência Fixa
         df_apc_base['Min_Transf_Fixa'] = df_apc_base['Data'].apply(lambda x: 1200 if x.weekday() < 5 else 0)
-        df_apc_base['Minutos_Atuais'] = df_apc_base['Tempo_APC_Minutos'] + df_apc_base['Min_Transf_Fixa']
-        df_apc_base['Equipes_Atuais'] = df_apc_base['Minutos_Atuais'].apply(lambda x: math.ceil(x / 427))
+        df_apc_base['Minutos_Originais'] = df_apc_base['Tempo_APC_Minutos'] + df_apc_base['Min_Transf_Fixa']
+        df_apc_base['Equipes_Originais'] = df_apc_base['Minutos_Originais'].apply(lambda x: math.ceil(x / 427))
         df_apc_base['Data_Str'] = df_apc_base['Data'].dt.strftime('%d/%m/%Y')
         
         st.markdown("---")
@@ -874,64 +885,81 @@ elif pagina == "📈 Simulador What-If":
         col_painel, col_resumo = st.columns([2, 1])
         
         with col_painel:
-            st.markdown("### 🧪 Painel de Injeção de Cargas")
-            dia_alvo = st.selectbox("Selecione o Dia para estressar:", df_apc_base['Data_Str'].tolist())
+            st.markdown("### 🧪 Injetar Cargas por Dia")
+            dia_alvo = st.selectbox("Selecione o Dia para adicionar as cargas:", df_apc_base['Data_Str'].tolist())
             
-            c_input1, c_input2, c_input3 = st.columns(3)
-            with c_input1:
-                add_madeira = st.number_input("🪵 Madeira (+427 min)", 0, 20, 0, help="Carros com mais de 10 peças de madeira")
-                add_eletro = st.number_input("📺 Eletro Pesado (+95 min)", 0, 20, 0)
-            with c_input2:
-                add_pneu = st.number_input("🛞 Pneus (+240 min)", 0, 20, 0)
-                add_mercado = st.number_input("🛒 Mercado (+150 min)", 0, 20, 0)
-            with c_input3:
-                add_cofre = st.number_input("🔒 Cofre / Imagem (+90 min)", 0, 20, 0)
-                add_div = st.number_input("📦 Diversos / Full (+60 min)", 0, 50, 0)
+            # Resgata os números que o usuário já tinha salvo para este dia
+            if dia_alvo not in st.session_state['simulador_cargas']:
+                st.session_state['simulador_cargas'][dia_alvo] = {'mad': 0, 'ele': 0, 'pne': 0, 'mer': 0, 'cof': 0, 'div': 0}
+            
+            sim_dia = st.session_state['simulador_cargas'][dia_alvo]
+            
+            c_in1, c_in2, c_in3 = st.columns(3)
+            with c_in1:
+                val_mad = st.number_input("🪵 Madeira (+427m)", 0, 50, sim_dia['mad'])
+                val_ele = st.number_input("📺 Eletro (+95m)", 0, 50, sim_dia['ele'])
+            with c_in2:
+                val_pne = st.number_input("🛞 Pneus (+240m)", 0, 50, sim_dia['pne'])
+                val_mer = st.number_input("🛒 Mercado (+150m)", 0, 50, sim_dia['mer'])
+            with c_in3:
+                val_cof = st.number_input("🔒 Cofre/Img (+90m)", 0, 50, sim_dia['cof'])
+                val_div = st.number_input("📦 Div/Full (+60m)", 0, 100, sim_dia['div'])
                 
-        # 3. Lógica de Simulação
-        minutos_injetados = (add_madeira * 427) + (add_pneu * 240) + (add_mercado * 150) + (add_eletro * 95) + (add_cofre * 90) + (add_div * 60)
-        veiculos_injetados = add_madeira + add_pneu + add_mercado + add_eletro + add_cofre + add_div
-        
-        dados_dia = df_apc_base[df_apc_base['Data_Str'] == dia_alvo].iloc[0]
-        minutos_simulados = dados_dia['Minutos_Atuais'] + minutos_injetados
-        equipes_simuladas = math.ceil(minutos_simulados / 427)
-        delta_equipes = equipes_simuladas - dados_dia['Equipes_Atuais']
-        
-        # Atualiza a base para o Gráfico
+            # Salva imediatamente de volta na memória
+            st.session_state['simulador_cargas'][dia_alvo] = {
+                'mad': val_mad, 'ele': val_ele, 'pne': val_pne, 'mer': val_mer, 'cof': val_cof, 'div': val_div
+            }
+
+        # 3. Lógica de Simulação Cumulativa (A MÁGICA ACONTECE AQUI)
         df_apc_simulado = df_apc_base.copy()
-        df_apc_simulado.loc[df_apc_simulado['Data_Str'] == dia_alvo, 'Minutos_Atuais'] = minutos_simulados
-        df_apc_simulado.loc[df_apc_simulado['Data_Str'] == dia_alvo, 'Equipes_Atuais'] = equipes_simuladas
-        df_apc_simulado['Cenario'] = df_apc_simulado['Data_Str'].apply(lambda x: 'Simulado' if x == dia_alvo else 'Real Base')
+        df_apc_simulado['Minutos_Simulados'] = df_apc_simulado['Minutos_Originais']
+        df_apc_simulado['Cenario'] = 'Real Base'
         
-        # 4. Resultado da Simulação
+        # O robô varre a memória e injeta os carros em TODOS os dias que você mexeu
+        for d_str, injecoes in st.session_state['simulador_cargas'].items():
+            min_add = (injecoes['mad'] * 427) + (injecoes['ele'] * 95) + (injecoes['pne'] * 240) + (injecoes['mer'] * 150) + (injecoes['cof'] * 90) + (injecoes['div'] * 60)
+            if min_add > 0:
+                idx = df_apc_simulado['Data_Str'] == d_str
+                df_apc_simulado.loc[idx, 'Minutos_Simulados'] += min_add
+                df_apc_simulado.loc[idx, 'Cenario'] = 'Simulado'
+                
+        # Recalcula a quantidade de equipes finais para cada dia
+        df_apc_simulado['Equipes_Simuladas'] = df_apc_simulado['Minutos_Simulados'].apply(lambda x: math.ceil(x / 427))
+        
+        # 4. Resultado Específico do Dia Selecionado na Tela
         with col_resumo:
             st.markdown(f"### 🎯 Impacto no dia {dia_alvo}")
-            if minutos_injetados == 0:
-                st.info("Nenhuma carga extra injetada. O cenário reflete a base atual com os filtros selecionados.")
+            linha_alvo = df_apc_simulado[df_apc_simulado['Data_Str'] == dia_alvo].iloc[0]
+            
+            min_injetados_hoje = linha_alvo['Minutos_Simulados'] - linha_alvo['Minutos_Originais']
+            eq_originais = linha_alvo['Equipes_Originais']
+            eq_simuladas = linha_alvo['Equipes_Simuladas']
+            delta_eq = eq_simuladas - eq_originais
+            
+            if min_injetados_hoje == 0:
+                st.info("Nenhuma carga extra salva para este dia. Reflete a base atual.")
             else:
-                cor_alerta = "#E74C3C" if delta_equipes > 0 else "#2ECC71"
-                txt_alerta = f"🚨 Requer +{delta_equipes} Equipe(s) extra" if delta_equipes > 0 else "✅ Absorvido pela ociosidade"
+                cor_alerta = "#E74C3C" if delta_eq > 0 else "#2ECC71"
+                txt_alerta = f"🚨 Requer +{int(delta_eq)} Equipe(s) extra" if delta_eq > 0 else "✅ Absorvido pela ociosidade"
                 
-                exibir_kpi("Novo Headcount Necessário", equipes_simuladas, txt_alerta, cor_alerta)
-                exibir_kpi("Carga Horária Total", f"{minutos_simulados:,.0f} min", f"+{minutos_injetados} min adicionados", "#F39C12")
+                exibir_kpi("Novo Headcount Necessário", int(eq_simuladas), txt_alerta, cor_alerta)
+                exibir_kpi("Carga Horária Total", f"{linha_alvo['Minutos_Simulados']:,.0f} min", f"+{min_injetados_hoje} min adicionados", "#F39C12")
 
         st.markdown("---")
-        st.markdown("### 📈 Projeção da Semana (Base vs Simulado)")
+        st.markdown("### 📈 Projeção da Semana (Com todos os dias simulados)")
         
-        # Gráfico dinâmico
+        # Gráfico mostra a semana toda com as barras vermelhas onde houve injeção
         fig_sim = px.bar(
             df_apc_simulado.sort_values(by='Data'), 
             x='Data', 
-            y='Equipes_Atuais', 
-            text='Equipes_Atuais', 
+            y='Equipes_Simuladas', 
+            text='Equipes_Simuladas', 
             color='Cenario',
             color_discrete_map={'Real Base': '#3498DB', 'Simulado': '#E74C3C'},
-            title="Quantidade equipes necessárias"
+            title="Evolução de Mão de Obra Necessária"
         )
         fig_sim.update_traces(textposition='outside')
         fig_sim.update_layout(xaxis=dict(tickformat="%d/%m/%Y"))
-        
-        # Aplica o estilo premium
         fig_sim = aplicar_estilo_premium(fig_sim)
         
         col_graf_esq, col_graf_dir = st.columns([5, 1])
