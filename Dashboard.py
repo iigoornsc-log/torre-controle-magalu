@@ -245,12 +245,13 @@ def carregar_dados():
             def calcular_minutos(row):
                 try:
                     canal = row.get('Canal', '')
+                    # Pegamos o nome do fornecedor original e arrancamos os espaços para o match não falhar!
                     forn_original = str(row.get('Fornecedor', '')).strip().upper()
+                    forn_limpo = forn_original.replace(" ", "") 
                     categorias = str(row.get('Categorias', '')).upper()
                     
                     def calcular_pela_categoria():
                         maior_tempo = 0 
-                        # Agora ele divide e verifica a categoria padrão, não a linha raw
                         for cat in categorias.split(','):
                             t = 90 
                             cat = cat.strip()
@@ -275,12 +276,28 @@ def carregar_dados():
 
                     if canal == 'Fulfillment':
                         for chave_forn, tempo in apc_full_dict.items():
-                            if chave_forn in forn_original:
+                            chave_forn_str = str(chave_forn).strip()
+                            
+                            # Pula linhas em branco da APC_FULL que poderiam quebrar o cálculo
+                            if chave_forn_str == '': continue 
+                            
+                            chave_limpa = chave_forn_str.upper().replace(" ", "")
+                            
+                            # Match perfeito: Sem depender de espaços!
+                            if chave_limpa in forn_limpo:
+                                if pd.isna(tempo) or tempo <= 0:
+                                    break # Se tiver na APC_FULL mas estiver zerado, vai pro plano B
+                                
+                                # Nova regra de segurança: Se o tempo for absurdo (>300), calcula pela Categoria em vez de jogar 60
                                 if tempo > 300: 
-                                    return 60.0
+                                    return calcular_pela_categoria() 
+                                    
                                 return float(tempo)
+                                
+                        # Se ele varreu a APC_FULL inteira e não achou, aciona o plano B (Calcula pela Linha/Categoria)
                         return calcular_pela_categoria()
                     else:
+                        # 1P Fornecedor sempre calcula pela categoria
                         return calcular_pela_categoria()
                 except:
                     return 60.0
