@@ -926,7 +926,7 @@ elif pagina == "📈 Simulador What-If":
             text='Equipes_Atuais', 
             color='Cenario',
             color_discrete_map={'Real Base': '#3498DB', 'Simulado': '#E74C3C'},
-            title="Evolução de Mão de Obra Necessária"
+            title="Quantidade equipes necessárias"
         )
         fig_sim.update_traces(textposition='outside')
         fig_sim.update_layout(xaxis=dict(tickformat="%d/%m/%Y"))
