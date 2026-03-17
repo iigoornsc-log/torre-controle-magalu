@@ -1008,8 +1008,12 @@ elif pagina == "👷 Simulador Mão de Obra":
             with col_s2: exibir_kpi("Demanda Exigida no Dia", f"{int(minutos_totais)} min", f"Capacidade Real: {capacidade_total_cd} min", "#9B59B6")
             
             saldo = minutos_totais - capacidade_total_cd
-            if saldo > 0: with col_s3: exibir_kpi("Déficit Inevitável", f"+{int(saldo)} min", "Tempo faltante", "#E74C3C")
-            else: with col_s3: exibir_kpi("Déficit Inevitável", "0 min", "Operação dentro do limite", "#2ECC71")
+            if saldo > 0: 
+                with col_s3: 
+                    exibir_kpi("Déficit Inevitável", f"+{int(saldo)} min", "Tempo faltante", "#E74C3C")
+            else: 
+                with col_s3: 
+                    exibir_kpi("Déficit Inevitável", "0 min", "Operação dentro do limite", "#2ECC71")
 
             fig_mochila = px.bar(
                 df_mochila, x='Equipe', y='Minutos', color='Tipo Carga', text='Detalhe', title=f"Balanceamento Dinâmico de Cargas - Dia {dia_simulacao}",
