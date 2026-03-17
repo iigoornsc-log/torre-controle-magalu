@@ -16,7 +16,6 @@ st.markdown("""
     h1, h2, h3 { color: #2C3E50 !important; font-weight: 800; letter-spacing: -0.5px; }
     hr { border-top: 2px solid #EAEDED; border-radius: 2px; }
     
-    /* Tabelas com borda arredondada e sombra */
     [data-testid="stDataFrame"] { 
         border: none !important; 
         border-radius: 12px !important; 
@@ -24,7 +23,6 @@ st.markdown("""
         overflow: hidden !important; 
     }
     
-    /* EFEITO RELEVO NOS GRÁFICOS (NOVO) */
     [data-testid="stPlotlyChart"] {
         background-color: #FFFFFF;
         border-radius: 16px;
@@ -51,28 +49,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÃO DE ESTILIZAÇÃO DE GRÁFICOS (NOVO) ---
+# --- FUNÇÃO DE ESTILIZAÇÃO DE GRÁFICOS ---
 def aplicar_estilo_premium(fig):
-    """Aplica bordas brancas, transparência e grid clean para visual de relevo/3D."""
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(family="Segoe UI, Roboto, sans-serif", color='#2C3E50'),
         hovermode="x unified",
-        hoverlabel=dict(
-            bgcolor="rgba(255, 255, 255, 0.95)",
-            font_size=13,
-            font_family="Segoe UI",
-            bordercolor="#EAEDED"
-        ),
+        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.95)", font_size=13, font_family="Segoe UI", bordercolor="#EAEDED"),
         margin=dict(t=40, b=20, l=20, r=20)
     )
-    # Borda branca grossa e opacidade dão o efeito de peças separadas (Modern UI)
-    fig.update_traces(
-        marker=dict(line=dict(width=2, color='#FFFFFF')),
-        opacity=0.88
-    )
-    # Grid sutil apenas no eixo Y para não poluir
+    fig.update_traces(marker=dict(line=dict(width=2, color='#FFFFFF')), opacity=0.88)
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F0F3F4', griddash='dot')
     fig.update_xaxes(showgrid=False)
     return fig
@@ -177,37 +164,27 @@ def carregar_dados():
             else: df_raw['Qtd Peças'] = pd.to_numeric(df_raw['Qtd Peças'], errors='coerce').fillna(0)
             if 'É Ofensor?' not in df_raw.columns: df_raw['É Ofensor?'] = 'Não'
 
-            # --- NOVO: TRADUTOR UNIVERSAL DE LINHAS PARA APC ---
+            # --- TRADUTOR UNIVERSAL DE LINHAS PARA APC ---
             def categorizar_linha(linha_raw):
                 l = str(linha_raw).upper()
-                # Regras prioritárias (ex: Madeira Simples é estofado, não madeira)
                 if 'MADEIRA SIMPLES' in l or 'COLCH' in l or 'ESTOFADO' in l or 'FREEPASS' in l:
                     return 'COLCHAO/ESTOFADO'
                 if 'FRACIONADO' in l or 'MADEIRA' in l or 'MOVEIS ENCOMENDA' in l:
                     return 'MADEIRA'
                 if 'BELEZA' in l or 'BENS DE CONSUMO' in l or 'MERCADO' in l or 'ALIMENT' in l:
                     return 'MERCADO'
-                if 'COFRE' in l:
-                    return 'COFRE'
-                if 'ELETRO PESADO' in l or 'ELETRO' in l:
-                    return 'ELETRO PESADO'
-                if 'IMAGEM' in l:
-                    return 'IMAGEM'
-                if 'PNEU' in l:
-                    return 'PNEU'
-                if 'TRANSFERENCIA RUIM' in l:
-                    return 'TRANSFERENCIA RUIM'
-                if 'TRANSFERENCIA' in l:
-                    return 'TRANSFERENCIA'
-                return 'DIV PEQUENOS' # Default para UD/CM, Livros, Ferramentas, etc.
+                if 'COFRE' in l: return 'COFRE'
+                if 'ELETRO PESADO' in l or 'ELETRO' in l: return 'ELETRO PESADO'
+                if 'IMAGEM' in l: return 'IMAGEM'
+                if 'PNEU' in l: return 'PNEU'
+                if 'TRANSFERENCIA RUIM' in l: return 'TRANSFERENCIA RUIM'
+                if 'TRANSFERENCIA' in l: return 'TRANSFERENCIA'
+                return 'DIV PEQUENOS' 
 
-            # Aplica o tradutor
             df_raw['Categoria_Padrao'] = df_raw['Linhas'].apply(categorizar_linha)
 
-            # Agora conta as peças de madeira baseado na categoria traduzida!
             df_raw['Pecas_Madeira'] = df_raw.apply(
-                lambda r: r['Qtd Peças'] if r['Categoria_Padrao'] == 'MADEIRA' else 0, 
-                axis=1
+                lambda r: r['Qtd Peças'] if r['Categoria_Padrao'] == 'MADEIRA' else 0, axis=1
             )
 
             df_raw['Data'] = pd.to_datetime(df_raw['Data'], errors='coerce', dayfirst=True).dt.normalize()
@@ -247,11 +224,8 @@ def carregar_dados():
                     canal = row.get('Canal', '')
                     forn_original = str(row.get('Fornecedor', '')).strip().upper()
                     
-                    # ==========================================================
-                    # 🚀 REGRA EXPRESSA: KITS RÁPIDOS (CORTA-FILA)
-                    # ==========================================================
-                    if 'ARTELY' in forn_original or 'ARTANY' in forn_original:
-                        return 20.0
+                    # REGRA EXPRESSA
+                    if 'ARTELY' in forn_original or 'ARTANY' in forn_original: return 20.0
                     
                     forn_limpo = forn_original.replace(" ", "") 
                     categorias = str(row.get('Categorias', '')).upper()
@@ -261,12 +235,10 @@ def carregar_dados():
                         for cat in categorias.split(','):
                             t = 90 
                             cat = cat.strip()
-                            
                             if 'MADEIRA' in cat: 
                                 if row.get('Pecas_Madeira', 0) > 10:
                                     t = 110 if 'TUBRAX' in forn_original else 427
-                                else:
-                                    t = 90
+                                else: t = 90
                             elif 'PNEU' in cat: t = 240
                             elif 'TRANSFERENCIA RUIM' in cat: t = 40
                             elif 'TRANSFERENCIA' in cat: t = 240
@@ -275,35 +247,20 @@ def carregar_dados():
                             elif 'COFRE' in cat: t = 90
                             elif 'IMAGEM' in cat: t = 90
                             elif 'COLCHAO/ESTOFADO' in cat: t = 60
-                            
                             if t > maior_tempo: maior_tempo = t
-                        
                         return float(maior_tempo) if maior_tempo > 0 else 60.0
 
                     if canal == 'Fulfillment':
                         for chave_forn, tempo in apc_full_dict.items():
                             chave_forn_str = str(chave_forn).strip()
-                            
-                            # Pula linhas em branco da APC_FULL que poderiam quebrar o cálculo
                             if chave_forn_str == '': continue 
-                            
                             chave_limpa = chave_forn_str.upper().replace(" ", "")
-                            
-                            # Match perfeito: Sem depender de espaços!
                             if chave_limpa in forn_limpo:
-                                if pd.isna(tempo) or tempo <= 0:
-                                    break # Se tiver na APC_FULL mas estiver zerado, vai pro plano B
-                                
-                                # Nova regra de segurança: Se o tempo for absurdo (>300), calcula pela Categoria em vez de jogar 60
-                                if tempo > 300: 
-                                    return calcular_pela_categoria() 
-                                    
+                                if pd.isna(tempo) or tempo <= 0: break
+                                if tempo > 300: return calcular_pela_categoria() 
                                 return float(tempo)
-                                
-                        # Se ele varreu a APC_FULL inteira e não achou, aciona o plano B (Calcula pela Linha/Categoria)
                         return calcular_pela_categoria()
                     else:
-                        # 1P Fornecedor sempre calcula pela categoria
                         return calcular_pela_categoria()
                 except:
                     return 60.0
@@ -361,7 +318,7 @@ def carregar_dados():
             df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.split('.').str[0].str.strip()
 
         # ==============================================================================
-        # 3. ABA PLANEJAMENTO
+        # 3. ABA PLANEJAMENTO (LEGO)
         # ==============================================================================
         try:
             ws_plan = planilha_principal.worksheet("PLANEJAMENTO")
@@ -371,10 +328,23 @@ def carregar_dados():
                 df_plan = df_plan.loc[:, ~df_plan.columns.duplicated()]
                 df_plan = df_plan.loc[:, df_plan.columns != '']
                 df_plan.columns = df_plan.columns.str.strip().str.lower()
-                if 'data' in df_plan.columns: df_plan['data'] = pd.to_datetime(df_plan['data'], format='%d/%m/%Y', errors='coerce').dt.normalize()
-                if 'quantidade_planejado' in df_plan.columns: df_plan['quantidade_planejado'] = pd.to_numeric(df_plan['quantidade_planejado'], errors='coerce').fillna(0)
-                if 'quantidade_real' in df_plan.columns: df_plan['quantidade_real'] = pd.to_numeric(df_plan['quantidade_real'], errors='coerce').fillna(0)
+                
+                if 'data' in df_plan.columns: 
+                    df_plan['data'] = pd.to_datetime(df_plan['data'], format='%d/%m/%Y', errors='coerce').dt.normalize()
+                if 'quantidade_planejado' in df_plan.columns: 
+                    df_plan['quantidade_planejado'] = pd.to_numeric(df_plan['quantidade_planejado'], errors='coerce').fillna(0)
+                if 'quantidade_real' in df_plan.columns: 
+                    df_plan['quantidade_real'] = pd.to_numeric(df_plan['quantidade_real'], errors='coerce').fillna(0)
+                
                 if 'categoria' in df_plan.columns:
+                    # 1. Salva a original consertando erros de acentuação do arquivo
+                    def limpar_caracteres_originais(cat):
+                        c = str(cat).upper().strip()
+                        return c.replace('Ã‡ÃƒO', 'ÇÃO').replace('ÃƒO', 'ÃO').replace('Ã\x8D', 'Í')
+                    
+                    df_plan['categoria_original'] = df_plan['categoria'].apply(limpar_caracteres_originais)
+                    
+                    # 2. Traduz a categoria para o painel gerencial de S&OP
                     def traduzir_categoria(cat):
                         c = str(cat).upper().strip()
                         if 'MADEIRA SIMPLES' in c: return 'COLCHÕES/ESTOFADOS'
@@ -433,7 +403,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador Cenário", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador What-If", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
 st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
@@ -544,10 +514,11 @@ if pagina == "🏠 Painel Operacional":
         
         col_1p_1, col_1p_2 = st.columns([2, 1])
         with col_1p_1:
-            fig_1p = px.bar(df_limite_1p, x='Data', y='Agendas_Validas', text='Agendas_Validas', color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, labels={'Agendas_Validas': 'Agendas', 'Estourou_Limite': 'Acima do Limite?'}, title="Veiculos agendados (1P)")
+            fig_1p = px.bar(df_limite_1p, x='Data', y='Agendas_Validas', text='Agendas_Validas', color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, labels={'Agendas_Validas': 'Agendas', 'Estourou_Limite': 'Acima do Limite?'}, title="Consumo da Capacidade Diária (Realizado 1P)")
             fig_1p.add_hline(y=limite_agendas_1p, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text=f"Capacidade: {limite_agendas_1p}")
             fig_1p.update_traces(textposition='outside')
-            fig_1p = aplicar_estilo_premium(fig_1p) # <- ESTILO APLICADO AQUI
+            fig_1p.update_layout(xaxis=dict(tickformat="%d/%m/%Y"), showlegend=False)
+            fig_1p = aplicar_estilo_premium(fig_1p)
             st.plotly_chart(fig_1p, use_container_width=True)
             
             if not df_excecoes.empty and 'Data da Vaga' in df_excecoes.columns:
@@ -570,18 +541,15 @@ if pagina == "🏠 Painel Operacional":
     # NOVA VISÃO: PLANEJAMENTO LEGO LADO A LADO COM 1P
     # ====================================================================
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("🧩 Planejamento Lego: Vagas Liberadas Lego")
+    st.markdown("### 🧱 Planejamento Lego: Vagas Liberadas pelo Comercial")
     
     if not df_plan.empty:
-        # Filtra a base do Lego pelas mesmas datas do filtro lateral
         df_plan_1p = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy()
         
         if not df_plan_1p.empty:
-            # Aplica a mesma regra de isenção (Cofres não gastam doca)
             df_plan_1p['Vagas_Validas'] = df_plan_1p.apply(lambda x: x['quantidade_planejado'] if 'COFRE' not in str(x['categoria']).upper() else 0, axis=1)
             df_plan_1p['Vagas_Isentas'] = df_plan_1p.apply(lambda x: x['quantidade_planejado'] if 'COFRE' in str(x['categoria']).upper() else 0, axis=1)
             
-            # Agrupa os volumes por dia
             df_limite_lego = df_plan_1p.groupby('data').agg(
                 Total_Planejado=('quantidade_planejado', 'sum'),
                 Vagas_Validas=('Vagas_Validas', 'sum'),
@@ -596,7 +564,7 @@ if pagina == "🏠 Painel Operacional":
                     df_limite_lego, x='data', y='Vagas_Validas', text='Vagas_Validas', 
                     color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, 
                     labels={'Vagas_Validas': 'Vagas Liberadas', 'Estourou_Limite': 'Acima do Limite?'}, 
-                    title="Vagas Planejadas no Lego (1P)"
+                    title="Vagas Planejadas no Lego (Previsão 1P)"
                 )
                 fig_lego.add_hline(y=limite_agendas_1p, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text=f"Capacidade: {limite_agendas_1p}")
                 fig_lego.update_traces(textposition='outside')
@@ -606,9 +574,9 @@ if pagina == "🏠 Painel Operacional":
                 
             with col_lg2:
                 st.subheader("Balanço Lego (Planejado)")
-                exibir_kpi("Dias Estourados (Lego)", df_limite_lego['Estourou_Limite'].sum(), "Dias acima do plano", "#E74C3C")
+                exibir_kpi("Dias Estourados", df_limite_lego['Estourou_Limite'].sum(), "Dias acima do plano", "#E74C3C")
                 exibir_kpi("Volume Planejado", df_limite_lego['Total_Planejado'].sum(), "Total vagas liberadas", "#3498DB")
-                exibir_kpi("Isentos (Cofres)", df_limite_lego['Vagas_Isentas'].sum(), "Não entra na capacidade Carros", "#95A5A6")
+                exibir_kpi("Isentos (Cofres)", df_limite_lego['Vagas_Isentas'].sum(), "Não consumem doca padrão", "#95A5A6")
         else:
             st.info("Nenhuma vaga liberada no Lego para o período filtrado.")
     else:
@@ -638,7 +606,7 @@ if pagina == "🏠 Painel Operacional":
         fig_equipes = px.bar(df_apc, x='Data', y='Equipes Necessárias', text='Equipes Necessárias', color_discrete_sequence=['#3498DB'], title="Necessidade Diária de Mão de Obra")
         fig_equipes.add_hline(y=capacidade_diaria, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text=f"Headcount Fixo ({capacidade_diaria})")
         fig_equipes.update_traces(textposition='outside')
-        fig_equipes = aplicar_estilo_premium(fig_equipes) # <- ESTILO APLICADO AQUI
+        fig_equipes = aplicar_estilo_premium(fig_equipes)
         st.plotly_chart(fig_equipes, use_container_width=True)
 
     st.markdown("---")
@@ -663,7 +631,7 @@ if pagina == "🏠 Painel Operacional":
         with col_chart:
             fig_canais = px.pie(df_dia_critico.groupby('Canal')['Tempo_APC_Minutos'].sum().reset_index(), values='Tempo_APC_Minutos', names='Canal', hole=0.5, color_discrete_map={'Fulfillment': '#3498DB', '1P Fornecedor': '#F39C12'}, title="Distribuição por Canal")
             fig_canais.update_traces(textposition='inside', textinfo='percent+label')
-            fig_canais = aplicar_estilo_premium(fig_canais) # <- ESTILO APLICADO AQUI
+            fig_canais = aplicar_estilo_premium(fig_canais)
             fig_canais.update_layout(showlegend=False)
             st.plotly_chart(fig_canais, use_container_width=True)
             
@@ -768,14 +736,14 @@ elif pagina == "📅 Previsão de Agendas":
     with col_g1:
         fig_v = px.pie(df_macro, values='Veiculos', names='Canal', title='Distribuição de Doca (Veículos)', hole=0.5, color='Canal', color_discrete_map=cores_canais)
         fig_v.update_traces(textposition='inside', textinfo='percent+label')
-        fig_v = aplicar_estilo_premium(fig_v) # <- ESTILO APLICADO AQUI
+        fig_v = aplicar_estilo_premium(fig_v)
         fig_v.update_layout(showlegend=False)
         st.plotly_chart(fig_v, use_container_width=True)
 
     with col_g2:
         fig_p = px.pie(df_macro, values='Pecas', names='Canal', title='Composição de Volume Físico (Peças)', hole=0.5, color='Canal', color_discrete_map=cores_canais)
         fig_p.update_traces(textposition='inside', textinfo='percent+label')
-        fig_p = aplicar_estilo_premium(fig_p) # <- ESTILO APLICADO AQUI
+        fig_p = aplicar_estilo_premium(fig_p)
         fig_p.update_layout(showlegend=False)
         st.plotly_chart(fig_p, use_container_width=True)
 
@@ -796,7 +764,7 @@ elif pagina == "📅 Previsão de Agendas":
             st.markdown(f"**Top Categorias ({nome_canal})**")
             fig_bar = px.bar(df_linha, x='Peças', y='Linhas', orientation='h', text='Peças', color_discrete_sequence=[cor_hex])
             fig_bar.update_traces(textposition='outside')
-            fig_bar = aplicar_estilo_premium(fig_bar) # <- ESTILO APLICADO AQUI
+            fig_bar = aplicar_estilo_premium(fig_bar)
             fig_bar.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(t=0, b=0, l=0, r=0), xaxis_title="", yaxis_title="")
             st.plotly_chart(fig_bar, use_container_width=True)
         
@@ -813,24 +781,19 @@ elif pagina == "📅 Previsão de Agendas":
                 }
             )
 
-    with tab_1p:
-        renderizar_detalhe(df_1p_prev, '#0086FF', '1P')
-
-    with tab_full:
-        renderizar_detalhe(df_full_prev, '#F39C12', 'Fulfillment')
-
+    with tab_1p: renderizar_detalhe(df_1p_prev, '#0086FF', '1P')
+    with tab_full: renderizar_detalhe(df_full_prev, '#F39C12', 'Fulfillment')
     with tab_transf:
         if df_transf_prev.empty or 'ID_CARGA_PCP' not in df_transf_prev.columns:
             st.info("Nenhuma Transferência prevista para esta data.")
         else:
             c_t1, c_t2 = st.columns([1, 2])
-            
             df_modal = df_transf_prev.groupby('MODAL2').agg(Peças=('QTDE', 'sum')).reset_index().sort_values(by='Peças', ascending=False)
             with c_t1:
                 st.markdown("**Volume por Modalidade**")
                 fig_t = px.bar(df_modal, x='Peças', y='MODAL2', orientation='h', text='Peças', color_discrete_sequence=['#9B59B6'])
                 fig_t.update_traces(textposition='outside')
-                fig_t = aplicar_estilo_premium(fig_t) # <- ESTILO APLICADO AQUI
+                fig_t = aplicar_estilo_premium(fig_t)
                 fig_t.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(t=0, b=0, l=0, r=0), xaxis_title="", yaxis_title="")
                 st.plotly_chart(fig_t, use_container_width=True)
             
@@ -852,41 +815,32 @@ elif pagina == "📅 Previsão de Agendas":
                 )
 
 # ==============================================================================
-# NOVA PÁGINA: Simulador Cenário (ESTRESSE DE MALHA CONTÍNUO)
+# PÁGINA 2.5: SIMULADOR WHAT-IF
 # ==============================================================================
-elif pagina == "📈 Simulador Cenário":
+elif pagina == "📈 Simulador What-If":
     col_titulo, col_reset = st.columns([4, 1])
     with col_titulo:
-        st.title("📈 Simulador Cenário ")
+        st.title("📈 Simulador What-If | Estresse de Malha")
         st.markdown("Adicione novas cargas em múltiplos dias e veja o impacto cumulativo na semana inteira. O sistema **salva as suas adições** enquanto você navega pelas datas!")
     
-    # --- INICIALIZA A MEMÓRIA PERSISTENTE DO ROBO ---
     if 'simulador_cargas' not in st.session_state:
         st.session_state['simulador_cargas'] = {}
 
     with col_reset:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🗑️ Limpar Simulação", use_container_width=True):
-            st.session_state['simulador_cargas'] = {} # Apaga a memória
+            st.session_state['simulador_cargas'] = {}
             st.rerun()
 
-    # 1. Prepara a Base Real
     df_base_periodo = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
     
     if not df_base_periodo.empty:
         st.markdown("---")
         st.markdown("### 🎛️ Filtro de Cenário Base")
         canais_disponiveis = df_base_periodo['Canal'].unique().tolist()
-        
-        canais_selecionados = st.multiselect(
-            "Selecione quais canais você quer manter no cálculo ANTES de simular o estresse:", 
-            options=canais_disponiveis, 
-            default=canais_disponiveis
-        )
+        canais_selecionados = st.multiselect("Selecione quais canais você quer manter no cálculo ANTES de simular o estresse:", options=canais_disponiveis, default=canais_disponiveis)
         
         df_filtrado_sim = df_base_periodo[df_base_periodo['Canal'].isin(canais_selecionados)]
-        
-        # Base de datas para não sumir o gráfico se tirar os filtros
         df_apc_base = df_base_periodo[['Data']].drop_duplicates()
         
         if not df_filtrado_sim.empty:
@@ -896,22 +850,18 @@ elif pagina == "📈 Simulador Cenário":
             df_apc_base['Tempo_APC_Minutos'] = 0
             df_apc_base['Agenda_Texto'] = 0
             
-        # Adiciona a Transferência Fixa
         df_apc_base['Min_Transf_Fixa'] = df_apc_base['Data'].apply(lambda x: 1200 if x.weekday() < 5 else 0)
         df_apc_base['Minutos_Originais'] = df_apc_base['Tempo_APC_Minutos'] + df_apc_base['Min_Transf_Fixa']
         df_apc_base['Equipes_Originais'] = df_apc_base['Minutos_Originais'].apply(lambda x: math.ceil(x / 427))
         df_apc_base['Data_Str'] = df_apc_base['Data'].dt.strftime('%d/%m/%Y')
         
         st.markdown("---")
-        
-        # 2. Painel de Injeção de Carga
         col_painel, col_resumo = st.columns([2, 1])
         
         with col_painel:
             st.markdown("### 🧪 Injetar Cargas por Dia")
             dia_alvo = st.selectbox("Selecione o Dia para adicionar as cargas:", df_apc_base['Data_Str'].tolist())
             
-            # Resgata os números que o usuário já tinha salvo para este dia
             if dia_alvo not in st.session_state['simulador_cargas']:
                 st.session_state['simulador_cargas'][dia_alvo] = {'mad': 0, 'ele': 0, 'pne': 0, 'mer': 0, 'cof': 0, 'div': 0}
             
@@ -928,17 +878,12 @@ elif pagina == "📈 Simulador Cenário":
                 val_cof = st.number_input("🔒 Cofre/Img (+90m)", 0, 50, sim_dia['cof'])
                 val_div = st.number_input("📦 Div/Full (+60m)", 0, 100, sim_dia['div'])
                 
-            # Salva imediatamente de volta na memória
-            st.session_state['simulador_cargas'][dia_alvo] = {
-                'mad': val_mad, 'ele': val_ele, 'pne': val_pne, 'mer': val_mer, 'cof': val_cof, 'div': val_div
-            }
+            st.session_state['simulador_cargas'][dia_alvo] = {'mad': val_mad, 'ele': val_ele, 'pne': val_pne, 'mer': val_mer, 'cof': val_cof, 'div': val_div}
 
-        # 3. Lógica de Simulação Cumulativa (A MÁGICA ACONTECE AQUI)
         df_apc_simulado = df_apc_base.copy()
         df_apc_simulado['Minutos_Simulados'] = df_apc_simulado['Minutos_Originais']
         df_apc_simulado['Cenario'] = 'Real Base'
         
-        # O robô varre a memória e injeta os carros em TODOS os dias que você mexeu
         for d_str, injecoes in st.session_state['simulador_cargas'].items():
             min_add = (injecoes['mad'] * 427) + (injecoes['ele'] * 95) + (injecoes['pne'] * 240) + (injecoes['mer'] * 150) + (injecoes['cof'] * 90) + (injecoes['div'] * 60)
             if min_add > 0:
@@ -946,10 +891,8 @@ elif pagina == "📈 Simulador Cenário":
                 df_apc_simulado.loc[idx, 'Minutos_Simulados'] += min_add
                 df_apc_simulado.loc[idx, 'Cenario'] = 'Simulado'
                 
-        # Recalcula a quantidade de equipes finais para cada dia
         df_apc_simulado['Equipes_Simuladas'] = df_apc_simulado['Minutos_Simulados'].apply(lambda x: math.ceil(x / 427))
         
-        # 4. Resultado Específico do Dia Selecionado na Tela
         with col_resumo:
             st.markdown(f"### 🎯 Impacto no dia {dia_alvo}")
             linha_alvo = df_apc_simulado[df_apc_simulado['Data_Str'] == dia_alvo].iloc[0]
@@ -964,33 +907,23 @@ elif pagina == "📈 Simulador Cenário":
             else:
                 cor_alerta = "#E74C3C" if delta_eq > 0 else "#2ECC71"
                 txt_alerta = f"🚨 Requer +{int(delta_eq)} Equipe(s) extra" if delta_eq > 0 else "✅ Absorvido pela ociosidade"
-                
                 exibir_kpi("Novo Headcount Necessário", int(eq_simuladas), txt_alerta, cor_alerta)
                 exibir_kpi("Carga Horária Total", f"{linha_alvo['Minutos_Simulados']:,.0f} min", f"+{min_injetados_hoje} min adicionados", "#F39C12")
 
         st.markdown("---")
         st.markdown("### 📈 Projeção da Semana (Com todos os dias simulados)")
         
-        # Gráfico mostra a semana toda com as barras vermelhas onde houve injeção
         fig_sim = px.bar(
-            df_apc_simulado.sort_values(by='Data'), 
-            x='Data', 
-            y='Equipes_Simuladas', 
-            text='Equipes_Simuladas', 
-            color='Cenario',
-            color_discrete_map={'Real Base': '#3498DB', 'Simulado': '#E74C3C'},
-            title="Evolução de Mão de Obra Necessária"
+            df_apc_simulado.sort_values(by='Data'), x='Data', y='Equipes_Simuladas', text='Equipes_Simuladas', 
+            color='Cenario', color_discrete_map={'Real Base': '#3498DB', 'Simulado': '#E74C3C'}, title="Evolução de Mão de Obra Necessária"
         )
         fig_sim.update_traces(textposition='outside')
         fig_sim.update_layout(xaxis=dict(tickformat="%d/%m/%Y"))
         fig_sim = aplicar_estilo_premium(fig_sim)
         
         col_graf_esq, col_graf_dir = st.columns([5, 1])
-        with col_graf_esq:
-            st.plotly_chart(fig_sim, use_container_width=True)
-            
-    else:
-        st.warning("Não há dados carregados para gerar a simulação no período selecionado.")
+        with col_graf_esq: st.plotly_chart(fig_sim, use_container_width=True)
+    else: st.warning("Não há dados carregados para gerar a simulação no período selecionado.")
 
 # ==============================================================================
 # PÁGINA 3: PROVA DE SOBRECARGA (COMERCIAL)
@@ -1014,29 +947,21 @@ elif pagina == "👷 Simulador Mão de Obra":
         df_simulacao = df[df['Data'].dt.strftime('%d/%m/%Y') == dia_simulacao].copy()
         
         tempo_equipes = {i: 0 for i in range(1, total_equipes + 1)}
-        
         def nomear_equipe(i):
             if i <= eq_transf: return f'Eq. {i} 👷 (Transf)'
             elif i <= eq_transf + eq_madeira: return f'Eq. {i} 👷 (Madeira)'
             else: return f'Eq. {i} 👷 Misto'
-            
         nomes_equipes = {i: nomear_equipe(i) for i in range(1, total_equipes + 1)}
         
         cargas_alocadas = []
         data_obj = pd.to_datetime(dia_simulacao, format='%d/%m/%Y')
-        
         eq_disponiveis_transf = list(range(1, eq_transf + 1)) if eq_transf > 0 else list(tempo_equipes.keys())
         
         if data_obj.weekday() < 5:
             for i in range(5):
                 eq_num = min(eq_disponiveis_transf, key=lambda k: tempo_equipes[k])
                 tempo_equipes[eq_num] += 240
-                cargas_alocadas.append({
-                    'Equipe': nomes_equipes[eq_num],
-                    'Tipo Carga': 'Transferência Fixa (240m)',
-                    'Minutos': 240,
-                    'Detalhe': f'Transf CD Origem {i+1}'
-                })
+                cargas_alocadas.append({'Equipe': nomes_equipes[eq_num], 'Tipo Carga': 'Transferência Fixa (240m)', 'Minutos': 240, 'Detalhe': f'Transf CD Origem {i+1}'})
         
         cargas_madeira_lista = []
         cargas_restante = []
@@ -1045,7 +970,6 @@ elif pagina == "👷 Simulador Mão de Obra":
             linhas = str(row['Linhas']).upper()
             forn = str(row['Fornecedor']).strip().title()
             tipo = 'Carga Fulfillment' if row['Canal'] == 'Fulfillment' else 'Carga 1P/Misto'
-            
             if 'MADEIRA' in linhas and row.get('Pecas_Madeira', 0) > 10:
                 cargas_madeira_lista.append((minutos, 'Carga Madeira', f'Madeira: {forn[:15]}'))
             else:
@@ -1061,22 +985,12 @@ elif pagina == "👷 Simulador Mão de Obra":
         for min_val, tipo, det in cargas_madeira_lista:
             eq_num = min(eq_disponiveis_madeira, key=lambda k: tempo_equipes[k])
             tempo_equipes[eq_num] += min_val
-            cargas_alocadas.append({
-                'Equipe': nomes_equipes[eq_num],
-                'Tipo Carga': tipo,
-                'Minutos': min_val,
-                'Detalhe': det
-            })
+            cargas_alocadas.append({'Equipe': nomes_equipes[eq_num], 'Tipo Carga': tipo, 'Minutos': min_val, 'Detalhe': det})
             
         for min_val, tipo, det in cargas_restante:
             eq_num = min(tempo_equipes.keys(), key=lambda k: tempo_equipes[k])
             tempo_equipes[eq_num] += min_val
-            cargas_alocadas.append({
-                'Equipe': nomes_equipes[eq_num],
-                'Tipo Carga': tipo,
-                'Minutos': min_val,
-                'Detalhe': det
-            })
+            cargas_alocadas.append({'Equipe': nomes_equipes[eq_num], 'Tipo Carga': tipo, 'Minutos': min_val, 'Detalhe': det})
             
         df_mochila = pd.DataFrame(cargas_alocadas)
         
@@ -1094,37 +1008,21 @@ elif pagina == "👷 Simulador Mão de Obra":
             with col_s2: exibir_kpi("Demanda Exigida no Dia", f"{int(minutos_totais)} min", f"Capacidade Real: {capacidade_total_cd} min", "#9B59B6")
             
             saldo = minutos_totais - capacidade_total_cd
-            if saldo > 0:
-                with col_s3: exibir_kpi("Déficit Inevitável", f"+{int(saldo)} min", "Tempo faltante", "#E74C3C")
-            else:
-                with col_s3: exibir_kpi("Déficit Inevitável", "0 min", "Operação dentro do limite", "#2ECC71")
+            if saldo > 0: with col_s3: exibir_kpi("Déficit Inevitável", f"+{int(saldo)} min", "Tempo faltante", "#E74C3C")
+            else: with col_s3: exibir_kpi("Déficit Inevitável", "0 min", "Operação dentro do limite", "#2ECC71")
 
             fig_mochila = px.bar(
-                df_mochila, x='Equipe', y='Minutos', color='Tipo Carga', text='Detalhe',
-                title=f"Balanceamento Dinâmico de Cargas - Dia {dia_simulacao}",
-                color_discrete_map={
-                    'Transferência Fixa (240m)': '#8E44AD', 'Carga Madeira': '#E67E22', 
-                    'Carga Fulfillment': '#3498DB', 'Carga 1P/Misto': '#2ECC71'
-                }
+                df_mochila, x='Equipe', y='Minutos', color='Tipo Carga', text='Detalhe', title=f"Balanceamento Dinâmico de Cargas - Dia {dia_simulacao}",
+                color_discrete_map={'Transferência Fixa (240m)': '#8E44AD', 'Carga Madeira': '#E67E22', 'Carga Fulfillment': '#3498DB', 'Carga 1P/Misto': '#2ECC71'}
             )
             
             fig_mochila.add_hline(y=427, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text="Capacidade Máxima do Turno (427 min)", annotation_position="top left", annotation_font_color="#E74C3C")
             fig_mochila.update_traces(textposition='inside', insidetextanchor='middle')
             fig_mochila = aplicar_estilo_premium(fig_mochila)
-            
-            # --- AJUSTE DE DIMENSÕES ---
-            fig_mochila.update_layout(
-                height=800,       # Mantém a altura que ficou excelente
-                bargap=0.15       # Espaço menor entre as barras (deixa elas mais gordinhas)
-            )
-            
-            # Tiramos as margens laterais! Agora ele vai ocupar 100% da tela e respirar melhor
+            fig_mochila.update_layout(height=800, bargap=0.15)
             st.plotly_chart(fig_mochila, use_container_width=True)
-            
-        else:
-            st.warning("Nenhuma carga encontrada para o dia selecionado.")
-    else:
-        st.warning("Não há dados carregados para gerar a simulação.")
+        else: st.warning("Nenhuma carga encontrada para o dia selecionado.")
+    else: st.warning("Não há dados carregados para gerar a simulação.")
 
 # ==============================================================================
 # PÁGINA 4: MATRIZ DE PLANEJAMENTO (S&OP COMERCIAL)
@@ -1138,7 +1036,8 @@ elif pagina == "🧩 Planejamento Lego":
         st.markdown("### 🎯 Planejamento Mensal do Comercial")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
         
-        categorias_existentes = sorted([c for c in df_plan['categoria'].unique() if pd.notna(c) and str(c).strip() != ''])
+        # Puxa categorias originais para preenchimento
+        categorias_existentes = sorted([c for c in df_plan['categoria_original'].unique() if pd.notna(c) and str(c).strip() != ''])
         df_base_categorias = pd.DataFrame({'CATEGORIA': categorias_existentes})
         
         try:
@@ -1185,8 +1084,8 @@ elif pagina == "🧩 Planejamento Lego":
                 except Exception as e:
                     st.error(f"🚨 Erro ao salvar na nuvem: {e}")
 
-        resumo_real = df_plan_filtrado.groupby('categoria')['quantidade_real'].sum().reset_index()
-        resumo_real.rename(columns={'categoria': 'CATEGORIA', 'quantidade_real': 'CARROS (Realizado)'}, inplace=True)
+        resumo_real = df_plan_filtrado.groupby('categoria_original')['quantidade_real'].sum().reset_index()
+        resumo_real.rename(columns={'categoria_original': 'CATEGORIA', 'quantidade_real': 'CARROS (Realizado)'}, inplace=True)
         
         df_executivo = pd.merge(df_metas_editadas, resumo_real, on='CATEGORIA', how='left').fillna(0)
         df_executivo['VAGAS (Saldo)'] = df_executivo['LEGO (Meta)'] - df_executivo['CARROS (Realizado)']
@@ -1209,7 +1108,7 @@ elif pagina == "🧩 Planejamento Lego":
         with col_e4: exibir_kpi("Categorias Estouradas", estouradas, "Acima da Meta", "#E74C3C")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("#### 🔍 Fechamento por Categoria")
+        st.markdown("#### 🔍 Fechamento por Categoria (Visão Original)")
         
         df_executivo_limpo = df_executivo[(df_executivo['LEGO (Meta)'] > 0) | (df_executivo['CARROS (Realizado)'] > 0)]
         
@@ -1229,12 +1128,14 @@ elif pagina == "🧩 Planejamento Lego":
         
         st.markdown("### 🧩 Distribução Planejado x Realizado (LEGO)")
         if not df_plan_filtrado.empty:
+            # ---> USA A CATEGORIA ORIGINAL E REMOVE LINHAS ZERADAS <---
             pivot = pd.pivot_table(
-                df_plan_filtrado, index='categoria', columns='data', 
+                df_plan_filtrado, index='categoria_original', columns='data', 
                 values=['quantidade_planejado', 'quantidade_real'], aggfunc='sum', fill_value=0
             )
             pivot = pivot.swaplevel(0, 1, axis=1).sort_index(axis=1, level=0)
             
+            # Filtro mágico que apaga linhas onde todos os dias estão zerados (planejado e realizado)
             pivot = pivot.loc[(pivot != 0).any(axis=1)]
 
             if not pivot.empty:
@@ -1398,12 +1299,12 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
                 evolucao = resumo_tabela.groupby('Data Produção')['Peças'].sum().reset_index()
                 fig_transf = px.bar(evolucao, x='Data Produção', y='Peças', text='Peças', title="Volume de Peças por Dia", color_discrete_sequence=['#9B59B6'])
                 fig_transf.update_traces(textposition='outside')
-                fig_transf = aplicar_estilo_premium(fig_transf) # <- ESTILO APLICADO AQUI
+                fig_transf = aplicar_estilo_premium(fig_transf)
                 st.plotly_chart(fig_transf, use_container_width=True)
             
             with graf_col2:
                 fig_modal = px.pie(resumo_tabela, values='Peças', names='Modalidade', title="Distribuição por Modal", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r)
-                fig_modal = aplicar_estilo_premium(fig_modal) # <- ESTILO APLICADO AQUI
+                fig_modal = aplicar_estilo_premium(fig_modal)
                 st.plotly_chart(fig_modal, use_container_width=True)
 
         else:
@@ -1467,11 +1368,3 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
-
-
-
-
-
-
-
-
