@@ -245,8 +245,14 @@ def carregar_dados():
             def calcular_minutos(row):
                 try:
                     canal = row.get('Canal', '')
-                    # Pegamos o nome do fornecedor original e arrancamos os espaços para o match não falhar!
                     forn_original = str(row.get('Fornecedor', '')).strip().upper()
+                    
+                    # ==========================================================
+                    # 🚀 REGRA EXPRESSA: KITS RÁPIDOS (CORTA-FILA)
+                    # ==========================================================
+                    if 'ARTELY' in forn_original or 'ARTANY' in forn_original:
+                        return 20.0
+                    
                     forn_limpo = forn_original.replace(" ", "") 
                     categorias = str(row.get('Categorias', '')).upper()
                     
