@@ -340,7 +340,15 @@ def carregar_dados():
                     # 1. Salva a original consertando erros de acentuação do arquivo
                     def limpar_caracteres_originais(cat):
                         c = str(cat).upper().strip()
-                        return c.replace('Ã‡ÃƒO', 'ÇÃO').replace('ÃƒO', 'ÃO').replace('Ã\x8D', 'Í')
+                        dict_correcao = {
+                            'AR E VENTILAÃ‡ÃƒO': 'AR E VENTILAÇÃO',
+                            'COLCHÃƒO/ ESTOFADOS': 'COLCHÃO/ ESTOFADOS',
+                            'COLCHÃƒO': 'COLCHÃO',
+                            'BENS DE CONSUMO - ALIMENTÃ\x8DCIOS': 'BENS DE CONSUMO - ALIMENTÍCIOS'
+                        }
+                        for errado, certo in dict_correcao.items():
+                            c = c.replace(errado, certo)
+                        return c.replace('Ã‡ÃƒO', 'ÇÃO').replace('ÃƒO', 'ÃO').replace('Ã\x8D', 'Í').replace('Ã‡', 'Ç').replace('Ãƒ', 'Ã')
                     
                     df_plan['categoria_original'] = df_plan['categoria'].apply(limpar_caracteres_originais)
                     
@@ -1040,7 +1048,7 @@ elif pagina == "🧩 Planejamento Lego":
         st.markdown("### 🎯 Planejamento Mensal do Comercial")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
         
-        # ---> 1. USA AS CATEGORIAS TRADUZIDAS PARA AS METAS E SALDO <---
+        # 1. USA AS CATEGORIAS TRADUZIDAS PARA AS METAS E SALDO
         categorias_existentes = sorted([c for c in df_plan['categoria'].unique() if pd.notna(c) and str(c).strip() != ''])
         df_base_categorias = pd.DataFrame({'CATEGORIA': categorias_existentes})
         
@@ -1088,7 +1096,7 @@ elif pagina == "🧩 Planejamento Lego":
                 except Exception as e:
                     st.error(f"🚨 Erro ao salvar na nuvem: {e}")
 
-        # ---> 2. AGRUPA PELAS CATEGORIAS TRADUZIDAS PARA BATER COM AS METAS <---
+        # 2. BALANÇO POR CATEGORIA TRADUZIDA
         resumo_real = df_plan_filtrado.groupby('categoria')['quantidade_real'].sum().reset_index()
         resumo_real.rename(columns={'categoria': 'CATEGORIA', 'quantidade_real': 'CARROS (Realizado)'}, inplace=True)
         
@@ -1106,14 +1114,13 @@ elif pagina == "🧩 Planejamento Lego":
         col_e1, col_e2, col_e3, col_e4 = st.columns(4)
         with col_e1: exibir_kpi("Meta (LEGO)", f"{meta_total:,.0f}".replace(',', '.'), "Plano do Mês", "#3498DB")
         with col_e2: exibir_kpi("Agendado", f"{realizado_total:,.0f}".replace(',', '.'), "Agendamentos Realizados", "#9B59B6")
-        
         cor_saldo = "#2ECC71" if saldo_total >= 0 else "#E74C3C"
         texto_saldo = "Vagas Livres" if saldo_total >= 0 else "Risco Global"
         with col_e3: exibir_kpi("Saldo de Vagas", f"{saldo_total:,.0f}".replace(',', '.'), texto_saldo, cor_saldo)
         with col_e4: exibir_kpi("Categorias Estouradas", estouradas, "Acima da Meta", "#E74C3C")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("#### 🔍 Fechamento por Categoria")
+        st.markdown("#### 🔍 Fechamento por Categoria (Metas Agrupadas)")
         
         df_executivo_limpo = df_executivo[(df_executivo['LEGO (Meta)'] > 0) | (df_executivo['CARROS (Realizado)'] > 0)]
         
@@ -1131,20 +1138,26 @@ elif pagina == "🧩 Planejamento Lego":
 
         st.markdown("---")
         
-        st.markdown("### 🧩 Distribução Planejado x Realizado (Linhas Originais)")
-        if not df_plan_filtrado.empty:
-            
-            # Limpeza emergencial extra de acentuação corrompida do Excel
-            df_plan_filtrado['categoria_original'] = df_plan_filtrado['categoria_original'].str.replace('Ã‡ÃƒO', 'ÇÃO').str.replace('ÃƒO', 'ÃO').str.replace('Ã\x8D', 'Í').str.replace('Ã‡', 'Ç').str.replace('Ãƒ', 'Ã')
+        # 3. MATRIZ DE ACOMPANHAMENTO DIÁRIO (ORIGINAL)
+        st.markdown("### 🧩 Distribuição Diária: Planejado x Realizado (Linhas Originais)")
+        
+        # Legenda do Heatmap de Cores
+        st.markdown("""
+        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <div style="padding: 6px 12px; background-color: #FADBD8; color: #C0392B; border-radius: 6px; font-weight: bold; font-size: 13px;">🔴 Esgotado / Estourado (0 vagas)</div>
+            <div style="padding: 6px 12px; background-color: #FDEBD0; color: #D35400; border-radius: 6px; font-weight: bold; font-size: 13px;">🟡 Atenção (Apenas 1 vaga)</div>
+            <div style="padding: 6px 12px; background-color: #D5F5E3; color: #27AE60; border-radius: 6px; font-weight: bold; font-size: 13px;">🟢 Livre (2+ vagas disponíveis)</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            # ---> 3. USA A CATEGORIA ORIGINAL PARA A MATRIZ <---
+        if not df_plan_filtrado.empty:
             pivot = pd.pivot_table(
                 df_plan_filtrado, index='categoria_original', columns='data', 
                 values=['quantidade_planejado', 'quantidade_real'], aggfunc='sum', fill_value=0
             )
             pivot = pivot.swaplevel(0, 1, axis=1).sort_index(axis=1, level=0)
             
-            # ---> 4. FILTRO MÁGICO: Remove linhas que estão com Planejado e Realizado zerados <---
+            # Remove linhas que não tem planejamento nem agendamento no período filtrado
             pivot = pivot.loc[(pivot != 0).any(axis=1)]
 
             if not pivot.empty:
@@ -1159,16 +1172,28 @@ elif pagina == "🧩 Planejamento Lego":
                     for coluna in df_pivot.columns:
                         data_str, tipo = coluna
                         for indice in df_pivot.index:
-                            valor = df_pivot.loc[indice, coluna]
+                            val_real = df_pivot.loc[indice, (data_str, 'REALIZADO')]
+                            val_plan = df_pivot.loc[indice, (data_str, 'PLANEJADO')]
+                            
                             css = ''
-                            if pd.isna(valor) or valor == 0:
+                            if pd.isna(val_real) and pd.isna(val_plan):
+                                css += 'color: rgba(0,0,0,0); background-color: rgba(0,0,0,0); ' 
+                            elif val_real == 0 and val_plan == 0:
                                 css += 'color: rgba(0,0,0,0); background-color: rgba(0,0,0,0); ' 
                             else:
-                                css += 'background-color: #FDEDEC; color: #C0392B; font-weight: bold; ' 
-                            if tipo == 'PLANEJADO':
-                                css += 'border-left: 2px solid #EAEDED; '
-                            elif tipo == 'REALIZADO':
-                                css += 'border-right: 2px solid #EAEDED; '
+                                if tipo == 'REALIZADO':
+                                    vagas = val_plan - val_real
+                                    # Lógica de Cores por Disponibilidade
+                                    if vagas <= 0:
+                                        css += 'background-color: #FADBD8; color: #C0392B; font-weight: bold; border-right: 2px solid #EAEDED;' 
+                                    elif vagas == 1:
+                                        css += 'background-color: #FDEBD0; color: #D35400; font-weight: bold; border-right: 2px solid #EAEDED;' 
+                                    else:
+                                        css += 'background-color: #D5F5E3; color: #27AE60; font-weight: bold; border-right: 2px solid #EAEDED;' 
+                                else:
+                                    # Planejado ganha uma cor neutra para não poluir a tela
+                                    css += 'background-color: #F8F9FA; color: #7F8C8D; font-weight: bold; border-left: 2px solid #EAEDED;'
+                                    
                             estilos.loc[indice, coluna] = css
                     return estilos
 
