@@ -1040,8 +1040,8 @@ elif pagina == "🧩 Planejamento Lego":
         st.markdown("### 🎯 Planejamento Mensal do Comercial")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
         
-        # Puxa categorias originais para preenchimento
-        categorias_existentes = sorted([c for c in df_plan['categoria_original'].unique() if pd.notna(c) and str(c).strip() != ''])
+        # ---> 1. USA AS CATEGORIAS TRADUZIDAS PARA AS METAS E SALDO <---
+        categorias_existentes = sorted([c for c in df_plan['categoria'].unique() if pd.notna(c) and str(c).strip() != ''])
         df_base_categorias = pd.DataFrame({'CATEGORIA': categorias_existentes})
         
         try:
@@ -1088,8 +1088,9 @@ elif pagina == "🧩 Planejamento Lego":
                 except Exception as e:
                     st.error(f"🚨 Erro ao salvar na nuvem: {e}")
 
-        resumo_real = df_plan_filtrado.groupby('categoria_original')['quantidade_real'].sum().reset_index()
-        resumo_real.rename(columns={'categoria_original': 'CATEGORIA', 'quantidade_real': 'CARROS (Realizado)'}, inplace=True)
+        # ---> 2. AGRUPA PELAS CATEGORIAS TRADUZIDAS PARA BATER COM AS METAS <---
+        resumo_real = df_plan_filtrado.groupby('categoria')['quantidade_real'].sum().reset_index()
+        resumo_real.rename(columns={'categoria': 'CATEGORIA', 'quantidade_real': 'CARROS (Realizado)'}, inplace=True)
         
         df_executivo = pd.merge(df_metas_editadas, resumo_real, on='CATEGORIA', how='left').fillna(0)
         df_executivo['VAGAS (Saldo)'] = df_executivo['LEGO (Meta)'] - df_executivo['CARROS (Realizado)']
@@ -1112,7 +1113,7 @@ elif pagina == "🧩 Planejamento Lego":
         with col_e4: exibir_kpi("Categorias Estouradas", estouradas, "Acima da Meta", "#E74C3C")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("#### 🔍 Fechamento por Categoria (Visão Original)")
+        st.markdown("#### 🔍 Fechamento por Categoria")
         
         df_executivo_limpo = df_executivo[(df_executivo['LEGO (Meta)'] > 0) | (df_executivo['CARROS (Realizado)'] > 0)]
         
@@ -1130,16 +1131,20 @@ elif pagina == "🧩 Planejamento Lego":
 
         st.markdown("---")
         
-        st.markdown("### 🧩 Distribução Planejado x Realizado (LEGO)")
+        st.markdown("### 🧩 Distribução Planejado x Realizado (Linhas Originais)")
         if not df_plan_filtrado.empty:
-            # ---> USA A CATEGORIA ORIGINAL E REMOVE LINHAS ZERADAS <---
+            
+            # Limpeza emergencial extra de acentuação corrompida do Excel
+            df_plan_filtrado['categoria_original'] = df_plan_filtrado['categoria_original'].str.replace('Ã‡ÃƒO', 'ÇÃO').str.replace('ÃƒO', 'ÃO').str.replace('Ã\x8D', 'Í').str.replace('Ã‡', 'Ç').str.replace('Ãƒ', 'Ã')
+
+            # ---> 3. USA A CATEGORIA ORIGINAL PARA A MATRIZ <---
             pivot = pd.pivot_table(
                 df_plan_filtrado, index='categoria_original', columns='data', 
                 values=['quantidade_planejado', 'quantidade_real'], aggfunc='sum', fill_value=0
             )
             pivot = pivot.swaplevel(0, 1, axis=1).sort_index(axis=1, level=0)
             
-            # Filtro mágico que apaga linhas onde todos os dias estão zerados (planejado e realizado)
+            # ---> 4. FILTRO MÁGICO: Remove linhas que estão com Planejado e Realizado zerados <---
             pivot = pivot.loc[(pivot != 0).any(axis=1)]
 
             if not pivot.empty:
