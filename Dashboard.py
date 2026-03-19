@@ -617,6 +617,79 @@ if pagina == "🏠 Painel Operacional":
         fig_equipes = aplicar_estilo_premium(fig_equipes)
         st.plotly_chart(fig_equipes, use_container_width=True)
 
+    # ====================================================================
+    # NOVA VISÃO: MATRIZ DE RISCO CRÍTICO (REGRAS DE CAPOTAMENTO)
+    # ====================================================================
+    st.markdown("---")
+    st.header("🚨 Matriz de Risco Crítico (Regras de Operação)")
+    
+    # 1. Cria as flags para identificar os perfis de carga do dia
+    df_risco = df_filtrado_op.copy()
+    
+    # Usa uppercase para garantir a leitura correta
+    df_risco['Cat_Upper'] = df_risco['Categorias'].astype(str).str.upper()
+    df_risco['Lin_Upper'] = df_risco['Linhas'].astype(str).str.upper()
+    df_risco['Forn_Upper'] = df_risco['Fornecedor'].astype(str).str.upper()
+    
+    df_risco['is_madeira'] = df_risco['Cat_Upper'].apply(lambda x: 1 if 'MADEIRA' in x else 0)
+    df_risco['is_tubrax'] = df_risco['Forn_Upper'].apply(lambda x: 1 if 'TUBRAX' in x else 0)
+    df_risco['is_pneu'] = df_risco['Cat_Upper'].apply(lambda x: 1 if 'PNEU' in x else 0)
+    df_risco['is_ar'] = df_risco['Lin_Upper'].apply(lambda x: 1 if 'AR CONDICIONADO' in x or 'AR E VENTILA' in x else 0)
+    df_risco['is_div_pesado'] = df_risco.apply(lambda x: 1 if ('DIV PEQUENOS' in x['Cat_Upper'] and x['Qtd Peças'] >= 1000) else 0, axis=1)
+    
+    # 2. Agrupa contando quantos de cada tipo tem no dia
+    df_risco_dia = df_risco.groupby('Data').agg(
+        Qtd_Madeira=('is_madeira', 'sum'),
+        Qtd_Tubrax=('is_tubrax', 'sum'),
+        Qtd_Pneu=('is_pneu', 'sum'),
+        Qtd_Ar=('is_ar', 'sum'),
+        Qtd_DivPesado=('is_div_pesado', 'sum')
+    ).reset_index()
+    
+    # 3. O Motor de Regras: Aplica as condições que você definiu
+    def identificar_regras_quebradas(row):
+        alertas = []
+        if row['Qtd_Madeira'] >= 3: 
+            alertas.append("🔴 3+ Cargas de Madeira")
+        if row['Qtd_Pneu'] >= 2: 
+            alertas.append("🔴 2+ Cargas de Pneu")
+        if row['Qtd_Madeira'] >= 2 and row['Qtd_Tubrax'] >= 1: 
+            alertas.append("🔴 2 Madeira + 1 Tubrax")
+        if row['Qtd_Madeira'] >= 2 and row['Qtd_DivPesado'] >= 1: 
+            alertas.append("🔴 2 Madeira + 1 Diversos (>1k peças)")
+        if row['Qtd_Ar'] >= 2: 
+            alertas.append("🔴 2+ Cargas de Ar Condicionado")
+            
+        return " | ".join(alertas) if alertas else "OK"
+
+    df_risco_dia['Alerta de Risco'] = df_risco_dia.apply(identificar_regras_quebradas, axis=1)
+    
+    # 4. Filtra apenas os dias que deram problema
+    df_dias_criticos = df_risco_dia[df_risco_dia['Alerta de Risco'] != "OK"].copy()
+    
+    if not df_dias_criticos.empty:
+        st.error("⚠️ **ATENÇÃO:** O sistema identificou dias com combinações críticas de carga que exigem plano de ação imediato!")
+        
+        # Formata a tabela para exibição
+        df_dias_criticos['Data'] = df_dias_criticos['Data'].dt.strftime('%d/%m/%Y')
+        df_dias_criticos = df_dias_criticos.rename(columns={
+            'Qtd_Madeira': 'Madeiras', 'Qtd_Tubrax': 'Tubrax', 
+            'Qtd_Pneu': 'Pneus', 'Qtd_Ar': 'Ar Cond.', 'Qtd_DivPesado': 'Diversos (>1k)'
+        })
+        
+        # Reordena para o Alerta ficar logo no começo
+        colunas_exibir = ['Data', 'Alerta de Risco', 'Madeiras', 'Tubrax', 'Pneus', 'Ar Cond.', 'Diversos (>1k)']
+        df_exibir_risco = df_dias_criticos[colunas_exibir]
+        
+        # Aplica uma cor de fundo suave na tabela para destacar
+        def cor_tabela_risco(val):
+            return 'background-color: #FDEDEC; color: #C0392B; font-weight: bold;'
+            
+        tabela_risco_estilizada = df_exibir_risco.style.map(cor_tabela_risco, subset=['Alerta de Risco'])
+        st.dataframe(tabela_risco_estilizada, use_container_width=True, hide_index=True)
+    else:
+        st.success("✅ Nenhuma combinação crítica (Risco de Capotamento) identificada no período filtrado.")
+
     st.markdown("---")
     st.header("🔥 Possíveis Gargalos")
     df_apc_sobrecarga = df_apc[df_apc['Gap_Equipes'] > 0]
