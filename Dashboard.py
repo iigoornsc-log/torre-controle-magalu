@@ -12,41 +12,29 @@ st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="🛍️",
 # --- INJEÇÃO DE CSS PREMIUM (RELEVO E SOMBRAS) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #F4F7F6; color: #2C3E50; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    h1, h2, h3 { color: #2C3E50 !important; font-weight: 800; letter-spacing: -0.5px; }
-    hr { border-top: 2px solid #EAEDED; border-radius: 2px; }
-    
-    [data-testid="stDataFrame"] { 
-        border: none !important; 
-        border-radius: 12px !important; 
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important; 
-        overflow: hidden !important; 
-    }
-    
-    [data-testid="stPlotlyChart"] {
-        background-color: #FFFFFF;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-        padding: 15px 10px 5px 10px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    [data-testid="stPlotlyChart"]:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-        box-shadow: 2px 0 15px rgba(0, 0, 0, 0.03);
-        border-right: none;
-    }
-    .streamlit-expanderHeader {
-        background-color: #FFFFFF !important;
-        border-radius: 10px !important;
-        border: 1px solid #EAEDED !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
-    }
+.header-magalu {
+    background: linear-gradient(90deg, #0086FF, #0057D9);
+    padding: 18px 30px;
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 8px 25px rgba(0, 86, 255, 0.25);
+    margin-bottom: 20px;
+}
+.header-magalu h1 {
+    color: white;
+    font-size: 28px;
+    margin: 0;
+    font-weight: 700;
+}
+.header-magalu span {
+    color: #D6E4FF;
+    font-size: 14px;
+}
 </style>
+
+<div class="header-magalu">
+    <h1>🚛 MagaluLog | Torre de Controle CD2900</h1>
+    <span>Gestão Inteligente de Recebimento e Capacidade Operacional</span>
+</div>
 """, unsafe_allow_html=True)
 
 # --- FUNÇÃO DE ESTILIZAÇÃO DE GRÁFICOS ---
