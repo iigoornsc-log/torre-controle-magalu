@@ -7,78 +7,138 @@ from google.oauth2.service_account import Credentials
 import json
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="🛍️", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="MagaluLog | Torre de Controle", page_icon="🛍️", layout="wide", initial_sidebar_state="expanded")
 
-# --- INJEÇÃO DE CSS PREMIUM (RELEVO E SOMBRAS) ---
+# --- INJEÇÃO DE CSS PREMIUM (DESIGN SYSTEM MAGALU) ---
 st.markdown("""
 <style>
-    .stApp { background-color: #F4F7F6; color: #2C3E50; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    h1, h2, h3 { color: #2C3E50 !important; font-weight: 800; letter-spacing: -0.5px; }
-    hr { border-top: 2px solid #EAEDED; border-radius: 2px; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+    :root {
+        --magalu-blue: #0086FF;
+        --magalu-dark: #031A33;
+        --magalu-light-bg: #F8F9FA;
+        --magalu-gray: #6C757D;
+        --success: #00B259;
+        --warning: #FF9900;
+        --danger: #E74C3C;
+    }
+
+    .stApp { 
+        background-color: var(--magalu-light-bg); 
+        color: var(--magalu-dark); 
+        font-family: 'Inter', sans-serif; 
+    }
     
+    h1, h2, h3, h4 { 
+        color: var(--magalu-dark) !important; 
+        font-weight: 800; 
+        letter-spacing: -0.5px; 
+    }
+    
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04);
+        border-right: none;
+    }
+    
+    .stButton > button {
+        background-color: var(--magalu-blue);
+        color: white;
+        border-radius: 8px;
+        border: none;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 134, 255, 0.2);
+    }
+    .stButton > button:hover {
+        background-color: #006CE0;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 134, 255, 0.3);
+        color: white;
+    }
+
     [data-testid="stDataFrame"] { 
-        border: none !important; 
+        border: 1px solid #EEF2F5 !important; 
         border-radius: 12px !important; 
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important; 
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important; 
         overflow: hidden !important; 
+        background: white;
     }
     
     [data-testid="stPlotlyChart"] {
         background-color: #FFFFFF;
         border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-        padding: 15px 10px 5px 10px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        padding: 20px 10px 10px 10px;
+        border: 1px solid #EEF2F5;
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
     [data-testid="stPlotlyChart"]:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
     }
 
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-        box-shadow: 2px 0 15px rgba(0, 0, 0, 0.03);
-        border-right: none;
-    }
     .streamlit-expanderHeader {
         background-color: #FFFFFF !important;
         border-radius: 10px !important;
-        border: 1px solid #EAEDED !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+        border: 1px solid #EEF2F5 !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.02) !important;
+        font-weight: 600 !important;
+        color: var(--magalu-dark) !important;
+    }
+    
+    .stTabs [data-baseweb="tab-list"] { gap: 24px; }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: transparent;
+        border-radius: 4px 4px 0 0;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-weight: 600;
+    }
+    .stTabs [aria-selected="true"] {
+        color: var(--magalu-blue) !important;
+        border-bottom: 3px solid var(--magalu-blue) !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÃO DE ESTILIZAÇÃO DE GRÁFICOS ---
+# --- FUNÇÕES DE ESTILIZAÇÃO E COMPONENTES ---
 def aplicar_estilo_premium(fig):
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family="Segoe UI, Roboto, sans-serif", color='#2C3E50'),
+        font=dict(family="Inter, sans-serif", color='#031A33', size=12),
         hovermode="x unified",
-        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.95)", font_size=13, font_family="Segoe UI", bordercolor="#EAEDED"),
-        margin=dict(t=40, b=20, l=20, r=20)
+        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.98)", font_size=13, font_family="Inter", bordercolor="#EEF2F5"),
+        margin=dict(t=50, b=30, l=20, r=20),
+        title_font=dict(size=18, family="Inter", color="#031A33")
     )
-    fig.update_traces(marker=dict(line=dict(width=2, color='#FFFFFF')), opacity=0.88)
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F0F3F4', griddash='dot')
-    fig.update_xaxes(showgrid=False)
+    fig.update_traces(marker=dict(line=dict(width=1.5, color='#FFFFFF')), opacity=0.9)
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#EEF2F5', griddash='solid')
+    fig.update_xaxes(showgrid=False, linecolor='#EEF2F5')
     return fig
 
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# --- COMPONENTE DE KPI ---
 def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
     st.markdown(f"""
     <div style="
-        background-color: #FFFFFF; border-radius: 12px; padding: 16px 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04); border-left: 6px solid {cor};
-        margin-bottom: 15px; transition: transform 0.2s ease, box-shadow 0.2s ease;
-    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0, 0, 0, 0.08)';" 
-      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.04)';">
-        <p style="margin: 0; font-size: 13px; color: #7F8C8D; font-weight: 600; text-transform: uppercase;">{titulo}</p>
-        <h2 style="margin: 5px 0; font-size: 32px; color: #2C3E50; font-weight: 800;">{valor}</h2>
-        <p style="margin: 0; font-size: 13px; color: #95A5A6; font-weight: 500;">{subtitulo}</p>
+        background-color: #FFFFFF; border-radius: 16px; padding: 20px 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); border: 1px solid #EEF2F5;
+        border-left: 6px solid {cor}; margin-bottom: 16px; position: relative;
+        overflow: hidden; transition: transform 0.3s ease, box-shadow 0.3s ease;
+    " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 24px rgba(0, 0, 0, 0.08)';" 
+      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(0, 0, 0, 0.03)';">
+        <div style="position: absolute; right: -20px; top: -20px; width: 80px; height: 80px; background-color: {cor}; opacity: 0.05; border-radius: 50%;"></div>
+        <p style="margin: 0; font-size: 12px; color: #6C757D; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</p>
+        <h2 style="margin: 8px 0; font-size: 36px; color: #031A33; font-weight: 800; line-height: 1.1;">{valor}</h2>
+        <p style="margin: 0; font-size: 13px; color: #A0AAB2; font-weight: 500;">{subtitulo}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -90,10 +150,9 @@ def conectar_google():
     except:
         caminho_local = 'C:/Users/ign_oliveira/Documents/Analises Agendas/credential_key.json'
         creds = Credentials.from_service_account_file(caminho_local, scopes=["https://www.googleapis.com/auth/spreadsheets"])
-    
     return gspread.authorize(creds)
 
-# --- EXTRAÇÃO DE DADOS (MULTIPLAS PLANILHAS & AGRUPAMENTOS) ---
+# --- EXTRAÇÃO DE DADOS ---
 @st.cache_data(ttl=300)
 def carregar_dados():
     df = pd.DataFrame()
@@ -106,9 +165,7 @@ def carregar_dados():
         cliente_google = conectar_google()
         planilha_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
         
-        # ==============================================================================
         # 0. RECUPERANDO A BASE DE MINUTOS E EXCEÇÕES
-        # ==============================================================================
         apc_full_dict = {}
         try:
             ws_apc = planilha_principal.worksheet("APC_FULL")
@@ -133,9 +190,7 @@ def carregar_dados():
                     df_excecoes['Data da Vaga'] = pd.to_datetime(df_excecoes['Data da Vaga'], dayfirst=True, errors='coerce').dt.normalize()
         except: pass
 
-        # ==============================================================================
         # 1. ABA CONSOLIDADO
-        # ==============================================================================
         ws_consolidado = planilha_principal.worksheet("CONSOLIDADO")
         dados_consolidado = ws_consolidado.get_all_values() 
         if dados_consolidado and len(dados_consolidado) > 1:
@@ -164,15 +219,11 @@ def carregar_dados():
             else: df_raw['Qtd Peças'] = pd.to_numeric(df_raw['Qtd Peças'], errors='coerce').fillna(0)
             if 'É Ofensor?' not in df_raw.columns: df_raw['É Ofensor?'] = 'Não'
 
-            # --- TRADUTOR UNIVERSAL DE LINHAS PARA APC ---
             def categorizar_linha(linha_raw):
                 l = str(linha_raw).upper()
-                if 'MADEIRA SIMPLES' in l or 'COLCH' in l or 'ESTOFADO' in l or 'FREEPASS' in l:
-                    return 'COLCHAO/ESTOFADO'
-                if 'FRACIONADO' in l or 'MADEIRA' in l or 'MOVEIS ENCOMENDA' in l:
-                    return 'MADEIRA'
-                if 'BELEZA' in l or 'BENS DE CONSUMO' in l or 'MERCADO' in l or 'ALIMENT' in l:
-                    return 'MERCADO'
+                if 'MADEIRA SIMPLES' in l or 'COLCH' in l or 'ESTOFADO' in l or 'FREEPASS' in l: return 'COLCHAO/ESTOFADO'
+                if 'FRACIONADO' in l or 'MADEIRA' in l or 'MOVEIS ENCOMENDA' in l: return 'MADEIRA'
+                if 'BELEZA' in l or 'BENS DE CONSUMO' in l or 'MERCADO' in l or 'ALIMENT' in l: return 'MERCADO'
                 if 'COFRE' in l: return 'COFRE'
                 if 'ELETRO PESADO' in l or 'ELETRO' in l: return 'ELETRO PESADO'
                 if 'IMAGEM' in l: return 'IMAGEM'
@@ -182,11 +233,7 @@ def carregar_dados():
                 return 'DIV PEQUENOS' 
 
             df_raw['Categoria_Padrao'] = df_raw['Linhas'].apply(categorizar_linha)
-
-            df_raw['Pecas_Madeira'] = df_raw.apply(
-                lambda r: r['Qtd Peças'] if r['Categoria_Padrao'] == 'MADEIRA' else 0, axis=1
-            )
-
+            df_raw['Pecas_Madeira'] = df_raw.apply(lambda r: r['Qtd Peças'] if r['Categoria_Padrao'] == 'MADEIRA' else 0, axis=1)
             df_raw['Data'] = pd.to_datetime(df_raw['Data'], errors='coerce', dayfirst=True).dt.normalize()
             df_raw = df_raw[df_raw['Agenda'].astype(str).str.strip() != '']
             df_raw['Agenda'] = df_raw['Agenda'].astype(str).str.split('.').str[0].str.strip()
@@ -215,7 +262,6 @@ def carregar_dados():
             ).reset_index()
 
             df = df.rename(columns={'Qtd_SKUs': 'Qtd SKUs', 'Qtd_Pecas': 'Qtd Peças', 'E_Ofensor': 'É Ofensor?'})
-
             df['Agenda_Texto'] = df['Agenda']
             df['Canal'] = df['Agenda_Texto'].apply(lambda x: 'Fulfillment' if len(str(x)) >= 6 else '1P Fornecedor')
 
@@ -224,7 +270,6 @@ def carregar_dados():
                     canal = row.get('Canal', '')
                     forn_original = str(row.get('Fornecedor', '')).strip().upper()
                     
-                    # REGRA EXPRESSA
                     if 'ARTELY' in forn_original or 'ARTANY' in forn_original: return 20.0
                     
                     forn_limpo = forn_original.replace(" ", "") 
@@ -267,9 +312,7 @@ def carregar_dados():
             
             df['Tempo_APC_Minutos'] = df.apply(calcular_minutos, axis=1)
 
-        # ==============================================================================
-        # 2. ABA ITEM AGENDA (1P E FULFILLMENT)
-        # ==============================================================================
+        # 2. ABA ITEM AGENDA
         df_itens_1p = pd.DataFrame()
         df_itens_full = pd.DataFrame()
 
@@ -317,9 +360,7 @@ def carregar_dados():
         if not df_itens.empty and 'Agenda' in df_itens.columns:
             df_itens['Agenda'] = df_itens['Agenda'].astype(str).str.split('.').str[0].str.strip()
 
-        # ==============================================================================
         # 3. ABA PLANEJAMENTO (LEGO)
-        # ==============================================================================
         try:
             ws_plan = planilha_principal.worksheet("PLANEJAMENTO")
             dados_plan = ws_plan.get_all_values()
@@ -337,7 +378,6 @@ def carregar_dados():
                     df_plan['quantidade_real'] = pd.to_numeric(df_plan['quantidade_real'], errors='coerce').fillna(0)
                 
                 if 'categoria' in df_plan.columns:
-                    # 1. Salva a original consertando erros de acentuação do arquivo
                     def limpar_caracteres_originais(cat):
                         c = str(cat).upper().strip()
                         dict_correcao = {
@@ -346,13 +386,11 @@ def carregar_dados():
                             'COLCHÃƒO': 'COLCHÃO',
                             'BENS DE CONSUMO - ALIMENTÃ\x8DCIOS': 'BENS DE CONSUMO - ALIMENTÍCIOS'
                         }
-                        for errado, certo in dict_correcao.items():
-                            c = c.replace(errado, certo)
+                        for errado, certo in dict_correcao.items(): c = c.replace(errado, certo)
                         return c.replace('Ã‡ÃƒO', 'ÇÃO').replace('ÃƒO', 'ÃO').replace('Ã\x8D', 'Í').replace('Ã‡', 'Ç').replace('Ãƒ', 'Ã')
                     
                     df_plan['categoria_original'] = df_plan['categoria'].apply(limpar_caracteres_originais)
                     
-                    # 2. Traduz a categoria para o painel gerencial de S&OP
                     def traduzir_categoria(cat):
                         c = str(cat).upper().strip()
                         if 'MADEIRA SIMPLES' in c: return 'COLCHÕES/ESTOFADOS'
@@ -368,9 +406,7 @@ def carregar_dados():
                     df_plan['categoria'] = df_plan['categoria'].apply(traduzir_categoria)
         except: pass 
 
-        # ==============================================================================
-        # 4. PLANILHA DE TRANSFERÊNCIAS (LENDO A COLUNA V - POSIÇÃO 21)
-        # ==============================================================================
+        # 4. PLANILHA DE TRANSFERÊNCIAS
         try:
             planilha_transf = cliente_google.open_by_key('1PMgqjZr2nieniRShicaPyxAe6J6j7I04FFE5aNWnm_s')
             ws_transf = planilha_transf.get_worksheet(0) 
@@ -392,8 +428,7 @@ def carregar_dados():
                 else:
                     df_transf['DATA_FILTRO'] = pd.NaT
                     df_transf['NOME_COL_V'] = 'DATA_FILTRO'
-        except Exception as e:
-            pass 
+        except: pass 
 
     except Exception as e: 
         st.error(f"🚨 Erro crítico de conexão com o Banco de Dados do Google: {e}")
@@ -406,9 +441,13 @@ if df.empty and df_transf.empty:
     st.warning("⏳ Aguardando dados das planilhas para renderizar o Dashboard.")
     st.stop()
 
-# --- BARRA LATERAL E NAVEGAÇÃO ---
-st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
+# --- BARRA LATERAL ---
+st.sidebar.markdown("""
+<div style="text-align: center; padding-bottom: 20px;">
+    <h1 style="color: #0086FF; font-weight: 900; font-size: 28px; margin: 0;">Magalu<span style="color: #031A33;">Log</span></h1>
+    <p style="color: #6C757D; font-size: 12px; font-weight: 600; margin: 0;">TORRE DE CONTROLE CD2900</p>
+</div>
+""", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
 pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador Cenário APC", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
@@ -428,17 +467,14 @@ if hoje.month == 12:
 else:
     ultimo_dia_mes = (hoje.replace(month=hoje.month+1, day=1) - pd.Timedelta(days=1))
 
-datas_selecionadas = st.sidebar.date_input(
-    "Selecione o Início e o Fim:", 
-    value=(primeiro_dia_mes, ultimo_dia_mes), 
-    format="DD/MM/YYYY"
-)
+datas_selecionadas = st.sidebar.date_input("Selecione o Início e o Fim:", value=(primeiro_dia_mes, ultimo_dia_mes), format="DD/MM/YYYY")
 
 if len(datas_selecionadas) == 2: data_inicio, data_fim = datas_selecionadas
 else: data_inicio = data_fim = datas_selecionadas[0]
 
 ts_inicio = pd.to_datetime(data_inicio)
 ts_fim = pd.to_datetime(data_fim)
+
 
 # ==============================================================================
 # PÁGINA 1: PAINEL OPERACIONAL
@@ -464,8 +500,8 @@ if pagina == "🏠 Painel Operacional":
         df_filtrado_op = df_filtrado[(df_filtrado['Canal'].isin(canal_selecionado)) & (df_filtrado['Status'].isin(status_operacao))]
 
     st.title("📦 Torre de Controle Inbound | CD2900")
-    st.markdown(f"**Visão Executiva:** {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
-    st.markdown("---")
+    st.markdown(f"<p style='color: #6C757D; font-size: 16px; margin-top: -15px;'>Visão Executiva: <b>{data_inicio.strftime('%d/%m/%Y')}</b> a <b>{data_fim.strftime('%d/%m/%Y')}</b></p>", unsafe_allow_html=True)
+    st.write("")
 
     st.header("🚦 Painel Operacional")
     col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5, col_kpi6 = st.columns(6)
@@ -479,11 +515,11 @@ if pagina == "🏠 Painel Operacional":
     total_agendas = len(df_filtrado_op)
     taxa_noshow = (qtd_noshow / total_agendas * 100) if total_agendas > 0 else 0
 
-    with col_kpi1: exibir_kpi("📅 Agendado", qtd_agendado, "Total de agendas", "#3498DB")
-    with col_kpi2: exibir_kpi("🚛 Em Trânsito", qtd_transito, "A caminho do CD", "#9B59B6")
-    with col_kpi3: exibir_kpi("⏳ Pátio", qtd_aguardando, "Aguardando doca", "#F39C12")
-    with col_kpi4: exibir_kpi("⚙️ Em Descarga", qtd_descarga, "Operação rodando", "#1ABC9C")
-    with col_kpi5: exibir_kpi("✅ Recebido", qtd_recebido, "Finalizados", "#2ECC71")
+    with col_kpi1: exibir_kpi("📅 Agendado", qtd_agendado, "Total de agendas", "#0086FF")
+    with col_kpi2: exibir_kpi("🚛 Em Trânsito", qtd_transito, "A caminho do CD", "#8E44AD")
+    with col_kpi3: exibir_kpi("⏳ Pátio", qtd_aguardando, "Aguardando doca", "#FF9900")
+    with col_kpi4: exibir_kpi("⚙️ Em Descarga", qtd_descarga, "Operação rodando", "#17A2B8")
+    with col_kpi5: exibir_kpi("✅ Recebido", qtd_recebido, "Finalizados", "#00B259")
     with col_kpi6: exibir_kpi("❌ No-Show", qtd_noshow, f"{taxa_noshow:.1f}% de quebra", "#E74C3C")
 
     st.markdown("---")
@@ -522,7 +558,7 @@ if pagina == "🏠 Painel Operacional":
         
         col_1p_1, col_1p_2 = st.columns([2, 1])
         with col_1p_1:
-            fig_1p = px.bar(df_limite_1p, x='Data', y='Agendas_Validas', text='Agendas_Validas', color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, labels={'Agendas_Validas': 'Agendas', 'Estourou_Limite': 'Acima do Limite?'}, title="Consumo da Capacidade Diária (Realizado 1P)")
+            fig_1p = px.bar(df_limite_1p, x='Data', y='Agendas_Validas', text='Agendas_Validas', color='Estourou_Limite', color_discrete_map={False: '#0086FF', True: '#E74C3C'}, labels={'Agendas_Validas': 'Agendas', 'Estourou_Limite': 'Acima do Limite?'}, title="Consumo da Capacidade Diária (Realizado 1P)")
             fig_1p.add_hline(y=limite_agendas_1p, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text=f"Capacidade: {limite_agendas_1p}")
             fig_1p.update_traces(textposition='outside')
             fig_1p.update_layout(xaxis=dict(tickformat="%d/%m/%Y"), showlegend=False)
@@ -541,13 +577,10 @@ if pagina == "🏠 Painel Operacional":
         with col_1p_2:
             st.subheader("Balanço 1P")
             exibir_kpi("Dias Acima do Limite", df_limite_1p['Estourou_Limite'].sum(), "Necessita adequação", "#E74C3C")
-            exibir_kpi("Volume 1P", df_limite_1p['Total_1P'].sum(), "Total de agendas 1P", "#3498DB")
-            exibir_kpi("Isentos (Cofres)", df_limite_1p['Qtd_Cofres'].sum(), "Não consomem doca padrão", "#95A5A6")
+            exibir_kpi("Volume 1P", df_limite_1p['Total_1P'].sum(), "Total de agendas 1P", "#0086FF")
+            exibir_kpi("Isentos (Cofres)", df_limite_1p['Qtd_Cofres'].sum(), "Não consomem doca padrão", "#6C757D")
     else: st.info("Nenhuma agenda do canal 1P Fornecedor encontrada.")
 
-    # ====================================================================
-    # NOVA VISÃO: PLANEJAMENTO LEGO LADO A LADO COM 1P
-    # ====================================================================
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 🧱 Planejamento Lego: Vagas Liberadas pelo Comercial")
     
@@ -570,7 +603,7 @@ if pagina == "🏠 Painel Operacional":
             with col_lg1:
                 fig_lego = px.bar(
                     df_limite_lego, x='data', y='Vagas_Validas', text='Vagas_Validas', 
-                    color='Estourou_Limite', color_discrete_map={False: '#3498DB', True: '#E74C3C'}, 
+                    color='Estourou_Limite', color_discrete_map={False: '#0086FF', True: '#E74C3C'}, 
                     labels={'Vagas_Validas': 'Vagas Liberadas', 'Estourou_Limite': 'Acima do Limite?'}, 
                     title="Vagas Planejadas no Lego (Previsão 1P)"
                 )
@@ -583,8 +616,8 @@ if pagina == "🏠 Painel Operacional":
             with col_lg2:
                 st.subheader("Balanço Lego (Planejado)")
                 exibir_kpi("Dias Estourados", df_limite_lego['Estourou_Limite'].sum(), "Dias acima do plano", "#E74C3C")
-                exibir_kpi("Volume Planejado", df_limite_lego['Total_Planejado'].sum(), "Total vagas liberadas", "#3498DB")
-                exibir_kpi("Isentos (Cofres)", df_limite_lego['Vagas_Isentas'].sum(), "Não consumem doca padrão", "#95A5A6")
+                exibir_kpi("Volume Planejado", df_limite_lego['Total_Planejado'].sum(), "Total vagas liberadas", "#0086FF")
+                exibir_kpi("Isentos (Cofres)", df_limite_lego['Vagas_Isentas'].sum(), "Não consumem doca padrão", "#6C757D")
         else:
             st.info("Nenhuma vaga liberada no Lego para o período filtrado.")
     else:
@@ -606,27 +639,22 @@ if pagina == "🏠 Painel Operacional":
     if not df_apc.empty:
         st.markdown("### 📊 Visão Acumulada")
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-        with col_m1: exibir_kpi("Média Equipes/Dia", math.ceil(df_apc['Equipes Necessárias'].mean()), "Recurso Humano", "#3498DB")
+        with col_m1: exibir_kpi("Média Equipes/Dia", math.ceil(df_apc['Equipes Necessárias'].mean()), "Recurso Humano", "#0086FF")
         with col_m2: exibir_kpi("Dias em Sobrecarga", len(df_apc[df_apc['Gap_Equipes'] > 0]), f"De {len(df_apc)} analisados", "#E74C3C")
         with col_m3: exibir_kpi("Déficit Projetado", f"{df_apc['Horas_Extras'].sum()} h", f"Custo HE: {formatar_moeda(df_apc['Custo_HE'].sum())}", "#E74C3C")
-        with col_m4: exibir_kpi("Agendas Expostas", df_filtrado_op[df_filtrado_op['Data'].isin(df_apc[df_apc['Gap_Equipes'] > 0]['Data'])]['Agenda_Texto'].nunique(), "Cargas com risco", "#F39C12")
+        with col_m4: exibir_kpi("Agendas Expostas", df_filtrado_op[df_filtrado_op['Data'].isin(df_apc[df_apc['Gap_Equipes'] > 0]['Data'])]['Agenda_Texto'].nunique(), "Cargas com risco", "#FF9900")
         
-        fig_equipes = px.bar(df_apc, x='Data', y='Equipes Necessárias', text='Equipes Necessárias', color_discrete_sequence=['#3498DB'], title="Necessidade Diária de Mão de Obra")
+        fig_equipes = px.bar(df_apc, x='Data', y='Equipes Necessárias', text='Equipes Necessárias', color_discrete_sequence=['#0086FF'], title="Necessidade Diária de Mão de Obra")
         fig_equipes.add_hline(y=capacidade_diaria, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text=f"Headcount Fixo ({capacidade_diaria})")
         fig_equipes.update_traces(textposition='outside')
         fig_equipes = aplicar_estilo_premium(fig_equipes)
         st.plotly_chart(fig_equipes, use_container_width=True)
 
-    # ====================================================================
-    # NOVA VISÃO: MATRIZ DE RISCO CRÍTICO (REGRAS DE CAPOTAMENTO)
-    # ====================================================================
     st.markdown("---")
     st.header("🚨 Matriz de Risco Crítico (Regras de Operação)")
     
-    # 1. Cria as flags para identificar os perfis de carga do dia
     df_risco = df_filtrado_op.copy()
     
-    # Usa uppercase para garantir a leitura correta
     df_risco['Cat_Upper'] = df_risco['Categorias'].astype(str).str.upper()
     df_risco['Lin_Upper'] = df_risco['Linhas'].astype(str).str.upper()
     df_risco['Forn_Upper'] = df_risco['Fornecedor'].astype(str).str.upper()
@@ -637,7 +665,6 @@ if pagina == "🏠 Painel Operacional":
     df_risco['is_ar'] = df_risco['Lin_Upper'].apply(lambda x: 1 if 'AR CONDICIONADO' in x or 'AR E VENTILA' in x else 0)
     df_risco['is_div_pesado'] = df_risco.apply(lambda x: 1 if ('DIV PEQUENOS' in x['Cat_Upper'] and x['Qtd Peças'] >= 1000) else 0, axis=1)
     
-    # 2. Agrupa contando quantos de cada tipo tem no dia
     df_risco_dia = df_risco.groupby('Data').agg(
         Qtd_Madeira=('is_madeira', 'sum'),
         Qtd_Tubrax=('is_tubrax', 'sum'),
@@ -646,44 +673,31 @@ if pagina == "🏠 Painel Operacional":
         Qtd_DivPesado=('is_div_pesado', 'sum')
     ).reset_index()
     
-    # 3. O Motor de Regras: Aplica as condições que você definiu
     def identificar_regras_quebradas(row):
         alertas = []
-        if row['Qtd_Madeira'] >= 3: 
-            alertas.append("🔴 3+ Cargas de Madeira")
-        if row['Qtd_Pneu'] >= 2: 
-            alertas.append("🔴 2+ Cargas de Pneu")
-        if row['Qtd_Madeira'] >= 2 and row['Qtd_Tubrax'] >= 1: 
-            alertas.append("🔴 2 Madeira + 1 Tubrax")
-        if row['Qtd_Madeira'] >= 2 and row['Qtd_DivPesado'] >= 1: 
-            alertas.append("🔴 2 Madeira + 1 Diversos (>1k peças)")
-        if row['Qtd_Ar'] >= 2: 
-            alertas.append("🔴 2+ Cargas de Ar Condicionado")
-            
+        if row['Qtd_Madeira'] >= 3: alertas.append("🔴 3+ Cargas de Madeira")
+        if row['Qtd_Pneu'] >= 2: alertas.append("🔴 2+ Cargas de Pneu")
+        if row['Qtd_Madeira'] >= 2 and row['Qtd_Tubrax'] >= 1: alertas.append("🔴 2 Madeira + 1 Tubrax")
+        if row['Qtd_Madeira'] >= 2 and row['Qtd_DivPesado'] >= 1: alertas.append("🔴 2 Madeira + 1 Diversos (>1k peças)")
+        if row['Qtd_Ar'] >= 2: alertas.append("🔴 2+ Cargas de Ar Condicionado")
         return " | ".join(alertas) if alertas else "OK"
 
     df_risco_dia['Alerta de Risco'] = df_risco_dia.apply(identificar_regras_quebradas, axis=1)
-    
-    # 4. Filtra apenas os dias que deram problema
     df_dias_criticos = df_risco_dia[df_risco_dia['Alerta de Risco'] != "OK"].copy()
     
     if not df_dias_criticos.empty:
         st.error("⚠️ **ATENÇÃO:** O sistema identificou dias com combinações críticas de carga que exigem plano de ação imediato!")
         
-        # Formata a tabela para exibição
         df_dias_criticos['Data'] = df_dias_criticos['Data'].dt.strftime('%d/%m/%Y')
         df_dias_criticos = df_dias_criticos.rename(columns={
             'Qtd_Madeira': 'Madeiras', 'Qtd_Tubrax': 'Tubrax', 
             'Qtd_Pneu': 'Pneus', 'Qtd_Ar': 'Ar Cond.', 'Qtd_DivPesado': 'Diversos (>1k)'
         })
         
-        # Reordena para o Alerta ficar logo no começo
         colunas_exibir = ['Data', 'Alerta de Risco', 'Madeiras', 'Tubrax', 'Pneus', 'Ar Cond.', 'Diversos (>1k)']
         df_exibir_risco = df_dias_criticos[colunas_exibir]
         
-        # Aplica uma cor de fundo suave na tabela para destacar
-        def cor_tabela_risco(val):
-            return 'background-color: #FDEDEC; color: #C0392B; font-weight: bold;'
+        def cor_tabela_risco(val): return 'background-color: #FDEDEC; color: #C0392B; font-weight: bold;'
             
         tabela_risco_estilizada = df_exibir_risco.style.map(cor_tabela_risco, subset=['Alerta de Risco'])
         st.dataframe(tabela_risco_estilizada, use_container_width=True, hide_index=True)
@@ -703,14 +717,14 @@ if pagina == "🏠 Painel Operacional":
         
         st.markdown(f"### 🎯 Analise Operacional: {dia_selecionado}")
         met_col1, met_col2, met_col3, met_col4 = st.columns(4)
-        with met_col1: exibir_kpi("Equipes Necessárias", dados_apc_dia['Equipes Necessárias'], "Demanda do dia", "#3498DB")
-        with met_col2: exibir_kpi("Capacidade Atual", capacidade_diaria, "Headcount Fixo", "#95A5A6")
+        with met_col1: exibir_kpi("Equipes Necessárias", dados_apc_dia['Equipes Necessárias'], "Demanda do dia", "#0086FF")
+        with met_col2: exibir_kpi("Capacidade Atual", capacidade_diaria, "Headcount Fixo", "#6C757D")
         with met_col3: exibir_kpi("🚨 H.E. Projetadas", f"{dados_apc_dia['Horas_Extras']} h", f"Custo: {formatar_moeda(dados_apc_dia['Custo_HE'])}", "#E74C3C")
-        with met_col4: exibir_kpi("Volume de Peças", f"{df_dia_critico['Qtd Peças'].sum():,.0f}".replace(',', '.'), "Físico", "#9B59B6")
+        with met_col4: exibir_kpi("Volume de Peças", f"{df_dia_critico['Qtd Peças'].sum():,.0f}".replace(',', '.'), "Físico", "#8E44AD")
         
         col_chart, col_tab = st.columns([1, 2])
         with col_chart:
-            fig_canais = px.pie(df_dia_critico.groupby('Canal')['Tempo_APC_Minutos'].sum().reset_index(), values='Tempo_APC_Minutos', names='Canal', hole=0.5, color_discrete_map={'Fulfillment': '#3498DB', '1P Fornecedor': '#F39C12'}, title="Distribuição por Canal")
+            fig_canais = px.pie(df_dia_critico.groupby('Canal')['Tempo_APC_Minutos'].sum().reset_index(), values='Tempo_APC_Minutos', names='Canal', hole=0.5, color_discrete_map={'Fulfillment': '#0086FF', '1P Fornecedor': '#FF9900'}, title="Distribuição por Canal")
             fig_canais.update_traces(textposition='inside', textinfo='percent+label')
             fig_canais = aplicar_estilo_premium(fig_canais)
             fig_canais.update_layout(showlegend=False)
@@ -756,9 +770,9 @@ if pagina == "🏠 Painel Operacional":
 
                     st.markdown(f"#### Resumo da Agenda: {agenda_limpa}")
                     kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
-                    with kpi_c1: exibir_kpi("📦 Qtd de SKUs", f"{total_skus}", "Itens distintos", "#3498DB")
-                    with kpi_c2: exibir_kpi("🔢 Qtd Peças Totais", f"{total_pecas:,.0f}".replace(',', '.'), "Volume da carga", "#9B59B6")
-                    with kpi_c3: exibir_kpi("🏢 Fornecedor", f"{fornecedor_nome[:22]}", "Origem", "#F39C12")
+                    with kpi_c1: exibir_kpi("📦 Qtd de SKUs", f"{total_skus}", "Itens distintos", "#0086FF")
+                    with kpi_c2: exibir_kpi("🔢 Qtd Peças Totais", f"{total_pecas:,.0f}".replace(',', '.'), "Volume da carga", "#8E44AD")
+                    with kpi_c3: exibir_kpi("🏢 Fornecedor", f"{fornecedor_nome[:22]}", "Origem", "#FF9900")
                     
                     st.dataframe(resumo_itens, use_container_width=True, hide_index=True)
                 else: 
@@ -771,11 +785,12 @@ if pagina == "🏠 Painel Operacional":
     else: st.success("✅ A operação fluiu sem gargalos no período analisado!")
 
 # ==============================================================================
-# PÁGINA 2: PREVISÃO DE AGENDAS (CENÁRIO SÊNIOR)
+# PÁGINA 2: PREVISÃO DE AGENDAS
 # ==============================================================================
 elif pagina == "📅 Previsão de Agendas":
     st.title("📅 Previsão de Agendas | Visão Estratégica")
-    st.markdown(f"**Projeção de Cenário para o período:** {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+    st.markdown(f"<p style='color: #6C757D; font-size: 16px; margin-top: -15px;'>Projeção de Cenário: <b>{data_inicio.strftime('%d/%m/%Y')}</b> a <b>{data_fim.strftime('%d/%m/%Y')}</b></p>", unsafe_allow_html=True)
+    st.write("")
     
     df_filtrado_prev = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy() if not df.empty else pd.DataFrame()
     
@@ -801,8 +816,8 @@ elif pagina == "📅 Previsão de Agendas":
     st.markdown("### 📊 Resumo Executivo")
     col_k1, col_k2, col_k3, col_k4 = st.columns(4)
     with col_k1: exibir_kpi("Equipes APC Necessárias", eq_projetadas, "Headcount projetado", "#E74C3C")
-    with col_k2: exibir_kpi("Total de Veículos", agendas_1p + agendas_full + cargas_transf, "Agendas + Transferências", "#34495E")
-    with col_k3: exibir_kpi("Volume Físico Estimado", f"{(pecas_1p + pecas_full + pecas_transf):,.0f}".replace(',', '.'), "Peças Totais", "#9B59B6")
+    with col_k2: exibir_kpi("Total de Veículos", agendas_1p + agendas_full + cargas_transf, "Agendas + Transferências", "#031A33")
+    with col_k3: exibir_kpi("Volume Físico Estimado", f"{(pecas_1p + pecas_full + pecas_transf):,.0f}".replace(',', '.'), "Peças Totais", "#8E44AD")
     with col_k4: exibir_kpi("Agendas 1P", agendas_1p, "Fornecedor Tradicional", "#0086FF")
 
     df_macro = pd.DataFrame({
@@ -812,7 +827,7 @@ elif pagina == "📅 Previsão de Agendas":
     })
 
     col_g1, col_g2 = st.columns(2)
-    cores_canais = {'1P Fornecedor': '#0086FF', 'Fulfillment': '#F39C12', 'Transferência': '#9B59B6'}
+    cores_canais = {'1P Fornecedor': '#0086FF', 'Fulfillment': '#FF9900', 'Transferência': '#8E44AD'}
     
     with col_g1:
         fig_v = px.pie(df_macro, values='Veiculos', names='Canal', title='Distribuição de Doca (Veículos)', hole=0.5, color='Canal', color_discrete_map=cores_canais)
@@ -863,7 +878,7 @@ elif pagina == "📅 Previsão de Agendas":
             )
 
     with tab_1p: renderizar_detalhe(df_1p_prev, '#0086FF', '1P')
-    with tab_full: renderizar_detalhe(df_full_prev, '#F39C12', 'Fulfillment')
+    with tab_full: renderizar_detalhe(df_full_prev, '#FF9900', 'Fulfillment')
     with tab_transf:
         if df_transf_prev.empty or 'ID_CARGA_PCP' not in df_transf_prev.columns:
             st.info("Nenhuma Transferência prevista para esta data.")
@@ -872,7 +887,7 @@ elif pagina == "📅 Previsão de Agendas":
             df_modal = df_transf_prev.groupby('MODAL2').agg(Peças=('QTDE', 'sum')).reset_index().sort_values(by='Peças', ascending=False)
             with c_t1:
                 st.markdown("**Volume por Modalidade**")
-                fig_t = px.bar(df_modal, x='Peças', y='MODAL2', orientation='h', text='Peças', color_discrete_sequence=['#9B59B6'])
+                fig_t = px.bar(df_modal, x='Peças', y='MODAL2', orientation='h', text='Peças', color_discrete_sequence=['#8E44AD'])
                 fig_t.update_traces(textposition='outside')
                 fig_t = aplicar_estilo_premium(fig_t)
                 fig_t.update_layout(yaxis={'categoryorder':'total ascending'}, margin=dict(t=0, b=0, l=0, r=0), xaxis_title="", yaxis_title="")
@@ -902,7 +917,7 @@ elif pagina == "📈 Simulador Cenário APC":
     col_titulo, col_reset = st.columns([4, 1])
     with col_titulo:
         st.title("📈 Simulador Cenário APC | Estresse de Malha")
-        st.markdown("Adicione novas cargas em múltiplos dias e veja o impacto cumulativo na semana inteira. O sistema **salva as suas adições** enquanto você navega pelas datas!")
+        st.markdown("Adicione novas cargas em múltiplos dias e veja o impacto cumulativo na semana inteira.")
     
     if 'simulador_cargas' not in st.session_state:
         st.session_state['simulador_cargas'] = {}
@@ -986,17 +1001,17 @@ elif pagina == "📈 Simulador Cenário APC":
             if min_injetados_hoje == 0:
                 st.info("Nenhuma carga extra salva para este dia. Reflete a base atual.")
             else:
-                cor_alerta = "#E74C3C" if delta_eq > 0 else "#2ECC71"
+                cor_alerta = "#E74C3C" if delta_eq > 0 else "#00B259"
                 txt_alerta = f"🚨 Requer +{int(delta_eq)} Equipe(s) extra" if delta_eq > 0 else "✅ Absorvido pela ociosidade"
                 exibir_kpi("Novo Headcount Necessário", int(eq_simuladas), txt_alerta, cor_alerta)
-                exibir_kpi("Carga Horária Total", f"{linha_alvo['Minutos_Simulados']:,.0f} min", f"+{min_injetados_hoje} min adicionados", "#F39C12")
+                exibir_kpi("Carga Horária Total", f"{linha_alvo['Minutos_Simulados']:,.0f} min", f"+{min_injetados_hoje} min adicionados", "#FF9900")
 
         st.markdown("---")
         st.markdown("### 📈 Projeção da Semana (Com todos os dias simulados)")
         
         fig_sim = px.bar(
             df_apc_simulado.sort_values(by='Data'), x='Data', y='Equipes_Simuladas', text='Equipes_Simuladas', 
-            color='Cenario', color_discrete_map={'Real Base': '#3498DB', 'Simulado': '#E74C3C'}, title="Evolução de Mão de Obra Necessária"
+            color='Cenario', color_discrete_map={'Real Base': '#0086FF', 'Simulado': '#E74C3C'}, title="Evolução de Mão de Obra Necessária"
         )
         fig_sim.update_traces(textposition='outside')
         fig_sim.update_layout(xaxis=dict(tickformat="%d/%m/%Y"))
@@ -1086,7 +1101,7 @@ elif pagina == "👷 Simulador Mão de Obra":
             st.markdown("---")
             col_s1, col_s2, col_s3 = st.columns(3)
             with col_s1: exibir_kpi("Equipes em Sobrecarga", f"{equipes_estouradas} de {total_equipes}", "Mesmo equalizando 100%", "#E74C3C")
-            with col_s2: exibir_kpi("Demanda Exigida no Dia", f"{int(minutos_totais)} min", f"Capacidade Real: {capacidade_total_cd} min", "#9B59B6")
+            with col_s2: exibir_kpi("Demanda Exigida no Dia", f"{int(minutos_totais)} min", f"Capacidade Real: {capacidade_total_cd} min", "#8E44AD")
             
             saldo = minutos_totais - capacidade_total_cd
             if saldo > 0: 
@@ -1094,11 +1109,11 @@ elif pagina == "👷 Simulador Mão de Obra":
                     exibir_kpi("Déficit Inevitável", f"+{int(saldo)} min", "Tempo faltante", "#E74C3C")
             else: 
                 with col_s3: 
-                    exibir_kpi("Déficit Inevitável", "0 min", "Operação dentro do limite", "#2ECC71")
+                    exibir_kpi("Déficit Inevitável", "0 min", "Operação dentro do limite", "#00B259")
 
             fig_mochila = px.bar(
                 df_mochila, x='Equipe', y='Minutos', color='Tipo Carga', text='Detalhe', title=f"Balanceamento Dinâmico de Cargas - Dia {dia_simulacao}",
-                color_discrete_map={'Transferência Fixa (240m)': '#8E44AD', 'Carga Madeira': '#E67E22', 'Carga Fulfillment': '#3498DB', 'Carga 1P/Misto': '#2ECC71'}
+                color_discrete_map={'Transferência Fixa (240m)': '#8E44AD', 'Carga Madeira': '#E67E22', 'Carga Fulfillment': '#0086FF', 'Carga 1P/Misto': '#00B259'}
             )
             
             fig_mochila.add_hline(y=427, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text="Capacidade Máxima do Turno (427 min)", annotation_position="top left", annotation_font_color="#E74C3C")
@@ -1121,7 +1136,6 @@ elif pagina == "🧩 Planejamento Lego":
         st.markdown("### 🎯 Planejamento Mensal do Comercial")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
         
-        # 1. USA AS CATEGORIAS TRADUZIDAS PARA AS METAS E SALDO
         categorias_existentes = sorted([c for c in df_plan['categoria'].unique() if pd.notna(c) and str(c).strip() != ''])
         df_base_categorias = pd.DataFrame({'CATEGORIA': categorias_existentes})
         
@@ -1169,7 +1183,6 @@ elif pagina == "🧩 Planejamento Lego":
                 except Exception as e:
                     st.error(f"🚨 Erro ao salvar na nuvem: {e}")
 
-        # 2. BALANÇO POR CATEGORIA TRADUZIDA
         resumo_real = df_plan_filtrado.groupby('categoria')['quantidade_real'].sum().reset_index()
         resumo_real.rename(columns={'categoria': 'CATEGORIA', 'quantidade_real': 'CARROS (Realizado)'}, inplace=True)
         
@@ -1185,9 +1198,9 @@ elif pagina == "🧩 Planejamento Lego":
         estouradas = len(df_executivo[df_executivo['VAGAS (Saldo)'] < 0])
         
         col_e1, col_e2, col_e3, col_e4 = st.columns(4)
-        with col_e1: exibir_kpi("Meta (LEGO)", f"{meta_total:,.0f}".replace(',', '.'), "Plano do Mês", "#3498DB")
-        with col_e2: exibir_kpi("Agendado", f"{realizado_total:,.0f}".replace(',', '.'), "Agendamentos Realizados", "#9B59B6")
-        cor_saldo = "#2ECC71" if saldo_total >= 0 else "#E74C3C"
+        with col_e1: exibir_kpi("Meta (LEGO)", f"{meta_total:,.0f}".replace(',', '.'), "Plano do Mês", "#0086FF")
+        with col_e2: exibir_kpi("Agendado", f"{realizado_total:,.0f}".replace(',', '.'), "Agendamentos Realizados", "#8E44AD")
+        cor_saldo = "#00B259" if saldo_total >= 0 else "#E74C3C"
         texto_saldo = "Vagas Livres" if saldo_total >= 0 else "Risco Global"
         with col_e3: exibir_kpi("Saldo de Vagas", f"{saldo_total:,.0f}".replace(',', '.'), texto_saldo, cor_saldo)
         with col_e4: exibir_kpi("Categorias Estouradas", estouradas, "Acima da Meta", "#E74C3C")
@@ -1199,7 +1212,7 @@ elif pagina == "🧩 Planejamento Lego":
         
         def cor_vagas(val):
             if val < 0: return 'background-color: #FDEDEC; color: #E74C3C; font-weight: bold;'
-            elif val > 0: return 'background-color: #EAFAF1; color: #27AE60; font-weight: bold;'
+            elif val > 0: return 'background-color: #EAFAF1; color: #00B259; font-weight: bold;'
             else: return ''
 
         tabela_formatada = df_executivo_limpo.style.format(
@@ -1211,15 +1224,13 @@ elif pagina == "🧩 Planejamento Lego":
 
         st.markdown("---")
         
-        # 3. MATRIZ DE ACOMPANHAMENTO DIÁRIO (ORIGINAL)
         st.markdown("### 🧩 Distribuição Diária: Planejado x Realizado (Linhas Originais)")
         
-        # Legenda do Heatmap de Cores
         st.markdown("""
         <div style="display: flex; gap: 15px; margin-bottom: 15px;">
             <div style="padding: 6px 12px; background-color: #FADBD8; color: #C0392B; border-radius: 6px; font-weight: bold; font-size: 13px;">🔴 Esgotado / Estourado (0 vagas)</div>
             <div style="padding: 6px 12px; background-color: #FDEBD0; color: #D35400; border-radius: 6px; font-weight: bold; font-size: 13px;">🟡 Atenção (Apenas 1 vaga)</div>
-            <div style="padding: 6px 12px; background-color: #D5F5E3; color: #27AE60; border-radius: 6px; font-weight: bold; font-size: 13px;">🟢 Livre (2+ vagas disponíveis)</div>
+            <div style="padding: 6px 12px; background-color: #D5F5E3; color: #00B259; border-radius: 6px; font-weight: bold; font-size: 13px;">🟢 Livre (2+ vagas disponíveis)</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1230,7 +1241,6 @@ elif pagina == "🧩 Planejamento Lego":
             )
             pivot = pivot.swaplevel(0, 1, axis=1).sort_index(axis=1, level=0)
             
-            # Remove linhas que não tem planejamento nem agendamento no período filtrado
             pivot = pivot.loc[(pivot != 0).any(axis=1)]
 
             if not pivot.empty:
@@ -1256,16 +1266,14 @@ elif pagina == "🧩 Planejamento Lego":
                             else:
                                 if tipo == 'REALIZADO':
                                     vagas = val_plan - val_real
-                                    # Lógica de Cores por Disponibilidade
                                     if vagas <= 0:
-                                        css += 'background-color: #FADBD8; color: #C0392B; font-weight: bold; border-right: 2px solid #EAEDED;' 
+                                        css += 'background-color: #FADBD8; color: #C0392B; font-weight: bold; border-right: 2px solid #EEF2F5;' 
                                     elif vagas == 1:
-                                        css += 'background-color: #FDEBD0; color: #D35400; font-weight: bold; border-right: 2px solid #EAEDED;' 
+                                        css += 'background-color: #FDEBD0; color: #D35400; font-weight: bold; border-right: 2px solid #EEF2F5;' 
                                     else:
-                                        css += 'background-color: #D5F5E3; color: #27AE60; font-weight: bold; border-right: 2px solid #EAEDED;' 
+                                        css += 'background-color: #D5F5E3; color: #00B259; font-weight: bold; border-right: 2px solid #EEF2F5;' 
                                 else:
-                                    # Planejado ganha uma cor neutra para não poluir a tela
-                                    css += 'background-color: #F8F9FA; color: #7F8C8D; font-weight: bold; border-left: 2px solid #EAEDED;'
+                                    css += 'background-color: #F8F9FA; color: #7F8C8D; font-weight: bold; border-left: 2px solid #EEF2F5;'
                                     
                             estilos.loc[indice, coluna] = css
                     return estilos
@@ -1338,9 +1346,9 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
             
             st.markdown("### 📊 Indicadores de Transferência")
             col_t1, col_t2, col_t3 = st.columns(3)
-            with col_t1: exibir_kpi("🚛 Cargas Esperadas", total_cargas, "Veículos de transf.", "#9B59B6") 
-            with col_t2: exibir_kpi("📦 Mix de Produtos", total_skus, "SKUs distintos", "#3498DB")         
-            with col_t3: exibir_kpi("🔢 Volume Físico", f"{total_pecas:,.0f}".replace(',', '.'), "Peças a receber", "#2ECC71")
+            with col_t1: exibir_kpi("🚛 Cargas Esperadas", total_cargas, "Veículos de transf.", "#8E44AD") 
+            with col_t2: exibir_kpi("📦 Mix de Produtos", total_skus, "SKUs distintos", "#0086FF")         
+            with col_t3: exibir_kpi("🔢 Volume Físico", f"{total_pecas:,.0f}".replace(',', '.'), "Peças a receber", "#00B259")
 
             st.markdown("---")
             st.markdown("### 📑 Tabela de Acompanhamento (Master)")
@@ -1376,8 +1384,8 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
                     total_skus_id = df_detalhe[prod_col].nunique() if prod_col else 0
                     
                     col_det1, col_det2 = st.columns(2)
-                    with col_det1: exibir_kpi("📦 SKUs Distintos", total_skus_id, "Mix de produtos", "#3498DB")
-                    with col_det2: exibir_kpi("🔢 Total de Peças", f"{total_pecas_id:,.0f}".replace(',', '.'), "Volume Físico", "#9B59B6")
+                    with col_det1: exibir_kpi("📦 SKUs Distintos", total_skus_id, "Mix de produtos", "#0086FF")
+                    with col_det2: exibir_kpi("🔢 Total de Peças", f"{total_pecas_id:,.0f}".replace(',', '.'), "Volume Físico", "#8E44AD")
                     
                     cols_to_show = []
                     rename_dict = {}
@@ -1404,7 +1412,7 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
             graf_col1, graf_col2 = st.columns([2, 1])
             with graf_col1:
                 evolucao = resumo_tabela.groupby('Data Produção')['Peças'].sum().reset_index()
-                fig_transf = px.bar(evolucao, x='Data Produção', y='Peças', text='Peças', title="Volume de Peças por Dia", color_discrete_sequence=['#9B59B6'])
+                fig_transf = px.bar(evolucao, x='Data Produção', y='Peças', text='Peças', title="Volume de Peças por Dia", color_discrete_sequence=['#8E44AD'])
                 fig_transf.update_traces(textposition='outside')
                 fig_transf = aplicar_estilo_premium(fig_transf)
                 st.plotly_chart(fig_transf, use_container_width=True)
