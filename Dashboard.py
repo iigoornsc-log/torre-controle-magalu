@@ -12,29 +12,41 @@ st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="🛍️",
 # --- INJEÇÃO DE CSS PREMIUM (RELEVO E SOMBRAS) ---
 st.markdown("""
 <style>
-.header-magalu {
-    background: linear-gradient(90deg, #0086FF, #0057D9);
-    padding: 18px 30px;
-    border-radius: 0 0 18px 18px;
-    box-shadow: 0 8px 25px rgba(0, 86, 255, 0.25);
-    margin-bottom: 20px;
-}
-.header-magalu h1 {
-    color: white;
-    font-size: 28px;
-    margin: 0;
-    font-weight: 700;
-}
-.header-magalu span {
-    color: #D6E4FF;
-    font-size: 14px;
-}
-</style>
+    .stApp { background-color: #F4F7F6; color: #2C3E50; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    h1, h2, h3 { color: #2C3E50 !important; font-weight: 800; letter-spacing: -0.5px; }
+    hr { border-top: 2px solid #EAEDED; border-radius: 2px; }
+    
+    [data-testid="stDataFrame"] { 
+        border: none !important; 
+        border-radius: 12px !important; 
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important; 
+        overflow: hidden !important; 
+    }
+    
+    [data-testid="stPlotlyChart"] {
+        background-color: #FFFFFF;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        padding: 15px 10px 5px 10px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    [data-testid="stPlotlyChart"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    }
 
-<div class="header-magalu">
-    <h1>🚛 MagaluLog | Torre de Controle CD2900</h1>
-    <span>Gestão Inteligente de Recebimento e Capacidade Operacional</span>
-</div>
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        box-shadow: 2px 0 15px rgba(0, 0, 0, 0.03);
+        border-right: none;
+    }
+    .streamlit-expanderHeader {
+        background-color: #FFFFFF !important;
+        border-radius: 10px !important;
+        border: 1px solid #EAEDED !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+    }
+</style>
 """, unsafe_allow_html=True)
 
 # --- FUNÇÃO DE ESTILIZAÇÃO DE GRÁFICOS ---
@@ -56,30 +68,17 @@ def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # --- COMPONENTE DE KPI ---
-def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF", icone="📊"):
+def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
     st.markdown(f"""
     <div style="
-        background: linear-gradient(145deg, #FFFFFF, #F8FAFC);
-        border-radius: 16px;
-        padding: 18px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-        border: 1px solid #EEF2F7;
-        transition: all 0.25s ease;
-    " onmouseover="this.style.transform='scale(1.03)'" 
-      onmouseout="this.style.transform='scale(1)'">
-
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <p style="font-size:13px; color:#6B7280; margin:0;">{titulo}</p>
-            <span style="font-size:18px;">{icone}</span>
-        </div>
-
-        <h2 style="margin:10px 0; font-size:30px; color:{cor}; font-weight:800;">
-            {valor}
-        </h2>
-
-        <p style="font-size:12px; color:#9CA3AF; margin:0;">
-            {subtitulo}
-        </p>
+        background-color: #FFFFFF; border-radius: 12px; padding: 16px 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04); border-left: 6px solid {cor};
+        margin-bottom: 15px; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0, 0, 0, 0.08)';" 
+      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.04)';">
+        <p style="margin: 0; font-size: 13px; color: #7F8C8D; font-weight: 600; text-transform: uppercase;">{titulo}</p>
+        <h2 style="margin: 5px 0; font-size: 32px; color: #2C3E50; font-weight: 800;">{valor}</h2>
+        <p style="margin: 0; font-size: 13px; color: #95A5A6; font-weight: 500;">{subtitulo}</p>
     </div>
     """, unsafe_allow_html=True)
 
