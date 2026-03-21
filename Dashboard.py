@@ -56,17 +56,30 @@ def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 # --- COMPONENTE DE KPI ---
-def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
+def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF", icone="📊"):
     st.markdown(f"""
     <div style="
-        background-color: #FFFFFF; border-radius: 12px; padding: 16px 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04); border-left: 6px solid {cor};
-        margin-bottom: 15px; transition: transform 0.2s ease, box-shadow 0.2s ease;
-    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0, 0, 0, 0.08)';" 
-      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.04)';">
-        <p style="margin: 0; font-size: 13px; color: #7F8C8D; font-weight: 600; text-transform: uppercase;">{titulo}</p>
-        <h2 style="margin: 5px 0; font-size: 32px; color: #2C3E50; font-weight: 800;">{valor}</h2>
-        <p style="margin: 0; font-size: 13px; color: #95A5A6; font-weight: 500;">{subtitulo}</p>
+        background: linear-gradient(145deg, #FFFFFF, #F8FAFC);
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        border: 1px solid #EEF2F7;
+        transition: all 0.25s ease;
+    " onmouseover="this.style.transform='scale(1.03)'" 
+      onmouseout="this.style.transform='scale(1)'">
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <p style="font-size:13px; color:#6B7280; margin:0;">{titulo}</p>
+            <span style="font-size:18px;">{icone}</span>
+        </div>
+
+        <h2 style="margin:10px 0; font-size:30px; color:{cor}; font-weight:800;">
+            {valor}
+        </h2>
+
+        <p style="font-size:12px; color:#9CA3AF; margin:0;">
+            {subtitulo}
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
