@@ -1590,7 +1590,7 @@ elif pagina == "📦 Registro de Backlog":
             df_hist_backlog = pd.DataFrame(dados_hist[1:], columns=dados_hist[0])
             st.dataframe(df_hist_backlog, use_container_width=True, hide_index=True)
 
-            st.markdown("#### 📊 Raio-X dos Gargalos (Motivos)")
+            st.markdown("#### Gargalos (Motivos)")
             col_g1, col_g2 = st.columns([1, 2])
             
             with col_g1:
