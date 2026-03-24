@@ -1541,7 +1541,7 @@ elif pagina == "📦 Registro de Backlog":
         with col_b2:
             cat_backlog = st.text_input("Categoria / Linha")
             motivo_backlog = st.selectbox(
-                "Motivo da Sobra (Gargalo)", 
+                "Motivo da BackLog", 
                 ["Operacional", "Ocupação (Pátio/Armazém)", "Acima da Capacidade (Doca/Equipe)", "Tempo Hábil", "Sistêmico / Outros"]
             )
             qtd_pecas_backlog = st.number_input("Quantidade de Peças (Opcional)", min_value=0, step=1)
