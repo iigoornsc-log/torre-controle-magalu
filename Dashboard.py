@@ -459,7 +459,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador Cenário APC", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador What-If", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog"])
 st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
@@ -1523,3 +1523,85 @@ elif pagina == "📝 Solicitações Extras":
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
+
+# ==============================================================================
+# PÁGINA 7: REGISTRO DE BACKLOG (SOBRAS DE DOCA)
+# ==============================================================================
+elif pagina == "📦 Registro de Backlog":
+    st.title("📦 Registro de Backlog Diário")
+    st.markdown("Registre aqui as cargas que não puderam ser descarregadas no dia previsto e precisaram ser roladas para o dia seguinte. Isso gerará um histórico de gargalos operacionais.")
+
+    st.markdown("### ➕ Novo Registro de Backlog")
+    with st.form(key="form_backlog", clear_on_submit=True):
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            data_backlog = st.date_input("Data Original do Agendamento", format="DD/MM/YYYY")
+            agenda_backlog = st.text_input("Número da Agenda / ID")
+            forn_backlog = st.text_input("Fornecedor / Transportadora")
+        with col_b2:
+            cat_backlog = st.text_input("Categoria / Linha")
+            motivo_backlog = st.selectbox(
+                "Motivo da Sobra (Gargalo)", 
+                ["Operacional", "Ocupação (Pátio/Armazém)", "Acima da Capacidade (Doca/Equipe)", "Tempo Hábil", "Sistêmico / Outros"]
+            )
+            qtd_pecas_backlog = st.number_input("Quantidade de Peças (Opcional)", min_value=0, step=1)
+
+        submit_backlog = st.form_submit_button("💾 Salvar Backlog na Nuvem")
+
+        if submit_backlog:
+            if not agenda_backlog or not forn_backlog:
+                st.error("⚠️ Por favor, preencha pelo menos a Agenda e o Fornecedor.")
+            else:
+                try:
+                    cliente_google = conectar_google()
+                    ws_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
+
+                    # Tenta achar a aba, se não existir, o robô cria sozinho!
+                    try:
+                        ws_backlog = ws_principal.worksheet("BACKLOG")
+                    except:
+                        ws_backlog = ws_principal.add_worksheet(title="BACKLOG", rows="100", cols="7")
+                        ws_backlog.append_row(["Data Original", "Agenda", "Fornecedor", "Categoria", "Motivo", "Qtd Peças", "Data do Registro"])
+
+                    ws_backlog.append_row([
+                        data_backlog.strftime("%d/%m/%Y"),
+                        agenda_backlog.strip(),
+                        forn_backlog.strip().upper(),
+                        cat_backlog.strip().upper(),
+                        motivo_backlog,
+                        int(qtd_pecas_backlog),
+                        pd.Timestamp.now(tz='America/Sao_Paulo').strftime("%d/%m/%Y %H:%M:%S")
+                    ])
+                    st.success("✅ Backlog registrado com sucesso! Os dados já estão na nuvem.")
+                except Exception as e:
+                    st.error(f"🚨 Erro ao salvar: {e}")
+
+    st.markdown("---")
+    st.markdown("### 📚 Histórico de Backlogs Registrados")
+    
+    # O robô lê a planilha de Backlog em tempo real para exibir na tela
+    try:
+        cliente_google = conectar_google()
+        ws_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
+        ws_backlog_hist = ws_principal.worksheet("BACKLOG")
+        dados_hist = ws_backlog_hist.get_all_values()
+
+        if len(dados_hist) > 1:
+            df_hist_backlog = pd.DataFrame(dados_hist[1:], columns=dados_hist[0])
+            st.dataframe(df_hist_backlog, use_container_width=True, hide_index=True)
+
+            st.markdown("#### 📊 Raio-X dos Gargalos (Motivos)")
+            col_g1, col_g2 = st.columns([1, 2])
+            
+            with col_g1:
+                resumo_motivos = df_hist_backlog['Motivo'].value_counts().reset_index()
+                resumo_motivos.columns = ['Motivo', 'Quantidade']
+                fig_motivos = px.pie(resumo_motivos, values='Quantidade', names='Motivo', hole=0.5, color_discrete_sequence=px.colors.sequential.Teal)
+                fig_motivos.update_traces(textposition='inside', textinfo='percent+label')
+                fig_motivos = aplicar_estilo_premium(fig_motivos)
+                fig_motivos.update_layout(showlegend=False)
+                st.plotly_chart(fig_motivos, use_container_width=True)
+        else:
+            st.info("Ainda não há backlogs registrados no sistema.")
+    except:
+        st.info("A planilha de BACKLOG será criada automaticamente assim que você registrar a primeira sobra acima.")
