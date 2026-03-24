@@ -120,22 +120,10 @@ def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
     else:
         sombra_hover = "rgba(0, 134, 255, 0.25)"
 
+    # HTML TODO JUNTO PARA O STREAMLIT NÃO SE PERDER
     st.markdown(f"""
-    <div style="
-        background: #FFFFFF;
-        border-radius: 16px;
-        padding: 22px 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-        border-top: 5px solid {cor};
-        margin-bottom: 16px;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-    " onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 25px {sombra_hover}';" 
-      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.03)';">
-        
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 22px 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); border-top: 5px solid {cor}; margin-bottom: 16px; position: relative; overflow: hidden; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 25px {sombra_hover}';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.03)';">
         <div style="position: absolute; top: -15px; right: -15px; width: 70px; height: 70px; background: {cor}; opacity: 0.08; border-radius: 50%;"></div>
-        
         <p style="margin: 0; font-size: 13px; color: #576574; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</p>
         <h2 style="margin: 8px 0; font-size: 36px; color: #1E272E; font-weight: 900; line-height: 1.1;">{valor}</h2>
         <p style="margin: 0; font-size: 13px; color: #8395A7; font-weight: 600;">{subtitulo}</p>
