@@ -1479,7 +1479,7 @@ elif pagina == "📝 Solicitações Extras":
         col_f1, col_f2 = st.columns(2)
         with col_f1:
             data_vaga = st.date_input("Data autorizada para a vaga", format="DD/MM/YYYY")
-            fornecedor_extra = st.text_input("Fornecedor / Transportadora")
+            fornecedor_extra = st.text_input("Fornecedor")
             solicitante = st.text_input("Comercial Solicitante (Quem autorizou?)")
         with col_f2:
             qtd_pecas_extra = st.number_input("Quantidade Estimada de Peças", min_value=0, step=1)
