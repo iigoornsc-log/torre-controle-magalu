@@ -9,76 +9,136 @@ import json
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="🛍️", layout="wide", initial_sidebar_state="expanded")
 
-# --- INJEÇÃO DE CSS PREMIUM (RELEVO E SOMBRAS) ---
+# ==============================================================================
+# 🎨 FRONT-END SÊNIOR | IDENTIDADE VISUAL MAGALU
+# ==============================================================================
 st.markdown("""
 <style>
-    .stApp { background-color: #F4F7F6; color: #2C3E50; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    h1, h2, h3 { color: #2C3E50 !important; font-weight: 800; letter-spacing: -0.5px; }
-    hr { border-top: 2px solid #EAEDED; border-radius: 2px; }
-    
-    [data-testid="stDataFrame"] { 
-        border: none !important; 
-        border-radius: 12px !important; 
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important; 
-        overflow: hidden !important; 
+    /* Importando Fonte Tecnológica e Limpa */
+    @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
+
+    .stApp { 
+        background-color: #F5F7FA; 
+        font-family: 'Nunito Sans', sans-serif; 
+        color: #2D3436;
     }
     
-    [data-testid="stPlotlyChart"] {
-        background-color: #FFFFFF;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-        padding: 15px 10px 5px 10px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    h1, h2, h3, h4, h5, h6 { 
+        color: #1E272E !important; 
+        font-family: 'Nunito Sans', sans-serif !important;
+        font-weight: 800 !important; 
+        letter-spacing: -0.5px; 
     }
+    
+    hr { border-top: 2px solid #E1E8ED; border-radius: 2px; margin-top: 2rem; margin-bottom: 2rem; }
+    
+    /* Paineis e DataFrames: Bordas suaves e Sombras flutuantes */
+    [data-testid="stDataFrame"], [data-testid="stPlotlyChart"] { 
+        background-color: #FFFFFF !important; 
+        border-radius: 16px !important; 
+        box-shadow: 0 4px 20px rgba(0, 134, 255, 0.05) !important; 
+        padding: 10px;
+        border: 1px solid #F0F3F5;
+        transition: all 0.3s ease;
+    }
+    
     [data-testid="stPlotlyChart"]:hover {
+        box-shadow: 0 10px 30px rgba(0, 134, 255, 0.1) !important;
         transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
     }
 
+    /* Menu Lateral Branco e Elegante */
     [data-testid="stSidebar"] {
         background-color: #FFFFFF;
-        box-shadow: 2px 0 15px rgba(0, 0, 0, 0.03);
-        border-right: none;
+        border-right: 1px solid #E1E8ED;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.02);
     }
+    
+    /* Customização dos Botões (Estilo Magalu) */
+    .stButton>button {
+        background: linear-gradient(135deg, #0086FF 0%, #006DCC 100%);
+        color: #FFFFFF;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 15px;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0, 134, 255, 0.2);
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 134, 255, 0.4);
+        color: #FFFFFF;
+    }
+    
+    /* Expanders Limpos */
     .streamlit-expanderHeader {
         background-color: #FFFFFF !important;
         border-radius: 10px !important;
-        border: 1px solid #EAEDED !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02) !important;
+        border: 1px solid #E1E8ED !important;
+        font-weight: 700 !important;
+        color: #0086FF !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- FUNÇÃO DE ESTILIZAÇÃO DE GRÁFICOS ---
+# --- ESTILIZADOR DE GRÁFICOS (PLOTLY SÊNIOR) ---
 def aplicar_estilo_premium(fig):
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family="Segoe UI, Roboto, sans-serif", color='#2C3E50'),
+        font=dict(family="Nunito Sans, sans-serif", color='#2D3436', size=13),
         hovermode="x unified",
-        hoverlabel=dict(bgcolor="rgba(255, 255, 255, 0.95)", font_size=13, font_family="Segoe UI", bordercolor="#EAEDED"),
-        margin=dict(t=40, b=20, l=20, r=20)
+        hoverlabel=dict(
+            bgcolor="rgba(255, 255, 255, 0.95)", 
+            font_size=14, 
+            font_family="Nunito Sans", 
+            bordercolor="#E1E8ED",
+            font_color="#1E272E"
+        ),
+        margin=dict(t=50, b=20, l=20, r=20),
+        title_font=dict(size=18, color='#1E272E', family="Nunito Sans", weight='bold')
     )
-    fig.update_traces(marker=dict(line=dict(width=2, color='#FFFFFF')), opacity=0.88)
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F0F3F4', griddash='dot')
-    fig.update_xaxes(showgrid=False)
+    # Borda branca que dá o efeito de "fatias soltas" super moderno
+    fig.update_traces(marker=dict(line=dict(width=1.5, color='#FFFFFF')), opacity=0.9)
+    # Linhas de grade tracejadas (muito mais limpo)
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#E1E8ED', griddash='dash', tickfont=dict(color='#8395A7', size=12))
+    fig.update_xaxes(showgrid=False, tickfont=dict(color='#8395A7', size=12), title_font=dict(color='#8395A7'))
     return fig
 
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# --- COMPONENTE DE KPI ---
+# --- COMPONENTE DE KPI VIVO E MODERNO ---
 def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
+    # Converte o HEX para RGB para fazer a sombra brilhar na mesma cor
+    cor_hex = cor.lstrip('#')
+    if len(cor_hex) == 6:
+        r, g, b = tuple(int(cor_hex[i:i+2], 16) for i in (0, 2, 4))
+        sombra_hover = f"rgba({r}, {g}, {b}, 0.25)"
+    else:
+        sombra_hover = "rgba(0, 134, 255, 0.25)"
+
     st.markdown(f"""
     <div style="
-        background-color: #FFFFFF; border-radius: 12px; padding: 16px 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04); border-left: 6px solid {cor};
-        margin-bottom: 15px; transition: transform 0.2s ease, box-shadow 0.2s ease;
-    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0, 0, 0, 0.08)';" 
-      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.04)';">
-        <p style="margin: 0; font-size: 13px; color: #7F8C8D; font-weight: 600; text-transform: uppercase;">{titulo}</p>
-        <h2 style="margin: 5px 0; font-size: 32px; color: #2C3E50; font-weight: 800;">{valor}</h2>
-        <p style="margin: 0; font-size: 13px; color: #95A5A6; font-weight: 500;">{subtitulo}</p>
+        background: #FFFFFF;
+        border-radius: 16px;
+        padding: 22px 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        border-top: 5px solid {cor};
+        margin-bottom: 16px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    " onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 25px {sombra_hover}';" 
+      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.03)';">
+        
+        <div style="position: absolute; top: -15px; right: -15px; width: 70px; height: 70px; background: {cor}; opacity: 0.08; border-radius: 50%;"></div>
+        
+        <p style="margin: 0; font-size: 13px; color: #576574; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</p>
+        <h2 style="margin: 8px 0; font-size: 36px; color: #1E272E; font-weight: 900; line-height: 1.1;">{valor}</h2>
+        <p style="margin: 0; font-size: 13px; color: #8395A7; font-weight: 600;">{subtitulo}</p>
     </div>
     """, unsafe_allow_html=True)
 
