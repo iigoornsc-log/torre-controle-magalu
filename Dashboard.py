@@ -1148,7 +1148,7 @@ elif pagina == "👷 Simulador Mão de Obra":
                     # Se uma equipe está muito mais cheia que a outra, tenta mover uma carga
                     if tempo_por_equipe[e1] > tempo_por_equipe[e2]:
                         # Tenta achar uma carga em e1 que, se movida para e2, reduz a diferença
-                        for idx, c em enumerate(alocacao_equipes[e1]):
+                        for idx, c in enumerate(alocacao_equipes[e1]): # <-- AQUI ESTAVA O ERRO DE DIGITAÇÃO!
                             if c['tipo'] == '🚚 Transferência': continue # Não movemos cargas fixas
                             
                             novo_e1 = tempo_por_equipe[e1] - c['minutos']
