@@ -1,4 +1,5 @@
 import streamlit as st
+import google.generativeai as genai
 import pandas as pd
 import plotly.express as px
 import math
@@ -459,7 +460,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador What-If", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador What-If", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🤖 IA Recebimento"])
 st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
@@ -1663,3 +1664,69 @@ elif pagina == "📦 Registro de Backlog":
             st.info("Ainda não há backlogs registrados no sistema.")
     except:
         st.info("A planilha de BACKLOG será criada automaticamente assim que você registrar a primeira sobra acima.")
+
+# ==============================================================================
+# PÁGINA 8: ASSISTENTE VIRTUAL (COPILOT DA DOCA)
+# ==============================================================================
+elif pagina == "🤖 Copilot da Doca":
+    st.title("🤖 Copilot da Doca | Assistente de IA")
+    st.markdown("Converse com a Inteligência Artificial. Ela tem acesso ao resumo da operação do período filtrado e pode te ajudar a tomar decisões rápidas!")
+
+    # 1. Configura a IA com a sua chave secreta
+    try:
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        model = genai.GenerativeModel('gemini-1.5-flash')
+    except Exception as e:
+        st.error("⚠️ Chave de API do Gemini não configurada nos Secrets do Streamlit.")
+        st.stop()
+
+    # 2. Cria a memória do chat na sessão
+    if "mensagens_chat" not in st.session_state:
+        st.session_state.mensagens_chat = []
+
+    # 3. Injeta o "Cérebro" (Contexto da Operação) na IA
+    # Aqui a gente pega os dados filtrados e transforma em texto pra IA ler
+    df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)]
+    qtd_agendas = len(df_contexto)
+    qtd_pecas = df_contexto['Qtd Peças'].sum() if not df_contexto.empty else 0
+    top_fornecedores = df_contexto['Fornecedor'].value_counts().head(3).to_dict() if not df_contexto.empty else {}
+    
+    contexto_operacao = f"""
+    INSTRUÇÃO DE SISTEMA: Você é o Copilot da Doca, um assistente executivo de logística sênior do Magazine Luiza (CD2900). 
+    Responda de forma direta, profissional e analítica. 
+    Aqui estão os dados da operação no período filtrado ({data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}):
+    - Total de Veículos Agendados: {qtd_agendas}
+    - Volume Total (Peças): {qtd_pecas:,.0f}
+    - Top 3 Fornecedores com mais cargas: {top_fornecedores}
+    
+    Baseie suas respostas nestes dados quando questionado sobre a operação atual.
+    """
+
+    # 4. Desenha as mensagens antigas na tela
+    for msg in st.session_state.mensagens_chat:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    # 5. Caixa de texto para o usuário digitar
+    pergunta_usuario = st.chat_input("Pergunte algo sobre a operação de hoje...")
+
+    if pergunta_usuario:
+        # Mostra a pergunta do usuário na tela e salva na memória
+        st.chat_message("user").markdown(pergunta_usuario)
+        st.session_state.mensagens_chat.append({"role": "user", "content": pergunta_usuario})
+
+        # Prepara a mensagem pra mandar pra IA (juntando o contexto oculto + a pergunta)
+        prompt_final = contexto_operacao + "\n\nPergunta do Gerente: " + pergunta_usuario
+
+        with st.spinner("🧠 Analisando a doca..."):
+            try:
+                # Chama o Gemini
+                resposta = model.generate_content(prompt_final)
+                texto_resposta = resposta.text
+                
+                # Mostra a resposta da IA na tela e salva na memória
+                with st.chat_message("assistant"):
+                    st.markdown(texto_resposta)
+                st.session_state.mensagens_chat.append({"role": "assistant", "content": texto_resposta})
+            except Exception as e:
+                st.error(f"Erro ao consultar a IA: {e}")
