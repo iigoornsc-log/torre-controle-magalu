@@ -1165,7 +1165,7 @@ elif pagina == "👷 Simulador Mão de Obra":
         # --- RENDERIZAÇÃO DOS RESULTADOS ---
         dados_finais = []
         for eq_id, cargas in alocacao_equipes.items():
-            nome_display = nomes_equipes[eq_id]
+            nome_display = get_nome_equipe(eq_id) # <-- CORREÇÃO: Usando a função nova!
             for c in cargas:
                 dados_finais.append({
                     'Equipe': nome_display,
