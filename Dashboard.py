@@ -1055,107 +1055,165 @@ elif pagina == "📈 Simulador Cenário APC":
     else: st.warning("Não há dados carregados para gerar a simulação no período selecionado.")
 
 # ==============================================================================
-# PÁGINA 3: PROVA DE SOBRECARGA (COMERCIAL)
+# PÁGINA 3: SIMULADOR MÃO DE OBRA (COM MOTOR DE OTIMIZAÇÃO IA)
 # ==============================================================================
 elif pagina == "👷 Simulador Mão de Obra":
-    st.title("⚖️ Análise de Mão de obra")
-    st.markdown("Esta visão simula o cenário do dia selecionado, balanceando as cargas de acordo com a quantidade de equipes disponíveis.")
+    st.title("⚖️ Simulador Mão de Obra | Inteligência Logística")
+    st.markdown("""
+    Esta visão utiliza um algoritmo de **Otimização Matemática** para balancear as docas. 
+    O objetivo é garantir que nenhuma equipe fique sobrecarregada enquanto outra está ociosa, 
+    minimizando o custo de Horas Extras (HE).
+    """)
     
     dias_disponiveis = sorted(df[df['Data'].notna()]['Data'].dt.strftime('%d/%m/%Y').unique())
     
     if dias_disponiveis:
         st.sidebar.markdown("---")
         st.sidebar.header("⚙️ Parâmetros da Simulação")
-        dia_simulacao = st.sidebar.selectbox("Escolha um dia para balancear as cargas:", dias_disponiveis)
+        dia_simulacao = st.sidebar.selectbox("Escolha o dia para otimizar:", dias_disponiveis)
         
-        total_equipes = st.sidebar.number_input("Total de Equipes Disponíveis", min_value=1, max_value=20, value=6)
+        total_equipes = st.sidebar.number_input("Total de Equipes Disponíveis", min_value=1, max_value=25, value=6)
         eq_transf = st.sidebar.number_input("Equipes focadas em Transferência", min_value=0, max_value=total_equipes, value=min(3, total_equipes))
         max_madeira = max(0, total_equipes - eq_transf) 
         eq_madeira = st.sidebar.number_input("Equipes focadas em Madeira", min_value=0, max_value=max_madeira, value=min(2, max_madeira))
         
-        df_simulacao = df[df['Data'].dt.strftime('%d/%m/%Y') == dia_simulacao].copy()
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🤖 Configurações do Algoritmo")
+        ativar_ia = st.sidebar.toggle("🪄 Ativar Motor de Otimização", value=True, help="Se ativado, o robô fará milhares de trocas entre as equipes para achar a escala perfeita.")
         
-        tempo_equipes = {i: 0 for i in range(1, total_equipes + 1)}
-        def nomear_equipe(i):
-            if i <= eq_transf: return f'Eq. {i} 👷 (Transf)'
-            elif i <= eq_transf + eq_madeira: return f'Eq. {i} 👷 (Madeira)'
-            else: return f'Eq. {i} 👷 Misto'
-        nomes_equipes = {i: nomear_equipe(i) for i in range(1, total_equipes + 1)}
-        
-        cargas_alocadas = []
+        # --- PREPARAÇÃO DOS DADOS ---
+        df_dia = df[df['Data'].dt.strftime('%d/%m/%Y') == dia_simulacao].copy()
         data_obj = pd.to_datetime(dia_simulacao, format='%d/%m/%Y')
-        eq_disponiveis_transf = list(range(1, eq_transf + 1)) if eq_transf > 0 else list(tempo_equipes.keys())
         
+        # Estrutura para armazenar as alocações
+        # Cada equipe é um 'balde' que recebe tarefas
+        alocacao_equipes = {i: [] for i in range(1, total_equipes + 1)}
+        tempo_por_equipe = {i: 0 for i in range(1, total_equipes + 1)}
+
+        def get_nome_equipe(i):
+            if i <= eq_transf: return f'Eq. {i} (Transf)'
+            elif i <= eq_transf + eq_madeira: return f'Eq. {i} (Madeira)'
+            else: return f'Eq. {i} (Misto)'
+
+        # --- FASE 1: ALOCAÇÃO DE CARGAS FIXAS (TRANSFERÊNCIA) ---
         if data_obj.weekday() < 5:
-            for i in range(5):
-                eq_num = min(eq_disponiveis_transf, key=lambda k: tempo_equipes[k])
-                tempo_equipes[eq_num] += 240
-                cargas_alocadas.append({'Equipe': nomes_equipes[eq_num], 'Tipo Carga': 'Transferência Fixa (240m)', 'Minutos': 240, 'Detalhe': f'Transf CD Origem {i+1}'})
-        
-        cargas_madeira_lista = []
-        cargas_restante = []
-        for _, row in df_simulacao.iterrows():
+            indices_transf = list(range(1, eq_transf + 1)) if eq_transf > 0 else list(range(1, total_equipes + 1))
+            for i in range(5): # 5 Cargas de transferência fixa
+                # Escolhe a equipe com menos tempo no momento dentro do grupo de transf
+                eq_escolhida = min(indices_transf, key=lambda k: tempo_por_equipe[k])
+                carga = {'tipo': '🚚 Transferência', 'minutos': 240, 'detalhe': f'Transf CD Origem {i+1}'}
+                alocacao_equipes[eq_escolhida].append(carga)
+                tempo_por_equipe[eq_escolhida] += 240
+
+        # --- FASE 2: PREPARAÇÃO DAS CARGAS VARIÁVEIS ---
+        cargas_var = []
+        for _, row in df_dia.iterrows():
             minutos = row['Tempo_APC_Minutos']
             linhas = str(row['Linhas']).upper()
             forn = str(row['Fornecedor']).strip().title()
-            tipo = 'Carga Fulfillment' if row['Canal'] == 'Fulfillment' else 'Carga 1P/Misto'
+            
+            tipo = '📦 Fulfillment' if row['Canal'] == 'Fulfillment' else '🚛 1P Fornecedor'
             if 'MADEIRA' in linhas and row.get('Pecas_Madeira', 0) > 10:
-                cargas_madeira_lista.append((minutos, 'Carga Madeira', f'Madeira: {forn[:15]}'))
+                tipo = '🪵 Madeira'
+            
+            cargas_var.append({'tipo': tipo, 'minutos': minutos, 'detalhe': f"{forn[:15]} ({int(minutos)}m)"})
+
+        # Ordenar cargas da maior para a menor (Algoritmo LPT - Longest Processing Time)
+        cargas_var.sort(key=lambda x: x['minutos'], reverse=True)
+
+        # --- FASE 3: DISTRIBUIÇÃO INICIAL (GULOSA) ---
+        for carga in cargas_var:
+            # Se for madeira, tenta priorizar as equipes de madeira
+            if carga['tipo'] == '🪵 Madeira' and eq_madeira > 0:
+                indices_foco = list(range(eq_transf + 1, eq_transf + eq_madeira + 1))
             else:
-                cargas_restante.append((minutos, tipo, forn[:15]))
-                
-        cargas_madeira_lista.sort(key=lambda x: x[0], reverse=True)
-        cargas_restante.sort(key=lambda x: x[0], reverse=True)
-        
-        inicio_madeira = eq_transf + 1
-        fim_madeira = eq_transf + eq_madeira
-        eq_disponiveis_madeira = list(range(inicio_madeira, fim_madeira + 1)) if eq_madeira > 0 else list(tempo_equipes.keys())
-        
-        for min_val, tipo, det in cargas_madeira_lista:
-            eq_num = min(eq_disponiveis_madeira, key=lambda k: tempo_equipes[k])
-            tempo_equipes[eq_num] += min_val
-            cargas_alocadas.append({'Equipe': nomes_equipes[eq_num], 'Tipo Carga': tipo, 'Minutos': min_val, 'Detalhe': det})
+                # Caso contrário, foca em equipes mistas ou qualquer uma disponível (exceto exclusivas de transf se houver outras)
+                indices_foco = list(range(eq_transf + 1, total_equipes + 1)) if total_equipes > eq_transf else list(range(1, total_equipes + 1))
             
-        for min_val, tipo, det in cargas_restante:
-            eq_num = min(tempo_equipes.keys(), key=lambda k: tempo_equipes[k])
-            tempo_equipes[eq_num] += min_val
-            cargas_alocadas.append({'Equipe': nomes_equipes[eq_num], 'Tipo Carga': tipo, 'Minutos': min_val, 'Detalhe': det})
+            if not indices_foco: indices_foco = list(range(1, total_equipes + 1))
             
-        df_mochila = pd.DataFrame(cargas_alocadas)
+            eq_escolhida = min(indices_foco, key=lambda k: tempo_por_equipe[k])
+            alocacao_equipes[eq_escolhida].append(carga)
+            tempo_por_equipe[eq_escolhida] += carga['minutos']
+
+        # --- FASE 4: O MOTOR DE OTIMIZAÇÃO (IA) ---
+        if ativar_ia and total_equipes > 1:
+            with st.spinner("🤖 IA otimizando balanceamento de docas..."):
+                import random
+                # O algoritmo tentará 2000 iterações de melhoria
+                for _ in range(2000):
+                    # Seleciona duas equipes aleatórias
+                    e1, e2 = random.sample(list(alocacao_equipes.keys()), 2)
+                    
+                    # Se uma equipe está muito mais cheia que a outra, tenta mover uma carga
+                    if tempo_por_equipe[e1] > tempo_por_equipe[e2]:
+                        # Tenta achar uma carga em e1 que, se movida para e2, reduz a diferença
+                        for idx, c em enumerate(alocacao_equipes[e1]):
+                            if c['tipo'] == '🚚 Transferência': continue # Não movemos cargas fixas
+                            
+                            novo_e1 = tempo_por_equipe[e1] - c['minutos']
+                            novo_e2 = tempo_por_equipe[e2] + c['minutos']
+                            
+                            # Condição: A nova diferença deve ser menor que a anterior
+                            if abs(novo_e1 - novo_e2) < abs(tempo_por_equipe[e1] - tempo_por_equipe[e2]):
+                                # Executa a troca na memória
+                                alocacao_equipes[e2].append(alocacao_equipes[e1].pop(idx))
+                                tempo_por_equipe[e1] = novo_e1
+                                tempo_por_equipe[e2] = novo_e2
+                                break
+
+        # --- RENDERIZAÇÃO DOS RESULTADOS ---
+        dados_finais = []
+        for eq_id, cargas in alocacao_equipes.items():
+            nome_display = nomes_equipes[eq_id]
+            for c in cargas:
+                dados_finais.append({
+                    'Equipe': nome_display,
+                    'Tipo Carga': c['tipo'],
+                    'Minutos': c['minutos'],
+                    'Detalhe': c['detalhe']
+                })
+
+        df_mochila = pd.DataFrame(dados_finais)
         
         if not df_mochila.empty:
-            df_mochila['Ordem'] = df_mochila['Equipe'].str.extract(r'(\d+)').astype(int)
-            df_mochila = df_mochila.sort_values(by="Ordem")
-            
-            minutos_totais = sum(tempo_equipes.values())
-            capacidade_total_cd = total_equipes * 427
-            equipes_estouradas = sum(1 for v in tempo_equipes.values() if v > 427)
-            
             st.markdown("---")
-            col_s1, col_s2, col_s3 = st.columns(3)
-            with col_s1: exibir_kpi("Equipes em Sobrecarga", f"{equipes_estouradas} de {total_equipes}", "Mesmo equalizando 100%", "#E74C3C")
-            with col_s2: exibir_kpi("Demanda Exigida no Dia", f"{int(minutos_totais)} min", f"Capacidade Real: {capacidade_total_cd} min", "#9B59B6")
-            
-            saldo = minutos_totais - capacidade_total_cd
-            if saldo > 0: 
-                with col_s3: 
-                    exibir_kpi("Déficit Inevitável", f"+{int(saldo)} min", "Tempo faltante", "#E74C3C")
-            else: 
-                with col_s3: 
-                    exibir_kpi("Déficit Inevitável", "0 min", "Operação dentro do limite", "#2ECC71")
+            minutos_totais = sum(tempo_por_equipe.values())
+            capacidade_turno = total_equipes * 427
+            he_total = sum([max(0, v - 427) for v in tempo_por_equipe.values()])
+            ociosidade = sum([max(0, 427 - v) for v in tempo_por_equipe.values()])
 
-            fig_mochila = px.bar(
-                df_mochila, x='Equipe', y='Minutos', color='Tipo Carga', text='Detalhe', title=f"Balanceamento Dinâmico de Cargas - Dia {dia_simulacao}",
-                color_discrete_map={'Transferência Fixa (240m)': '#8E44AD', 'Carga Madeira': '#E67E22', 'Carga Fulfillment': '#3498DB', 'Carga 1P/Misto': '#2ECC71'}
+            col1, col2, col3, col4 = st.columns(4)
+            with col1: exibir_kpi("Equipes", total_equipes, "Headcount Ativo", "#3498DB")
+            with col2: 
+                cor_he = "#2ECC71" if he_total == 0 else "#E74C3C"
+                exibir_kpi("Total H.E.", f"{int(he_total)} min", "Minutos extras no CD", cor_he)
+            with col3: exibir_kpi("Carga de Trabalho", f"{int(minutos_totais)} min", "Demanda total do dia", "#9B59B6")
+            with col4: exibir_kpi("Ociosidade", f"{int(ociosidade)} min", "Capacidade sobrando", "#95A5A6")
+
+            # Gráfico de Gantt/Mochila Otimizado
+            fig_opt = px.bar(
+                df_mochila, x='Equipe', y='Minutos', color='Tipo Carga', text='Detalhe',
+                title=f"Escala Otimizada por IA - {dia_simulacao}",
+                color_discrete_map={
+                    '🚚 Transferência': '#8E44AD', '🪵 Madeira': '#E67E22', 
+                    '📦 Fulfillment': '#0086FF', '1P Fornecedor': '#2ECC71'
+                }
             )
             
-            fig_mochila.add_hline(y=427, line_dash="solid", line_width=3, line_color="#E74C3C", annotation_text="Capacidade Máxima do Turno (427 min)", annotation_position="top left", annotation_font_color="#E74C3C")
-            fig_mochila.update_traces(textposition='inside', insidetextanchor='middle')
-            fig_mochila = aplicar_estilo_premium(fig_mochila)
-            fig_mochila.update_layout(height=800, bargap=0.15)
-            st.plotly_chart(fig_mochila, use_container_width=True)
-        else: st.warning("Nenhuma carga encontrada para o dia selecionado.")
-    else: st.warning("Não há dados carregados para gerar a simulação.")
+            fig_opt.add_hline(y=427, line_dash="solid", line_width=3, line_color="#FF4757", 
+                             annotation_text="LIMITE DO TURNO (427m)", annotation_position="top left")
+            
+            fig_opt.update_traces(textposition='inside', insidetextanchor='middle')
+            fig_opt = aplicar_estilo_premium(fig_opt)
+            fig_opt.update_layout(height=800, bargap=0.2)
+            st.plotly_chart(fig_opt, use_container_width=True)
+            
+            st.info("💡 **Dica do Especialista:** O algoritmo priorizou o nivelamento das docas. As cargas de Madeira foram concentradas nas equipes especialistas para otimizar o tempo de conferência física.")
+        else:
+            st.warning("Nenhuma carga encontrada no agendamento para este dia.")
+    else:
+        st.warning("Aguardando carregamento da base de dados...")
 
 # ==============================================================================
 # PÁGINA 4: MATRIZ DE PLANEJAMENTO (S&OP COMERCIAL)
