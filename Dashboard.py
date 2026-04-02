@@ -1756,7 +1756,7 @@ elif "IA Recebimento" in pagina:
                         # Conecta na planilha real para caçar o item
                         cliente_google = conectar_google()
                         ws_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
-                        ws_itens = ws_principal.worksheet("Itens_Recebimento") # <-- COLOQUE O NOME DA ABA AQUI
+                        ws_itens = ws_principal.worksheet("Item Agenda") # <-- COLOQUE O NOME DA ABA AQUI
                         dados_nuvem = ws_itens.get_all_values()
                         if len(dados_nuvem) > 1:
                             df_nuvem = pd.DataFrame(dados_nuvem[1:], columns=dados_nuvem[0])
