@@ -1668,41 +1668,28 @@ elif pagina == "📦 Registro de Backlog":
 # ==============================================================================
 # PÁGINA 8: IA RECEBIMENTO (OMNI-CÉREBRO PREDADOR)
 # ==============================================================================
-elif "IA Recebimento" in pagina:
-    st.title("🤖 Robozinho Inteligente | OMNI-REC")
-    st.markdown("⚠️ **Atenção:** Inteligência conectada a **todos** os módulos do CD2900 (Teto 1P, Lego, APC, Risco e Nuvem).")
-
-    try:
-        import google.generativeai as genai
-        # Coloque sua chave real aqui
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) 
-        modelo_disponivel = next((m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods), None)
-        if not modelo_disponivel: st.stop()
-        model = genai.GenerativeModel(modelo_disponivel)
-    except Exception as e:
-        st.error(f"⚠️ Erro de ignição: {e}")
-        st.stop()
-
-    if "mensagens_chat" not in st.session_state:
-        msg_boas_vindas = """
-        🎖️ **CÉREBRO PREDADOR ONLINE. ACESSO OMNI-CHANNEL LIBERADO.**
+st.markdown("### 🎯 Comandos de Acesso Rápido:")
         
-        Estou conectado a 100% da malha de dados do site:
-        - 📏 **Teto de Agendas 1P** (Ocupação e Fornecedores)
-        - 🧩 **Planejamento Lego** (Vagas do Comercial vs Real)
-        - 👥 **Visão APC** (Matemática de equipes e H.E.)
-        - 🚨 **Matriz de Risco Crítico** (Capotamentos)
-        - 📦 **Rastreio de Itens na Nuvem**
+        # Cria 3 colunas para colocar os botões lado a lado
+        col1, col2, col3 = st.columns(3)
+        comando_clicado = None
         
-        Comande a operação.
-        """
-        st.session_state.mensagens_chat = [{"role": "assistant", "content": msg_boas_vindas}]
+        if col1.button("🚨 Ofensores da Semana"):
+            comando_clicado = "Quais os dias de maior risco na semana e os fornecedores ofensores?"
+            
+        if col2.button("⏱️ Risco de Hora Extra (APC)"):
+            comando_clicado = "Qual o cenário da nossa APC? Vamos estourar o limite de 2.562 min em algum dia?"
+            
+        if col3.button("🧩 Estouro Comercial (Lego)"):
+            comando_clicado = "O Comercial aprovou mais vagas no Lego do que a nossa capacidade suporta?"
 
-    for msg in st.session_state.mensagens_chat:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+        st.markdown("---")
+        
+        # Mantém a barra de digitação para rastreios específicos
+        pergunta_digitada = st.chat_input("Ou digite comando livre (Ex: 'Quando chega o item 123?')...")
 
-    pergunta_usuario = st.chat_input("Comande a operação. Cruze dados de qualquer aba...")
+        # A IA vai ser ativada se ele CLICAR no botão OU se ele DIGITAR algo
+        pergunta_usuario = comando_clicado or pergunta_digitada
 
     if pergunta_usuario:
         st.chat_message("user").markdown(pergunta_usuario)
