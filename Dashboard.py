@@ -1292,7 +1292,7 @@ elif pagina == "🧩 Planejamento Lego":
         estouradas = len(df_executivo[df_executivo['VAGAS (Saldo)'] < 0])
         
         col_e1, col_e2, col_e3, col_e4 = st.columns(4)
-        with col_e1: exibir_kpi("Meta (LEGO)", f"{meta_total:,.0f}".replace(',', '.'), "Plano do Mês", "#3498DB")
+        with col_e1: exibir_kpi("Planejado (LEGO)", f"{meta_total:,.0f}".replace(',', '.'), "Plano do Mês", "#3498DB")
         with col_e2: exibir_kpi("Agendado", f"{realizado_total:,.0f}".replace(',', '.'), "Agendamentos Realizados", "#9B59B6")
         cor_saldo = "#2ECC71" if saldo_total >= 0 else "#E74C3C"
         texto_saldo = "Vagas Livres" if saldo_total >= 0 else "Risco Global"
