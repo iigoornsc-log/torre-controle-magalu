@@ -1675,7 +1675,7 @@ elif "IA Recebimento" in pagina:
     try:
         import google.generativeai as genai
         # Coloque sua chave real aqui
-        genai.configure(api_key="SUA_CHAVE_AQUI") 
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) 
         modelo_disponivel = next((m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods), None)
         if not modelo_disponivel: st.stop()
         model = genai.GenerativeModel(modelo_disponivel)
