@@ -1728,8 +1728,8 @@ elif "IA Recebimento" in pagina:
                 # Resumo de Ofensores (Mix de Carga)
                 df_mix = df_contexto.groupby(['Data_Str', 'Categorias']).size().reset_index(name='Qtd')
                 
-                txt_apc = df_apc.to_csv(index=False, sep='|')
-                txt_mix = df_mix.to_csv(index=False, sep='|')
+                txt_apc = df_apc.head(100).to_csv(index=False, sep='|')
+                txt_mix = df_mix.head(100).to_csv(index=False, sep='|')
             else:
                 txt_apc, txt_mix = "Sem dados 1P.", "Sem dados de mix."
 
@@ -1751,7 +1751,7 @@ elif "IA Recebimento" in pagina:
                             Vagas_Liberadas=(col_plan_lego, 'sum'),
                             Vagas_Ocupadas=(col_real_lego, 'sum')
                         ).reset_index()
-                        txt_lego = resumo_lego.to_csv(index=False, sep='|')
+                        txt_lego = resumo_lego.head(100).to_csv(index=False, sep='|')
 
             # MÓDULO 3: RASTREIO NUVEM (SNIPER DE ITENS)
             txt_sniper = "Nenhuma busca de item solicitada."
@@ -1771,7 +1771,7 @@ elif "IA Recebimento" in pagina:
                             col_sku = next((c for c in df_nuvem.columns if 'SKU' in c.upper() or 'ITEM' in c.upper()), None)
                             if col_sku:
                                 busca = df_nuvem[df_nuvem[col_sku].astype(str).str.contains(sku_alvo)]
-                                txt_sniper = busca.to_csv(index=False, sep='|') if not busca.empty else f"Item {sku_alvo} não encontrado na Nuvem."
+                                txt_sniper = busca.head(50).to_csv(index=False, sep='|') if not busca.empty else f"Item {sku_alvo} não encontrado na Nuvem."
                     except Exception as e:
                         txt_sniper = f"Falha ao acessar Nuvem: {e}"
 
