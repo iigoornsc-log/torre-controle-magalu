@@ -358,7 +358,7 @@ def carregar_dados():
                     'LINHA': 'Linhas',
                     'ITEMS.LIST.ELEMENT.CATEGORY.FAMILY.NAME': 'Categoria',
                     'QTAGENDA': 'Qtd Peças'
-                
+                }
                 df_itens_full = df_itens_full.rename(columns=lambda x: map_full.get(x, x))
         except: pass
 
