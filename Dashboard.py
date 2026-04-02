@@ -1697,24 +1697,74 @@ elif pagina == "🤖 IA Recebimento":
     if "mensagens_chat" not in st.session_state:
         st.session_state.mensagens_chat = []
 
-    # 3. Injeta o "Cérebro" (Contexto da Operação) na IA
-    # Aqui a gente pega os dados filtrados e transforma em texto pra IA ler
-    df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)]
+   # 3. INJETA O "SUPER CÉREBRO" (Contexto Total do Sistema e Operação)
+    df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
+    
+    # Resumo 1P e Full
     qtd_agendas = len(df_contexto)
     qtd_pecas = df_contexto['Qtd Peças'].sum() if not df_contexto.empty else 0
-    top_fornecedores = df_contexto['Fornecedor'].value_counts().head(3).to_dict() if not df_contexto.empty else {}
+    minutos_apc_total = df_contexto['Tempo_APC_Minutos'].sum() if not df_contexto.empty else 0
     
-    contexto_operacao = f"""
-    INSTRUÇÃO DE SISTEMA: Você é o Copilot da Doca, um assistente executivo de logística sênior do Magazine Luiza (CD2900). 
-    Responda de forma direta, profissional e analítica. 
-    Aqui estão os dados da operação no período filtrado ({data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}):
-    - Total de Veículos Agendados: {qtd_agendas}
-    - Volume Total (Peças): {qtd_pecas:,.0f}
-    - Top 3 Fornecedores com mais cargas: {top_fornecedores}
-    
-    Baseie suas respostas nestes dados quando questionado sobre a operação atual.
-    """
+    # Resumo Diário para cruzamentos de Risco
+    if not df_contexto.empty:
+        df_contexto['Data_Str'] = df_contexto['Data'].dt.strftime('%d/%m/%Y')
+        resumo_diario = df_contexto.groupby(['Data_Str', 'Categorias']).size().reset_index(name='Qtd_Cargas')
+        lista_diaria = resumo_diario.to_dict('records')
+        top_forn = df_contexto['Fornecedor'].value_counts().head(5).to_dict()
+    else:
+        lista_diaria = "Sem cargas 1P/Full no período."
+        top_forn = "Nenhum."
 
+    # Resumo Transferências (se a base estiver carregada)
+    df_transf_contexto = df_transf[(df_transf['DATA_FILTRO'] >= ts_inicio) & (df_transf['DATA_FILTRO'] <= ts_fim)] if not df_transf.empty and 'DATA_FILTRO' in df_transf.columns else pd.DataFrame()
+    qtd_transf = df_transf_contexto['ID_CARGA_PCP'].nunique() if not df_transf_contexto.empty and 'ID_CARGA_PCP' in df_transf_contexto.columns else 0
+
+    # Resumo Lego (Planejamento)
+    df_plan_contexto = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)] if not df_plan.empty else pd.DataFrame()
+    vagas_planejadas = df_plan_contexto['quantidade_planejado'].sum() if not df_plan_contexto.empty and 'quantidade_planejado' in df_plan_contexto.columns else 0
+
+    # O PROMPT MESTRE DA IA
+    contexto_operacao = f"""
+    INSTRUÇÃO DE SISTEMA (NÍVEL SÊNIOR):
+    Você é a "IA Recebimento", a inteligência artificial central da Torre de Controle Logística do Magalu (CD2900).
+    Seu papel é atuar como um Analista Sênior de Planejamento e S&OP. Seja proativo, analítico, altamente profissional e ajude a resolver problemas críticos.
+
+    [📚 MAPA DO SISTEMA - COMO AJUDAR O USUÁRIO A USAR O SITE]
+    Sempre que o usuário pedir ajuda para fazer uma tarefa, indique a aba correta do nosso sistema:
+    1. '🏠 Painel Operacional': Para ver o status das docas hoje em tempo real, painel de ausências (No-Show), consumo do teto 1P e a Matriz de Risco Crítico.
+    2. '📅 Previsão de Agendas': Para ter a visão executiva e estratégica (Mix de veículos e SKUs).
+    3. '📈 Simulador What-If': Para testar o estresse da malha. O usuário pode adicionar cargas virtuais e projetar o impacto na semana.
+    4. '👷 Simulador Mão de Obra': Onde fica nossa IA de Auto-Balanceamento. Ela distribui os caminhões entre as equipes para zerar ociosidade e Horas Extras.
+    5. '🧩 Planejamento Lego': S&OP. Compara o que o Comercial planejou vs o que foi realizado (Mapa de calor: Vermelho=Estourado, Verde=Livre).
+    6. '🚛 Transferências': Rastreio de cargas 325.
+    7. '📝 Solicitações Extras' e '📦 Registro de Backlog': Para registrar autorizações de teto e cargas que sobraram na doca.
+
+    [🚨 REGRAS DE OURO DA DOCA (RISCO DE CAPOTAMENTO)]
+    Se o usuário pedir para analisar a semana, cruze as "Regras de Ouro" abaixo com a "Lista de Cargas Diárias" e alerte imediatamente se algum dia quebrar a regra:
+    - 3 ou mais cargas de Madeira no mesmo dia = CAPOTA.
+    - 2 ou mais cargas de Pneu = CAPOTA.
+    - 2 Madeira + 1 Tubrax = CAPOTA.
+    - 2 ou mais cargas de Ar Condicionado = CAPOTA.
+    - 2 Madeira + 1 Diversos (>1k peças) = CAPOTA.
+
+    [📊 DADOS REAIS DA OPERAÇÃO (PERÍODO FILTRADO: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')})]
+    - Vagas Planejadas no Lego (Meta): {vagas_planejadas} vagas.
+    - Veículos 1P/Full Realmente Agendados: {qtd_agendas} veículos.
+    - Volume Físico Total: {qtd_pecas:,.0f} peças.
+    - Cargas de Transferência Esperadas: {qtd_transf} veículos.
+    - Tempo Estimado Total (APC): {minutos_apc_total:,.0f} minutos.
+    
+    TOP 5 FORNECEDORES DE MAIOR VOLUME:
+    {top_forn}
+
+    LISTA DE CARGAS DIÁRIAS (USE PARA DIAGNÓSTICO DE RISCO):
+    {lista_diaria}
+    
+    COMO RESPONDER:
+    - Se o gerente pedir um relatório, aja como um consultor: mostre os dados, aponte os dias críticos e sugira um plano de ação (ex: usar o Simulador What-If para remanejar).
+    - Formate suas respostas com emojis profissionais, listas e negrito para facilitar a leitura executiva.
+    """
+    
     # 4. Desenha as mensagens antigas na tela
     for msg in st.session_state.mensagens_chat:
         with st.chat_message(msg["role"]):
