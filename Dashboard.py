@@ -1668,8 +1668,8 @@ elif pagina == "📦 Registro de Backlog":
 # ==============================================================================
 # PÁGINA 8: ASSISTENTE VIRTUAL (COPILOT DA DOCA)
 # ==============================================================================
-elif pagina == "🤖 Copilot da Doca":
-    st.title("🤖 Copilot da Doca | Assistente de IA")
+elif pagina == "🤖 IA Recebimento":
+    st.title("🤖 IA Recebimento | Assistente de IA")
     st.markdown("Converse com a Inteligência Artificial. Ela tem acesso ao resumo da operação do período filtrado e pode te ajudar a tomar decisões rápidas!")
 
     # 1. Configura a IA com a sua chave secreta
