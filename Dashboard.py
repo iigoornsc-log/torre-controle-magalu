@@ -1775,7 +1775,7 @@ elif "IA Recebimento" in pagina:
                     except Exception as e:
                         txt_sniper = f"Falha ao acessar Nuvem: {e}"
 
-            # ==============================================================================
+        # ==============================================================================
         # 💀 PROMPT MESTRE: O GENERAL DA DOCA (ESTILO CURTO E GROSSO)
         # ==============================================================================
         prompt_final = f"""
