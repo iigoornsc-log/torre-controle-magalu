@@ -1668,34 +1668,39 @@ elif pagina == "📦 Registro de Backlog":
 # ==============================================================================
 # PÁGINA 8: IA RECEBIMENTO (OMNI-CÉREBRO PREDADOR)
 # ==============================================================================
-st.markdown("### 🎯 Comandos de Acesso Rápido:")
-        
-        # Cria 3 colunas para colocar os botões lado a lado
-        col1, col2, col3 = st.columns(3)
-        comando_clicado = None
-        
-        if col1.button("🚨 Ofensores da Semana"):
-            comando_clicado = "Quais os dias de maior risco na semana e os fornecedores ofensores?"
-            
-        if col2.button("⏱️ Risco de Hora Extra (APC)"):
-            comando_clicado = "Qual o cenário da nossa APC? Vamos estourar o limite de 2.562 min em algum dia?"
-            
-        if col3.button("🧩 Estouro Comercial (Lego)"):
-            comando_clicado = "O Comercial aprovou mais vagas no Lego do que a nossa capacidade suporta?"
+elif "IA Recebimento" in pagina:
+    st.title("🤖 Cérebro Predador | OMNI-RADAR")
+    st.markdown("⚠️ **Atenção:** Inteligência conectada a **todos** os módulos do CD2900.")
 
-        st.markdown("---")
+    st.markdown("### 🎯 Comandos de Acesso Rápido:")
+    
+    # Cria 3 colunas para colocar os botões lado a lado
+    col1, col2, col3 = st.columns(3)
+    comando_clicado = None
+    
+    if col1.button("🚨 Ofensores da Semana"):
+        comando_clicado = "Quais os dias de maior risco na semana e os fornecedores ofensores?"
         
-        # Mantém a barra de digitação para rastreios específicos
-        pergunta_digitada = st.chat_input("Ou digite comando livre (Ex: 'Quando chega o item 123?')...")
+    if col2.button("⏱️ Risco de Hora Extra (APC)"):
+        comando_clicado = "Qual o cenário da nossa APC? Vamos estourar o limite de 2.562 min em algum dia?"
+        
+    if col3.button("🧩 Estouro Comercial (Lego)"):
+        comando_clicado = "O Comercial aprovou mais vagas no Lego do que a nossa capacidade suporta?"
 
-        # A IA vai ser ativada se ele CLICAR no botão OU se ele DIGITAR algo
-        pergunta_usuario = comando_clicado or pergunta_digitada
+    st.markdown("---")
+    
+    # Mantém a barra de digitação para rastreios específicos
+    pergunta_digitada = st.chat_input("Ou digite comando livre (Ex: 'Quando chega o item 123?')...")
+
+    # A IA vai ser ativada se ele CLICAR no botão OU se ele DIGITAR algo
+    pergunta_usuario = comando_clicado or pergunta_digitada
 
     if pergunta_usuario:
         st.chat_message("user").markdown(pergunta_usuario)
         st.session_state.mensagens_chat.append({"role": "user", "content": pergunta_usuario})
 
         with st.spinner("🧠 Varrendo todas as planilhas do sistema..."):
+            # ... Daqui pra baixo o seu código continua igual (hoje_str, etc)
             
             # ==============================================================================
             # 🌐 MÓDULOS DE INTELIGÊNCIA (EXTRAÇÃO TOTAL DO SITE)
