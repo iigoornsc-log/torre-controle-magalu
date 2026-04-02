@@ -1753,7 +1753,9 @@ elif "IA Recebimento" in pagina:
                         ).reset_index()
                         txt_lego = resumo_lego.head(100).to_csv(index=False, sep='|')
 
-            # MÓDULO 3: RASTREIO NUVEM (SNIPER DE ITENS OTIMIZADO)
+            # ==============================================================================
+            # MÓDULO 4: SNIPER DE ITENS (BUSCA GLOBAL NA NUVEM)
+            # ==============================================================================
             txt_sniper = "Nenhuma busca de item solicitada."
             if "ITEM" in pergunta_usuario.upper() or "SKU" in pergunta_usuario.upper():
                 import re
@@ -1763,22 +1765,25 @@ elif "IA Recebimento" in pagina:
                     try:
                         cliente_google = conectar_google()
                         ws_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
-                        ws_itens = ws_principal.worksheet("Item Agenda") # <-- COLOQUE O NOME DA ABA AQUI!
+                        ws_itens = ws_principal.worksheet("Item Agenda") # Sua aba correta
                         dados_nuvem = ws_itens.get_all_values()
+                        
                         if len(dados_nuvem) > 1:
                             df_nuvem = pd.DataFrame(dados_nuvem[1:], columns=dados_nuvem[0])
                             
-                            col_sku = next((c for c in df_nuvem.columns if 'SKU' in c.upper() or 'ITEM' in c.upper() or 'CÓD' in c.upper()), None)
+                            # 🎯 BUSCA GLOBAL: Varre a planilha INTEIRA atrás desse número
+                            mask = df_nuvem.astype(str).apply(lambda x: x.str.contains(sku_alvo, case=False, na=False))
+                            busca = df_nuvem[mask.any(axis=1)]
                             
-                            if col_sku:
-                                busca = df_nuvem[df_nuvem[col_sku].astype(str).str.contains(sku_alvo)]
-                                if not busca.empty:
-                                    # Pega todas as ocorrências (até 50 linhas) para ele listar TUDO
-                                    txt_sniper = busca.head(50).to_csv(index=False, sep='|')
-                                else:
-                                    txt_sniper = f"Item {sku_alvo} não encontrado na base da nuvem."
+                            if not busca.empty:
+                                # Pega a tabela completa e entrega pro General
+                                txt_sniper = busca.head(50).to_csv(index=False, sep='|')
+                            else:
+                                txt_sniper = f"O Item {sku_alvo} não foi encontrado em lugar nenhum da aba 'Item Agenda'."
+                        else:
+                            txt_sniper = "A aba 'Item Agenda' está vazia na nuvem."
                     except Exception as e:
-                        txt_sniper = f"Falha ao acessar Nuvem: {e}"
+                        txt_sniper = f"Falha de conexão com a Nuvem: {e}"
 
             # ==============================================================================
             # 💀 PROMPT MESTRE OMNI-CHANNEL (MODO EXECUTIVO - EQUILIBRADO)
