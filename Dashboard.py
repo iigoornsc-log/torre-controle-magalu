@@ -598,7 +598,7 @@ if pagina == "🏠 Painel Operacional":
     # NOVA VISÃO: PLANEJAMENTO LEGO LADO A LADO COM 1P
     # ====================================================================
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🧱 Planejamento Lego: Vagas Liberadas pelo Comercial")
+    st.markdown("### 🧩 Planejamento Lego: Vagas Liberadas pelo Comercial")
     
     if not df_plan.empty:
         df_plan_1p = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy()
