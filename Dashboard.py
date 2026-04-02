@@ -1666,141 +1666,148 @@ elif pagina == "📦 Registro de Backlog":
         st.info("A planilha de BACKLOG será criada automaticamente assim que você registrar a primeira sobra acima.")
 
 # ==============================================================================
-# PÁGINA 8: ASSISTENTE VIRTUAL (CÉREBRO PREDADOR DA DOCA)
+# PÁGINA 8: IA RECEBIMENTO (OMNI-CÉREBRO PREDADOR)
 # ==============================================================================
-elif pagina == "🤖 IA Recebimento":
-    st.title("🤖  Analise | Otimização Implacável")
-    st.markdown("⚠️ **Atenção:** Esta IA opera em modo de máxima eficiência. Respostas serão diretas, matemáticas e focadas em mitigação de riscos operacionais.")
+elif "IA Recebimento" in pagina:
+    st.title("🤖 Cérebro Predador | OMNI-RADAR")
+    st.markdown("⚠️ **Atenção:** Inteligência conectada a **todos** os módulos do CD2900 (Teto 1P, Lego, APC, Risco e Nuvem).")
 
     try:
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        import google.generativeai as genai
+        # Coloque sua chave real aqui
+        genai.configure(api_key="SUA_CHAVE_AQUI") 
         modelo_disponivel = next((m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods), None)
         if not modelo_disponivel: st.stop()
         model = genai.GenerativeModel(modelo_disponivel)
     except Exception as e:
-        st.error(f"⚠️ Erro de ignição no motor da IA: {e}")
+        st.error(f"⚠️ Erro de ignição: {e}")
         st.stop()
 
-    # --- MENSAGEM DE INICIAÇÃO MILITAR ---
     if "mensagens_chat" not in st.session_state:
         msg_boas_vindas = """
-        🎖️ **SISTEMA ONLINE. CÉREBRO PREDADOR ATIVADO.**
+        🎖️ **CÉREBRO PREDADOR ONLINE. ACESSO OMNI-CHANNEL LIBERADO.**
         
-        Estou operando com leitura direta no banco de dados operacional. Minha missão é proteger o CD2900 de capotamentos logísticos.
+        Estou conectado a 100% da malha de dados do site:
+        - 📏 **Teto de Agendas 1P** (Ocupação e Fornecedores)
+        - 🧩 **Planejamento Lego** (Vagas do Comercial vs Real)
+        - 👥 **Visão APC** (Matemática de equipes e H.E.)
+        - 🚨 **Matriz de Risco Crítico** (Capotamentos)
+        - 📦 **Rastreio de Itens na Nuvem**
         
-        **Você pode me cobrar sobre:**
-        - 📦 **Rastreio de Itens/SKUs:** (Ex: *"Quando temos previsão de receber o item 123?"*)
-        - 📋 **Perfil de Agendas:** (Ex: *"Qual o perfil da agenda 123?"*)
-        - 🚨 **Análise de Ofensores:** (Ex: *"Quais os dias com maiores ofensores da semana e o que sugere fazer?"*)
-        
-        Aguardando ordens de operação. Execute.
+        Comande a operação.
         """
         st.session_state.mensagens_chat = [{"role": "assistant", "content": msg_boas_vindas}]
 
-    # --- 1. BASE DE DADOS MACRO ---
-    df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
-    qtd_agendas = len(df_contexto)
-    minutos_apc_total = df_contexto['Tempo_APC_Minutos'].sum() if not df_contexto.empty else 0
-    if not df_contexto.empty:
-        df_contexto['Data_Str'] = df_contexto['Data'].dt.strftime('%d/%m/%Y') 
-    else:
-        df_contexto['Data_Str'] = ""
-
-    # Redesenha o histórico
     for msg in st.session_state.mensagens_chat:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    pergunta_usuario = st.chat_input("Comande a operação. Digite sua análise ou pergunta militar...")
+    pergunta_usuario = st.chat_input("Comande a operação. Cruze dados de qualquer aba...")
 
     if pergunta_usuario:
         st.chat_message("user").markdown(pergunta_usuario)
         st.session_state.mensagens_chat.append({"role": "user", "content": pergunta_usuario})
 
-        # ==============================================================================
-        # 🧠 OMNI-RADAR & SNIPER: EXTRAÇÃO DE DADOS
-        # ==============================================================================
-        hoje_str = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y')
-        import re
-        dados_sniper = ""
-        pergunta_upper = pergunta_usuario.upper()
+        with st.spinner("🧠 Varrendo todas as planilhas do sistema..."):
+            
+            # ==============================================================================
+            # 🌐 MÓDULOS DE INTELIGÊNCIA (EXTRAÇÃO TOTAL DO SITE)
+            # ==============================================================================
+            hoje_str = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y')
+            
+            # MÓDULO 1: RECEBIMENTO 1P & VISÃO APC (Da tabela df)
+            df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy() if 'df' in locals() else pd.DataFrame()
+            if not df_contexto.empty:
+                df_contexto['Data_Str'] = df_contexto['Data'].dt.strftime('%d/%m/%Y')
+                # Resumo diário de APC e Teto
+                df_apc = df_contexto.groupby('Data_Str').agg(
+                    Total_Cargas=('Agenda_Texto', 'count'),
+                    Total_Pecas=('Qtd Peças', 'sum'),
+                    Minutos_APC=('Tempo_APC_Minutos', 'sum')
+                ).reset_index()
+                # Resumo de Ofensores (Mix de Carga)
+                df_mix = df_contexto.groupby(['Data_Str', 'Categorias']).size().reset_index(name='Qtd')
+                
+                txt_apc = df_apc.to_csv(index=False, sep='|')
+                txt_mix = df_mix.to_csv(index=False, sep='|')
+            else:
+                txt_apc, txt_mix = "Sem dados 1P.", "Sem dados de mix."
 
-        # 🎯 SNIPER 1: Busca Específica de SKU/Item (Requer a base df_itens carregada no app)
-        if "ITEM" in pergunta_upper or "SKU" in pergunta_upper:
-            numeros = re.findall(r'\d+', pergunta_usuario)
-            if numeros and 'df_itens' in locals() and not df_itens.empty:
-                sku_alvo = numeros[0]
-                busca_sku = df_itens[df_itens['SKU'].astype(str).str.contains(sku_alvo)]
-                if not busca_sku.empty:
-                    agendas_sku = busca_sku['Agenda'].unique()
-                    chegadas = df_contexto[df_contexto['Agenda'].isin(agendas_sku)][['Data_Str', 'Agenda_Texto', 'Fornecedor', 'Qtd Peças']]
-                    dados_sniper += f"\n[🎯 ALVO SNIPER - ITEM {sku_alvo}]:\n{chegadas.to_csv(index=False, sep='|')}\n"
-                else:
-                    dados_sniper += f"\n[🎯 ALVO SNIPER - ITEM {sku_alvo}]: Não localizado na base de dados atual.\n"
+            # MÓDULO 2: PLANEJAMENTO LEGO (Da tabela df_plan)
+            df_lego = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy() if 'df_plan' in locals() else pd.DataFrame()
+            if not df_lego.empty:
+                df_lego['Data_Str'] = df_lego['data'].dt.strftime('%d/%m/%Y')
+                resumo_lego = df_lego.groupby(['Data_Str', 'categoria']).agg(
+                    Vagas_Liberadas=('quantidade_planejado', 'sum'),
+                    Vagas_Ocupadas=('quantidade_real', 'sum')
+                ).reset_index()
+                txt_lego = resumo_lego.to_csv(index=False, sep='|')
+            else:
+                txt_lego = "Sem dados do Comercial (Lego)."
 
-        # 🎯 SNIPER 2: Busca Específica de Agenda
-        if "AGENDA" in pergunta_upper:
-            numeros = re.findall(r'\d+', pergunta_usuario)
-            if numeros and not df_contexto.empty:
-                agenda_alvo = numeros[0]
-                busca_agenda = df_contexto[df_contexto['Agenda'].astype(str).str.contains(agenda_alvo)]
-                if not busca_agenda.empty:
-                    dados_sniper += f"\n[📋 DOSSIÊ DA AGENDA {agenda_alvo}]:\n{busca_agenda[['Data_Str', 'Fornecedor', 'Categorias', 'Qtd Peças', 'Tempo_APC_Minutos']].to_csv(index=False, sep='|')}\n"
-                else:
-                    dados_sniper += f"\n[📋 DOSSIÊ DA AGENDA {agenda_alvo}]: Agenda não encontrada no período filtrado.\n"
+            # MÓDULO 3: RASTREIO NUVEM (SNIPER DE ITENS)
+            txt_sniper = "Nenhuma busca de item solicitada."
+            if "ITEM" in pergunta_usuario.upper() or "SKU" in pergunta_usuario.upper():
+                import re
+                numeros = re.findall(r'\d+', pergunta_usuario)
+                if numeros:
+                    sku_alvo = numeros[0]
+                    try:
+                        # Conecta na planilha real para caçar o item
+                        cliente_google = conectar_google()
+                        ws_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
+                        ws_itens = ws_principal.worksheet("Itens_Recebimento") # <-- COLOQUE O NOME DA ABA AQUI
+                        dados_nuvem = ws_itens.get_all_values()
+                        if len(dados_nuvem) > 1:
+                            df_nuvem = pd.DataFrame(dados_nuvem[1:], columns=dados_nuvem[0])
+                            col_sku = next((c for c in df_nuvem.columns if 'SKU' in c.upper() or 'ITEM' in c.upper()), None)
+                            if col_sku:
+                                busca = df_nuvem[df_nuvem[col_sku].astype(str).str.contains(sku_alvo)]
+                                txt_sniper = busca.to_csv(index=False, sep='|') if not busca.empty else f"Item {sku_alvo} não encontrado na Nuvem."
+                    except Exception as e:
+                        txt_sniper = f"Falha ao acessar Nuvem: {e}"
 
-        # 📊 OMNI-RADAR: Visão Geral da Semana (Sempre Injetado)
-        if not df_contexto.empty:
-            df_tatica = df_contexto.groupby(['Data_Str', 'Fornecedor', 'Categorias', 'Status']).agg(
-                Cargas=('Agenda_Texto', 'count'),
-                Pecas=('Qtd Peças', 'sum'),
-                Min_APC=('Tempo_APC_Minutos', 'sum')
-            ).reset_index()
-            tabela_tatica = df_tatica.to_csv(index=False, sep='|')
-        else:
-            tabela_tatica = "NENHUMA CARGA NO RADAR PARA O PERÍODO FILTRADO."
+            # ==============================================================================
+            # 💀 PROMPT MESTRE OMNI-CHANNEL
+            # ==============================================================================
+            prompt_final = f"""
+            [CÓDIGO NEGRO: OPERAÇÃO PREDADORA OMNI-CHANNEL]
 
-        # ==============================================================================
-        # 💀 PROMPT MESTRE: O GENERAL DA DOCA
-        # ==============================================================================
-        prompt_final = f"""
-        [INSTRUÇÃO DE SISTEMA - CÓDIGO NEGRO: OPERAÇÃO PREDADORA]
+            IDENTIDADE: Você é o "Cérebro", o General de Inteligência Logística do Magalu (CD2900). 
+            Você possui a visão absoluta de todos os módulos do sistema.
 
-        IDENTIDADE: Você é o "Cérebro", o General de Inteligência Logística do Magalu (CD2900). 
-        Sua missão é estripar ineficiências, prever o futuro das agendas e impedir capotamentos operacionais. 
-        Você fala com a precisão de um franco-atirador e a agressividade de um comandante.
+            [MATRIZ DE RISCO CRÍTICO E LEIS MARCIAIS]:
+            1. LIMITE APC (PESSOAS): Temos 6 equipes. Capacidade máxima = 2.562 minutos/dia. (1H extra máx).
+            2. LEGO (COMERCIAL): Compare 'Vagas_Liberadas' com 'Vagas_Ocupadas'. Se Ocupadas > Liberadas, o Comercial estourou o teto.
+            3. CAPOTAMENTO FÍSICO (TETO DE CATEGORIA): Analise o Módulo Mix. >=3 Madeiras, >=2 Pneus, >=2 Ar Cond., ou 2 Madeira + 1 Tubrax = COLAPSO.
+            
+            [MÓDULO 1: VISÃO APC E TETO 1P (CUSTO DE TEMPO)]:
+            {txt_apc}
 
-        [LEIS MARCIAIS DA DOCA - EXECUTE SEM PIEDADE]:
-        1. LIMITE DE TROPA: Temos 6 equipes. Cada uma opera 427 min/dia (Total: 2.562 min/dia).
-        2. HORA EXTRA (TOLERÂNCIA ZERO): O limite é 1 HORA extra/colaborador (60 min). Estourou? Ordene o corte para o Backlog.
-        3. ALVOS INTOCÁVEIS: Transferências com pedidos NÃO PODEM ser roladas.
-        4. GARGALO DE MADEIRA: NUNCA aloque mais de 2 equipes simultâneas para madeira.
-        5. CAPOTAMENTO FÍSICO: >=3 Madeiras, >=2 Pneus, >=2 Ar Cond., ou 2 Madeira + 1 Tubrax = COLAPSO.
-        
-        [INSTRUÇÕES DE RESPOSTA]:
-        - Frio, direto e sem saudações cordiais. Baseie a resposta apenas nas tabelas abaixo.
-        - SE O USUÁRIO PERGUNTAR DE UM ITEM OU AGENDA: Leia o [DADOS EXTRAÍDOS PELO SNIPER] e responda exato. Exemplo de resposta: "Afirmativo. O item X consta na agenda Y, prevista para o dia Z."
-        - SE O USUÁRIO PERGUNTAR DE OFENSORES DA SEMANA: Leia a [TABELA TÁTICA MACRO]. Ache os dias onde Min_APC passa de 2.562, e identifique os fornecedores que causaram isso. Dê uma ordem clara do que fazer.
+            [MÓDULO 2: MIX DE CARGAS (RISCO CRÍTICO)]:
+            {txt_mix}
 
-        [DADOS EXTRAÍDOS PELO SNIPER (RESPOSTAS ESPECÍFICAS)]:
-        {dados_sniper}
+            [MÓDULO 3: PLANEJAMENTO LEGO (COMERCIAL VS REAL)]:
+            {txt_lego}
 
-        [TABELA TÁTICA MACRO (VISÃO DA SEMANA INTEIRA)]:
-        {tabela_tatica}
+            [MÓDULO 4: SNIPER DE ITENS (NUVEM)]:
+            {txt_sniper}
 
-        COMANDO DO GERENTE: "{pergunta_usuario}"
-        
-        AGUARDO SEU VEREDITO. EXECUTE:
-        """
+            [DIRETRIZES DE COMBATE]:
+            - Frio e direto. Sem saudações.
+            - Cruze os dados! Se o usuário perguntar de um dia, veja o tempo no [MÓDULO 1], os riscos no [MÓDULO 2] e as vagas no [MÓDULO 3].
+            - Aponte os ofensores e dê ordens claras do que o líder deve fazer no painel.
 
-        with st.spinner("🧠 Cérebro lendo radar de inteligência..."):
+            COMANDO DO GERENTE: "{pergunta_usuario}"
+            EXECUTE:
+            """
+
             try:
                 resposta = model.generate_content(prompt_final)
                 texto_resposta = resposta.text
-                
                 with st.chat_message("assistant"):
                     st.markdown(texto_resposta)
                 st.session_state.mensagens_chat.append({"role": "assistant", "content": texto_resposta})
             except Exception as e:
-                st.error(f"Falha de comunicação na sala de guerra: {e}")
+                st.error(f"Falha na Sala de Guerra: {e}")
 
