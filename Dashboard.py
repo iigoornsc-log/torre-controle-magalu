@@ -460,7 +460,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador What-If", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🤖 IA Recebimento"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simulador What-If", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog"])
 st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
@@ -1666,130 +1666,75 @@ elif pagina == "📦 Registro de Backlog":
         st.info("A planilha de BACKLOG será criada automaticamente assim que você registrar a primeira sobra acima.")
 
 # ==============================================================================
-# PÁGINA 8: ASSISTENTE VIRTUAL (COPILOT DA Carga)
+# 🤖 WIDGET FLUTUANTE DE IA (SEMPRE VISÍVEL NO MENU LATERAL)
 # ==============================================================================
-elif pagina == "🤖 IA Recebimento":
-    st.title("🤖 IA Recebimento | Assistente de IA")
-    st.markdown("Converse com a Inteligência Artificial. Ela tem acesso ao resumo da operação do período filtrado e pode te ajudar a tomar decisões rápidas!")
+st.sidebar.markdown("---")
 
-    # 1. Configura a IA com a sua chave secreta e acha o modelo sozinho!
+# O popover cria a janela que "salta" por cima do dashboard
+with st.sidebar.popover("🤖 Falar com a IA (Copilot)", use_container_width=True):
+    st.markdown("### 🧠 Assistente Sênior CD2900")
+    
+    # 1. Configura a IA
     try:
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        import google.generativeai as genai
+        # Coloque a sua chave direta aqui novamente:
+        genai.configure(api_key="AIzaSyCK2jyjPAjhGWq78PID-p6ClnSHa3NWJqQ") 
         
-        # O robô vai listar todos os modelos do Google e pegar o 1º que aceita chat de texto
         modelo_disponivel = None
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
                 modelo_disponivel = m.name
                 break
-                
-        if not modelo_disponivel:
-            st.error("⚠️ Nenhum modelo de texto liberado para essa Chave de API.")
-            st.stop()
-            
         model = genai.GenerativeModel(modelo_disponivel)
-        
     except Exception as e:
-        st.error(f"⚠️ Erro ao configurar a IA: {e}")
+        st.error(f"Erro na IA: {e}")
         st.stop()
 
-    # 2. Cria a memória do chat na sessão
+    # 2. Cria a memória da conversa
     if "mensagens_chat" not in st.session_state:
         st.session_state.mensagens_chat = []
 
-   # 3. INJETA O "SUPER CÉREBRO" (Contexto Total do Sistema e Operação)
-    df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
+    # 3. Caixa de mensagens (altura fixa para não quebrar a tela)
+    caixa_chat = st.container(height=400)
+    with caixa_chat:
+        for msg in st.session_state.mensagens_chat:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+    # 4. Campo de digitação
+    pergunta_usuario = st.chat_input("Pergunte algo sobre a doca...")
     
-    # Resumo 1P e Full
-    qtd_agendas = len(df_contexto)
-    qtd_pecas = df_contexto['Qtd Peças'].sum() if not df_contexto.empty else 0
-    minutos_apc_total = df_contexto['Tempo_APC_Minutos'].sum() if not df_contexto.empty else 0
-    
-    # Resumo Diário para cruzamentos de Risco
-    if not df_contexto.empty:
-        df_contexto['Data_Str'] = df_contexto['Data'].dt.strftime('%d/%m/%Y')
-        resumo_diario = df_contexto.groupby(['Data_Str', 'Categorias']).size().reset_index(name='Qtd_Cargas')
-        lista_diaria = resumo_diario.to_dict('records')
-        top_forn = df_contexto['Fornecedor'].value_counts().head(5).to_dict()
-    else:
-        lista_diaria = "Sem cargas 1P/Full no período."
-        top_forn = "Nenhum."
-
-    # Resumo Transferências (se a base estiver carregada)
-    df_transf_contexto = df_transf[(df_transf['DATA_FILTRO'] >= ts_inicio) & (df_transf['DATA_FILTRO'] <= ts_fim)] if not df_transf.empty and 'DATA_FILTRO' in df_transf.columns else pd.DataFrame()
-    qtd_transf = df_transf_contexto['ID_CARGA_PCP'].nunique() if not df_transf_contexto.empty and 'ID_CARGA_PCP' in df_transf_contexto.columns else 0
-
-    # Resumo Lego (Planejamento)
-    df_plan_contexto = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)] if not df_plan.empty else pd.DataFrame()
-    vagas_planejadas = df_plan_contexto['quantidade_planejado'].sum() if not df_plan_contexto.empty and 'quantidade_planejado' in df_plan_contexto.columns else 0
-
-    # O PROMPT MESTRE DA IA
-    contexto_operacao = f"""
-    INSTRUÇÃO DE SISTEMA (NÍVEL SÊNIOR):
-    Você é a "IA Recebimento", a inteligência artificial central da Torre de Controle Logística do Magalu (CD2900).
-    Seu papel é atuar como um Analista Sênior de Planejamento e S&OP. Seja proativo, analítico, altamente profissional e ajude a resolver problemas críticos.
-
-    [📚 MAPA DO SISTEMA - COMO AJUDAR O USUÁRIO A USAR O SITE]
-    Sempre que o usuário pedir ajuda para fazer uma tarefa, indique a aba correta do nosso sistema:
-    1. '🏠 Painel Operacional': Para ver o status das Cargas hoje em tempo real, painel de ausências (No-Show), consumo do teto 1P e a Matriz de Risco Crítico.
-    2. '📅 Previsão de Agendas': Para ter a visão executiva e estratégica (Mix de veículos e SKUs).
-    3. '📈 Simulador What-If': Para testar o estresse da malha. O usuário pode adicionar cargas virtuais e projetar o impacto na semana.
-    4. '👷 Simulador Mão de Obra': Onde fica nossa IA de Auto-Balanceamento. Ela distribui os caminhões entre as equipes para zerar ociosidade e Horas Extras.
-    5. '🧩 Planejamento Lego': S&OP. Compara o que o Comercial planejou vs o que foi realizado (Mapa de calor: Vermelho=Estourado, Verde=Livre).
-    6. '🚛 Transferências': Rastreio de cargas 325.
-    7. '📝 Solicitações Extras' e '📦 Registro de Backlog': Para registrar autorizações de teto e cargas que sobraram na Carga.
-
-    [🚨 REGRAS DE OURO DA Carga (RISCO DE CAPOTAMENTO)]
-    Se o usuário pedir para analisar a semana, cruze as "Regras de Ouro" abaixo com a "Lista de Cargas Diárias" e alerte imediatamente se algum dia quebrar a regra:
-    - 3 ou mais cargas de Madeira no mesmo dia = CAPOTA.
-    - 2 ou mais cargas de Pneu = CAPOTA.
-    - 2 Madeira + 1 Tubrax = CAPOTA.
-    - 2 ou mais cargas de Ar Condicionado = CAPOTA.
-    - 2 Madeira + 1 Diversos (>1k peças) = CAPOTA.
-
-    [📊 DADOS REAIS DA OPERAÇÃO (PERÍODO FILTRADO: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')})]
-    - Vagas Planejadas no Lego (Meta): {vagas_planejadas} vagas.
-    - Veículos 1P/Full Realmente Agendados: {qtd_agendas} veículos.
-    - Volume Físico Total: {qtd_pecas:,.0f} peças.
-    - Cargas de Transferência Esperadas: {qtd_transf} veículos.
-    - Tempo Estimado Total (APC): {minutos_apc_total:,.0f} minutos.
-    
-    TOP 5 FORNECEDORES DE MAIOR VOLUME:
-    {top_forn}
-
-    LISTA DE CARGAS DIÁRIAS (USE PARA DIAGNÓSTICO DE RISCO):
-    {lista_diaria}
-    
-    COMO RESPONDER:
-    - Se o gerente pedir um relatório, aja como um consultor: mostre os dados, aponte os dias críticos e sugira um plano de ação (ex: usar o Simulador What-If para remanejar).
-    - Formate suas respostas com emojis profissionais, listas e negrito para facilitar a leitura executiva.
-    """
-    
-    # 4. Desenha as mensagens antigas na tela
-    for msg in st.session_state.mensagens_chat:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    # 5. Caixa de texto para o usuário digitar
-    pergunta_usuario = st.chat_input("Pergunte algo sobre a operação de hoje...")
-
     if pergunta_usuario:
-        # Mostra a pergunta do usuário na tela e salva na memória
-        st.chat_message("user").markdown(pergunta_usuario)
+        # Salva a pergunta e mostra na tela
         st.session_state.mensagens_chat.append({"role": "user", "content": pergunta_usuario})
+        
+        # --- CARREGA O SUPER CÉREBRO (CONTEXTO) ---
+        df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
+        qtd_agendas = len(df_contexto)
+        qtd_pecas = df_contexto['Qtd Peças'].sum() if not df_contexto.empty else 0
+        
+        if not df_contexto.empty:
+            df_contexto['Data_Str'] = df_contexto['Data'].dt.strftime('%d/%m/%Y')
+            resumo_diario = df_contexto.groupby(['Data_Str', 'Categorias']).size().reset_index(name='Qtd')
+            lista_diaria = resumo_diario.to_dict('records')
+        else:
+            lista_diaria = "Sem dados no período."
 
-        # Prepara a mensagem pra mandar pra IA (juntando o contexto oculto + a pergunta)
-        prompt_final = contexto_operacao + "\n\nPergunta do Gerente: " + pergunta_usuario
-
-        with st.spinner("🧠 Analisando a Carga..."):
-            try:
-                # Chama o Gemini
-                resposta = model.generate_content(prompt_final)
-                texto_resposta = resposta.text
-                
-                # Mostra a resposta da IA na tela e salva na memória
-                with st.chat_message("assistant"):
-                    st.markdown(texto_resposta)
-                st.session_state.mensagens_chat.append({"role": "assistant", "content": texto_resposta})
-            except Exception as e:
-                st.error(f"Erro ao consultar a IA: {e}")
+        contexto_operacao = f"""
+        INSTRUÇÃO: Você é a IA de Recebimento CD2900 Magalu.
+        Indique o uso das abas do painel (Simulador, Lego, What-If) quando necessário.
+        [VISÃO GERAL]: {qtd_agendas} veículos | {qtd_pecas:,.0f} peças.
+        [LISTA DIÁRIA DE CARGAS]: {lista_diaria}
+        [REGRAS DE RISCO]: 3+ Madeira, 2+ Pneu, 2 Madeira+1 Tubrax, 2+ Ar Condicionado, 2 Madeira+1 Diversos(>1k) = RISCO DE CAPOTAMENTO.
+        Seja analítico e use emojis.
+        """
+        
+        prompt_final = contexto_operacao + "\n\nGerente: " + pergunta_usuario
+        
+        try:
+            # Chama a IA
+            resposta = model.generate_content(prompt_final)
+            st.session_state.mensagens_chat.append({"role": "assistant", "content": resposta.text})
+            st.rerun() # Atualiza a tela para mostrar a resposta
+        except Exception as e:
+            st.error(f"Erro ao processar: {e}")
