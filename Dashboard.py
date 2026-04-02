@@ -1672,12 +1672,25 @@ elif pagina == "🤖 IA Recebimento":
     st.title("🤖 IA Recebimento | Assistente de IA")
     st.markdown("Converse com a Inteligência Artificial. Ela tem acesso ao resumo da operação do período filtrado e pode te ajudar a tomar decisões rápidas!")
 
-    # 1. Configura a IA com a sua chave secreta
+    # 1. Configura a IA com a sua chave secreta e acha o modelo sozinho!
     try:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('gemini-pro')
+        
+        # O robô vai listar todos os modelos do Google e pegar o 1º que aceita chat de texto
+        modelo_disponivel = None
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                modelo_disponivel = m.name
+                break
+                
+        if not modelo_disponivel:
+            st.error("⚠️ Nenhum modelo de texto liberado para essa Chave de API.")
+            st.stop()
+            
+        model = genai.GenerativeModel(modelo_disponivel)
+        
     except Exception as e:
-        st.error("⚠️ Chave de API do Gemini não configurada nos Secrets do Streamlit.")
+        st.error(f"⚠️ Erro ao configurar a IA: {e}")
         st.stop()
 
     # 2. Cria a memória do chat na sessão
