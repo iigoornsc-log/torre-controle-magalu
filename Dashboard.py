@@ -1669,7 +1669,7 @@ elif pagina == "📦 Registro de Backlog":
 # PÁGINA 8: IA RECEBIMENTO (OMNI-CÉREBRO PREDADOR)
 # ==============================================================================
 elif "IA Recebimento" in pagina:
-    st.title("🤖 Cérebro Predador | OMNI-RADAR")
+    st.title("🤖 Robo Suporte Operacional | OMNI-REC")
     
     # --- 1. CONVOCAÇÃO DO GENERAL ---
     try:
