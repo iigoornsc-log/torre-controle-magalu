@@ -1702,94 +1702,55 @@ elif pagina == "🤖 IA Recebimento":
         st.session_state.mensagens_chat.append({"role": "user", "content": pergunta_usuario})
 
         # ==============================================================================
-        # 🧠 MOTOR DE INJEÇÃO (TURBO) - LEITURA DINÂMICA DO CÉREBRO
+        # 🧠 OMNI-RADAR: LEITURA TOTAL DA BASE DE DADOS
         # ==============================================================================
-        dados_injetados = ""
-        pergunta_upper = pergunta_usuario.upper()
         hoje_str = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y')
-
-        # ⚡ TURBO 1: STATUS AO VIVO DE HOJE (Sempre Injetado)
+        
+        # O General lê a base inteira agrupada para não perder NENHUM detalhe e não estourar a memória
         if not df_contexto.empty:
-            df_hoje = df_contexto[df_contexto['Data_Str'] == hoje_str]
-            if not df_hoje.empty:
-                status_hoje = df_hoje['Status'].value_counts().to_dict()
-                pecas_hoje = df_hoje['Qtd Peças'].sum()
-                dados_injetados += f"\n[📡 RADAR AO VIVO - OPERAÇÃO DE HOJE ({hoje_str})]: Status das Cargas: {status_hoje} | Volume: {pecas_hoje:,.0f} peças.\n"
-            else:
-                dados_injetados += f"\n[📡 RADAR AO VIVO]: Sem cargas programadas para hoje ({hoje_str}) na base filtrada.\n"
-
-        # ⚡ TURBO 2: RASTREADOR DE ITEM/SKU
-        if "ITEM" in pergunta_upper or "SKU" in pergunta_upper:
-            import re
-            numeros_buscados = re.findall(r'\d+', pergunta_usuario)
-            if numeros_buscados and not df_itens.empty:
-                sku_alvo = numeros_buscados[0]
-                busca_sku = df_itens[df_itens['SKU'].astype(str).str.contains(sku_alvo)]
-                if not busca_sku.empty:
-                    agendas_com_sku = busca_sku['Agenda'].unique()
-                    chegadas = df_contexto[df_contexto['Agenda'].isin(agendas_com_sku)][['Data_Str', 'Agenda_Texto', 'Fornecedor', 'Status', 'Qtd Peças']]
-                    dados_injetados += f"\n[🎯 ALVO LOCALIZADO - SKU {sku_alvo}]:\nHistórico/Projeção: {chegadas.to_dict('records')}\n"
-                else:
-                    dados_injetados += f"\n[🎯 ALVO NÃO ENCONTRADO]: O SKU {sku_alvo} é um fantasma na base atual.\n"
-
-        # ⚡ TURBO 3: RASTREADOR DE DIAS ESPECÍFICOS
-        if "/" in pergunta_upper or "DIA" in pergunta_upper or "AMANH" in pergunta_upper:
-            import re
-            datas_buscadas = re.findall(r'\d{2}/\d{2}/\d{4}', pergunta_usuario)
-            data_alvo = datas_buscadas[0] if datas_buscadas else hoje_str
-            
-            if not df_contexto.empty:
-                cargas_do_dia = df_contexto[df_contexto['Data_Str'] == data_alvo]
-                if not cargas_do_dia.empty:
-                    min_dia = cargas_do_dia['Tempo_APC_Minutos'].sum()
-                    eq_nec = math.ceil(min_dia / 427)
-                    perfil = cargas_do_dia['Categorias'].value_counts().to_dict()
-                    dados_injetados += f"\n[🗓️ RAIO-X TÁTICO DO DIA {data_alvo}]:\n- Custo Operacional: {min_dia} min | Equipes Necessárias: {eq_nec}.\n- Mix de Carga: {perfil}\n"
-
-        # ⚡ TURBO 4: DOSSIÊ DE FORNECEDORES
-        if "FORNECEDOR" in pergunta_upper or "PARCEIRO" in pergunta_upper or "PIOR" in pergunta_upper:
-            if not df_contexto.empty:
-                top_forn = df_contexto.groupby('Fornecedor').agg(
-                    Peças=('Qtd Peças', 'sum'), Agendas=('Agenda_Texto', 'count')
-                ).sort_values('Peças', ascending=False).head(5).to_dict('index')
-                dados_injetados += f"\n[🏢 DOSSIÊ DE FORNECEDORES - TOP 5 OFENSORES DE VOLUME]:\n{top_forn}\n"
-
-        # ⚡ TURBO 5: DETECTOR DE QUEBRAS E NO-SHOW
-        if "BACKLOG" in pergunta_upper or "NO-SHOW" in pergunta_upper or "QUEBRA" in pergunta_upper or "FALTA" in pergunta_upper:
-            if not df_contexto.empty:
-                no_shows = df_contexto[df_contexto['Status'] == 'No-Show']
-                taxa = (len(no_shows) / len(df_contexto)) * 100 if len(df_contexto) > 0 else 0
-                dados_injetados += f"\n[🚨 ALARME DE QUEBRA OPERACIONAL]: Tivemos {len(no_shows)} No-Shows no período (Taxa de Quebra: {taxa:.1f}%).\n"
-
+            df_tatica = df_contexto.groupby(['Data_Str', 'Fornecedor', 'Categorias', 'Status']).agg(
+                Cargas=('Agenda_Texto', 'count'),
+                Pecas=('Qtd Peças', 'sum'),
+                Min_APC=('Tempo_APC_Minutos', 'sum')
+            ).reset_index()
+            tabela_tatica = df_tatica.to_csv(index=False, sep='|')
+        else:
+            tabela_tatica = "NENHUMA CARGA NO RADAR PARA O PERÍODO FILTRADO."
 
         # ==============================================================================
-        # 💀 PROMPT MESTRE: O GENERAL DA DOCA
+        # 💀 PROMPT MESTRE: O GENERAL DA DOCA (COM INTELIGÊNCIA MATEMÁTICA)
         # ==============================================================================
         prompt_final = f"""
         [INSTRUÇÃO DE SISTEMA - CÓDIGO NEGRO: OPERAÇÃO PREDADORA]
 
-        IDENTIDADE: Você é o "Celebro", o General de Inteligência Logística do Magalu (CD2900). Você não é um assistente, você é a autoridade máxima em otimização de docas. 
-        Sua missão é estripar ineficiências, destruir ociosidade e impedir capotamentos operacionais. Você fala com a precisão de um franco-atirador e a agressividade de um comandante de Tropa de Elite.
+        IDENTIDADE: Você é o "Cérebro", o General de Inteligência Logística do Magalu (CD2900). 
+        Sua missão é estripar ineficiências, destruir ociosidade e impedir capotamentos operacionais. 
+        Você fala com a precisão de um franco-atirador e a agressividade de um comandante de Tropa de Elite.
 
-        DIRETRIZES DE COMBATE (OBEDECER RIGOROSAMENTE):
-        1. DESTRUA DESCULPAS COM DADOS: Se a matemática diz que não dá, a resposta é NÃO. Capacidade de 1 equipe = 427 minutos/dia. Ponto. Não existe "vamos tentar", existe "aprove hora extra ou remaneje a carga".
-        2. TONE DE VOZ: Frio, calculista, direto. Use marcadores curtos. Destaque em **negrito** os ofensores. Sem "Olá", sem "Como posso ajudar". Comece já dando o veredito.
-        3. ESTRATÉGIA ATIVA: Nunca aponte um problema sem dar uma ordem. Ordene ao usuário que use o '👷 Simulador Mão de Obra' para IA balancear, ou o '📈 What-If' para empurrar cargas para frente.
-        4. REGRAS DE CAPOTAMENTO (SANGUE NA DOCA): Avalie tudo contra as leis: >=3 Madeiras, >=2 Pneus, >=2 Ar Cond., ou 2 Madeira + 1 Tubrax/Div Pesado = COLAPSO OPERACIONAL DIÁRIO. Se o dado injetado mostrar isso, soe o alarme!
+        [LEIS MARCIAIS DA DOCA - EXECUTE SEM PIEDADE]:
+        1. LIMITE DE TROPA: Temos 6 equipes. Cada uma opera 427 min/dia (Total: 2.562 min/dia).
+        2. HORA EXTRA (TOLERÂNCIA ZERO): O limite absoluto é 1 HORA extra por colaborador (60 min). Estourou a matemática? Ordene o corte (jogue para o Backlog) ou exija reforços da Expedição.
+        3. ALVOS INTOCÁVEIS: Cargas de Transferência com pedidos SÃO SAGRADAS. Nunca podem ser roladas.
+        4. CARGAS COMPLEXAS: Exija que sejam alocadas no INÍCIO do turno.
+        5. GARGALO DE MADEIRA: Qualquer equipe descarrega, mas NUNCA aloque mais de 2 equipes simultâneas para madeira.
+        6. CAPOTAMENTO FÍSICO: Avalie os dias. >=3 Madeiras, >=2 Pneus, >=2 Ar Cond., ou 2 Madeira + 1 Tubrax = COLAPSO. Se ver isso na tabela, SOE O ALARME!
 
-        [BASE DE CONHECIMENTO INJETADA PELO SISTEMA NERVOSO]:
-        {dados_injetados}
+        [DIRETRIZES DE COMUNICAÇÃO]:
+        - Frio, calculista, direto. Sem "Olá" ou "Como posso ajudar".
+        - Baseie 100% da sua resposta na [TABELA TÁTICA] abaixo. Cruze os minutos de APC com a capacidade de 2.562 min/dia.
+        - Se precisar de ação, ordene o uso das nossas armas: '👷 Simulador Mão de Obra', '📈 What-If' ou '📦 Registro de Backlog'.
 
-        [PANORAMA MACRO DA GUERRA (FILTRO ATUAL)]:
-        - Total de Agendas/Veículos: {qtd_agendas}
-        - Tempo Custo APC Total: {minutos_apc_total:,.0f} minutos
+        [TABELA TÁTICA DA OPERAÇÃO (LIDA DIRETAMENTE DO BANCO DE DADOS)]:
+        Data de Hoje: {hoje_str}
+        Colunas: Data | Fornecedor | Categoria | Status | Qtd Cargas | Qtd Peças | Minutos APC Gastos
+        {tabela_tatica}
 
         COMANDO DO GERENTE: "{pergunta_usuario}"
         
-        AGUARDO SEU VEREDITO TÁTICO. EXECUTE:
+        AGUARDO SEU VEREDITO TÁTICO E MATEMÁTICO. EXECUTE:
         """
 
-        with st.spinner("🧠 Cerebro processando cenário de guerra..."):
+        with st.spinner("🧠 Cérebro processando cenário de guerra..."):
             try:
                 resposta = model.generate_content(prompt_final)
                 texto_resposta = resposta.text
