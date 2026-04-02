@@ -1670,159 +1670,76 @@ elif pagina == "📦 Registro de Backlog":
 # ==============================================================================
 elif "IA Recebimento" in pagina:
     st.title("🤖 Cérebro Predador | OMNI-RADAR")
-    st.markdown("⚠️ **Atenção:** Inteligência conectada a **todos** os módulos do CD2900.")
-
-    st.markdown("### 🎯 Comandos de Acesso Rápido:")
     
-    # Atualizado para 4 colunas para caber o rastreio
+    # --- 1. CONVOCAÇÃO DO GENERAL ---
+    try:
+        import google.generativeai as genai
+        # Coloque sua chave real aqui
+        genai.configure(api_key="SUA_CHAVE_AQUI") 
+        modelo_nome = next((m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods), "gemini-1.5-flash")
+        model = genai.GenerativeModel(modelo_nome)
+    except Exception as e:
+        st.error(f"⚠️ Erro ao convocar o General: {e}")
+        st.stop()
+
+    # 🔥 BLINDAGEM DE MEMÓRIA (Usando chaves [] em vez de ponto) 🔥
+    if "mensagens_chat" not in st.session_state:
+        st.session_state["mensagens_chat"] = [{"role": "assistant", "content": "🎖️ Sistema Online. Aguardando ordens táticas."}]
+
+    # --- 2. ARSENAL TÁTICO (BOTÕES) ---
+    st.markdown("### 🎯 Comandos de Acesso Rápido:")
     col1, col2, col3, col4 = st.columns(4)
     comando_clicado = None
-    
+
     if col1.button("🚨 Ofensores"):
         comando_clicado = "Quais os dias de maior risco na semana e os fornecedores ofensores?"
-        
-    if col2.button("⏱️ Risco APC"):
-        comando_clicado = "Qual o cenário da nossa APC? Vamos estourar o limite de 2.562 min?"
-        
+    
+    if col2.button("📊 Capacidade/Mês"):
+        comando_clicado = "Qual a nossa capacidade total de recebimento para o mês atual com base na APC?"
+
     if col3.button("🧩 Lego vs Real"):
         comando_clicado = "O Comercial aprovou mais vagas no Lego do que a nossa capacidade suporta?"
 
-    if col4.button("📦 Rastrear SKU"):
-        # Este botão serve como um guia rápido para o usuário
-        comando_clicado = "Quais as próximas chegadas previstas para o item 8034670?"
+    # Sistema de Mira para Item
+    if col4.button("🔍 Rastrear Item"):
+        st.session_state["modo_sniper"] = True
+
+    # Abre o campo extra caso o modo sniper seja ativado
+    if st.session_state.get("modo_sniper", False):
+        sku_alvo = st.text_input("🎯 Digite o SKU do Item para o Sniper:")
+        if sku_alvo:
+            comando_clicado = f"Quando tenho previsão para receber o item: {sku_alvo}"
+            st.session_state["modo_sniper"] = False # Desativa a mira após atirar
 
     st.markdown("---")
-    
-    # Ajustei o placeholder para ser mais instrutivo
-    pergunta_digitada = st.chat_input("Digite o SKU (Ex: 'Item 8034670') ou faça uma pergunta livre...")
 
-    # Ativação por clique ou por digitação
+    # Exibe o histórico de conversa com memória blindada
+    for msg in st.session_state["mensagens_chat"]:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    # Entrada de texto livre
+    pergunta_digitada = st.chat_input("Ou digite um comando livre para o Cérebro...")
     pergunta_usuario = comando_clicado or pergunta_digitada
 
     if pergunta_usuario:
         st.chat_message("user").markdown(pergunta_usuario)
-        st.session_state.mensagens_chat.append({"role": "user", "content": pergunta_usuario})
+        
+        # Salvando na memória blindada
+        st.session_state["mensagens_chat"].append({"role": "user", "content": pergunta_usuario})
 
-        with st.spinner("🧠 Cérebro varrendo planilhas e rastreando alvos..."):
-            # ... Daqui pra baixo o seu código continua igual (hoje_str, etc)
+        with st.spinner("🧠 Varrendo planilhas e processando veredito..."):
             
-            # ==============================================================================
-            # 🌐 MÓDULOS DE INTELIGÊNCIA (EXTRAÇÃO TOTAL DO SITE)
-            # ==============================================================================
+            # --- MÓDULOS DE DADOS (RECEBIMENTO, LEGO, SNIPER) ---
             hoje_str = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y')
             
-            # MÓDULO 1: RECEBIMENTO 1P & VISÃO APC (Da tabela df)
+            # Módulo 1 & 2 (APC e MIX)
             df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy() if 'df' in locals() else pd.DataFrame()
             if not df_contexto.empty:
                 df_contexto['Data_Str'] = df_contexto['Data'].dt.strftime('%d/%m/%Y')
-                # Resumo diário de APC e Teto
-                df_apc = df_contexto.groupby('Data_Str').agg(
-                    Total_Cargas=('Agenda_Texto', 'count'),
-                    Total_Pecas=('Qtd Peças', 'sum'),
-                    Minutos_APC=('Tempo_APC_Minutos', 'sum')
-                ).reset_index()
-                # Resumo de Ofensores (Mix de Carga)
-                df_mix = df_contexto.groupby(['Data_Str', 'Categorias']).size().reset_index(name='Qtd')
-                
-                txt_apc = df_apc.head(100).to_csv(index=False, sep='|')
-                txt_mix = df_mix.head(100).to_csv(index=False, sep='|')
+                txt_apc = df_contexto.groupby('Data_Str').agg(Cargas=('Agenda_Texto', 'count'), Min_APC=('Tempo_APC_Minutos', 'sum')).to_csv(sep='|')
+                txt_mix = df_contexto.groupby(['Data_Str', 'Categorias']).size().to_csv(sep='|')
             else:
-                txt_apc, txt_mix = "Sem dados 1P.", "Sem dados de mix."
+                txt_apc, txt_mix = "Sem dados.", "Sem dados."
 
-            # MÓDULO 2: PLANEJAMENTO LEGO (Da tabela df_plan)
-            txt_lego = "Sem dados do Comercial (Lego) para o período."
-            if 'df_plan' in locals() and not df_plan.empty:
-                # O código acha a coluna de data não importa se está escrito Data, DATA ou data
-                col_data_lego = next((col for col in df_plan.columns if col.upper() == 'DATA'), None)
-                col_cat_lego = next((col for col in df_plan.columns if col.upper() == 'CATEGORIA'), None)
-                col_plan_lego = next((col for col in df_plan.columns if 'PLANEJADO' in col.upper()), None)
-                col_real_lego = next((col for col in df_plan.columns if 'REAL' in col.upper()), None)
-
-                if col_data_lego and col_cat_lego and col_plan_lego and col_real_lego:
-                    df_lego = df_plan[(df_plan[col_data_lego] >= ts_inicio) & (df_plan[col_data_lego] <= ts_fim)].copy()
-                    
-                    if not df_lego.empty:
-                        df_lego['Data_Str'] = df_lego[col_data_lego].dt.strftime('%d/%m/%Y')
-                        resumo_lego = df_lego.groupby(['Data_Str', col_cat_lego]).agg(
-                            Vagas_Liberadas=(col_plan_lego, 'sum'),
-                            Vagas_Ocupadas=(col_real_lego, 'sum')
-                        ).reset_index()
-                        txt_lego = resumo_lego.head(100).to_csv(index=False, sep='|')
-
-            # ==============================================================================
-            # MÓDULO 4: SNIPER DE ITENS (BUSCA GLOBAL NA NUVEM)
-            # ==============================================================================
-            txt_sniper = "Nenhuma busca de item solicitada."
-            if "ITEM" in pergunta_usuario.upper() or "SKU" in pergunta_usuario.upper():
-                import re
-                numeros = re.findall(r'\d+', pergunta_usuario)
-                if numeros:
-                    sku_alvo = numeros[0]
-                    try:
-                        cliente_google = conectar_google()
-                        ws_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
-                        ws_itens = ws_principal.worksheet("Item Agenda") # Sua aba correta
-                        dados_nuvem = ws_itens.get_all_values()
-                        
-                        if len(dados_nuvem) > 1:
-                            df_nuvem = pd.DataFrame(dados_nuvem[1:], columns=dados_nuvem[0])
-                            
-                            # 🎯 BUSCA GLOBAL: Varre a planilha INTEIRA atrás desse número
-                            mask = df_nuvem.astype(str).apply(lambda x: x.str.contains(sku_alvo, case=False, na=False))
-                            busca = df_nuvem[mask.any(axis=1)]
-                            
-                            if not busca.empty:
-                                # Pega a tabela completa e entrega pro General
-                                txt_sniper = busca.head(50).to_csv(index=False, sep='|')
-                            else:
-                                txt_sniper = f"O Item {sku_alvo} não foi encontrado em lugar nenhum da aba 'Item Agenda'."
-                        else:
-                            txt_sniper = "A aba 'Item Agenda' está vazia na nuvem."
-                    except Exception as e:
-                        txt_sniper = f"Falha de conexão com a Nuvem: {e}"
-
-            # ==============================================================================
-            # 💀 PROMPT MESTRE OMNI-CHANNEL (MODO EXECUTIVO - EQUILIBRADO)
-            # ==============================================================================
-            prompt_final = f"""
-            [CÓDIGO NEGRO: OPERAÇÃO PREDADORA - MODO EXECUTIVO]
-
-            IDENTIDADE: Você é o "Cérebro", o General Logístico do CD2900. 
-            MISSÃO: Responder de forma direta, clara e COMPLETA. Sem textos longos, mas NUNCA esconda dados.
-            
-            [REGRAS DE OURO - COMO RESPONDER]:
-            1. RASTREIO DE ITENS: Liste TODAS as datas em que o item vai chegar. Leia o [MÓDULO 4]. 
-               - Pegue a agenda na coluna exata chamada 'CODAGENDA'. 
-               - Pegue a quantidade na coluna exata chamada 'QTAGENDA'.
-               - Exemplo de Resposta: 
-                 "O item 123 está previsto nas seguintes agendas:
-                 - Dia 10/04 | Agenda 321 | 50 peças.
-                 - Dia 12/04 | Agenda 405 | 120 peças."
-            2. OFENSORES: Diga o dia exato e o motivo. Ex: "No dia 01 teremos impacto: 3 cargas de Madeira agendadas (Risco de Colapso)."
-            3. MATEMÁTICA: A capacidade é 2.562 min/dia. Se passar disso, avise de forma direta quantos minutos estouraram.
-            4. POSTURA: Profissional e analítico. Use marcadores (bullet points) para facilitar a leitura.
-
-            [MÓDULO 1: VISÃO APC E TETO 1P (CUSTO DE TEMPO)]:
-            {txt_apc}
-
-            [MÓDULO 2: MIX DE CARGAS (RISCO CRÍTICO)]:
-            {txt_mix}
-
-            [MÓDULO 3: PLANEJAMENTO LEGO (COMERCIAL VS REAL)]:
-            {txt_lego}
-
-            [MÓDULO 4: SNIPER DE ITENS (DADOS DA NUVEM PARA A BUSCA)]:
-            {txt_sniper}
-
-            COMANDO DO GERENTE: "{pergunta_usuario}"
-            EXECUTE:
-            """
-
-            try:
-                resposta = model.generate_content(prompt_final)
-                texto_resposta = resposta.text
-                with st.chat_message("assistant"):
-                    st.markdown(texto_resposta)
-                st.session_state.mensagens_chat.append({"role": "assistant", "content": texto_resposta})
-            except Exception as e:
-                st.error(f"Falha na Sala de Guerra: {e}")
+            # Módulo 3 (
