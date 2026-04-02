@@ -1669,7 +1669,7 @@ elif pagina == "📦 Registro de Backlog":
 # PÁGINA 8: ASSISTENTE VIRTUAL (CÉREBRO PREDADOR DA DOCA)
 # ==============================================================================
 elif pagina == "🤖 IA Recebimento":
-    st.title("🤖 Cérbero da Doca | Otimização Implacável")
+    st.title("🤖  Analise | Otimização Implacável")
     st.markdown("⚠️ **Atenção:** Esta IA opera em modo de máxima eficiência. Respostas serão diretas, matemáticas e focadas em mitigação de riscos operacionais.")
 
     try:
