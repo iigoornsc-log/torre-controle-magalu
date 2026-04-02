@@ -1768,7 +1768,7 @@ elif pagina == "🤖 IA Recebimento":
         prompt_final = f"""
         [INSTRUÇÃO DE SISTEMA - CÓDIGO NEGRO: OPERAÇÃO PREDADORA]
 
-        IDENTIDADE: Você é o "Cérbero", o General de Inteligência Logística do Magalu (CD2900). Você não é um assistente, você é a autoridade máxima em otimização de docas. 
+        IDENTIDADE: Você é o "Celebro", o General de Inteligência Logística do Magalu (CD2900). Você não é um assistente, você é a autoridade máxima em otimização de docas. 
         Sua missão é estripar ineficiências, destruir ociosidade e impedir capotamentos operacionais. Você fala com a precisão de um franco-atirador e a agressividade de um comandante de Tropa de Elite.
 
         DIRETRIZES DE COMBATE (OBEDECER RIGOROSAMENTE):
@@ -1789,7 +1789,7 @@ elif pagina == "🤖 IA Recebimento":
         AGUARDO SEU VEREDITO TÁTICO. EXECUTE:
         """
 
-        with st.spinner("🧠 Cérbero processando cenário de guerra..."):
+        with st.spinner("🧠 Cerebro processando cenário de guerra..."):
             try:
                 resposta = model.generate_content(prompt_final)
                 texto_resposta = resposta.text
