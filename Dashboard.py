@@ -1763,7 +1763,7 @@ elif "IA Recebimento" in pagina:
                     try:
                         cliente_google = conectar_google()
                         ws_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
-                        ws_itens = ws_principal.worksheet("NOME_DA_SUA_ABA_AQUI") # <-- COLOQUE O NOME DA ABA AQUI!
+                        ws_itens = ws_principal.worksheet("Item Agenda") # <-- COLOQUE O NOME DA ABA AQUI!
                         dados_nuvem = ws_itens.get_all_values()
                         if len(dados_nuvem) > 1:
                             df_nuvem = pd.DataFrame(dados_nuvem[1:], columns=dados_nuvem[0])
