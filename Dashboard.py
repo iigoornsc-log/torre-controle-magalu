@@ -530,7 +530,7 @@ if pagina == "🏠 Painel Operacional":
 
     with col_kpi1: exibir_kpi("📅 Agendado", qtd_agendado, "Total de agendas", "#3498DB")
     with col_kpi2: exibir_kpi("🚛 Em Trânsito", qtd_transito, "A caminho do CD", "#9B59B6")
-    with col_kpi3: exibir_kpi("⏳ Pátio", qtd_aguardando, "Aguardando doca", "#F39C12")
+    with col_kpi3: exibir_kpi("⏳ Pátio", qtd_aguardando, "Aguardando Carga", "#F39C12")
     with col_kpi4: exibir_kpi("⚙️ Em Descarga", qtd_descarga, "Operação rodando", "#1ABC9C")
     with col_kpi5: exibir_kpi("✅ Recebido", qtd_recebido, "Finalizados", "#2ECC71")
     with col_kpi6: exibir_kpi("❌ No-Show", qtd_noshow, f"{taxa_noshow:.1f}% de quebra", "#E74C3C")
@@ -591,7 +591,7 @@ if pagina == "🏠 Painel Operacional":
             st.subheader("Balanço 1P")
             exibir_kpi("Dias Acima do Limite", df_limite_1p['Estourou_Limite'].sum(), "Necessita adequação", "#E74C3C")
             exibir_kpi("Volume 1P", df_limite_1p['Total_1P'].sum(), "Total de agendas 1P", "#3498DB")
-            exibir_kpi("Isentos (Cofres)", df_limite_1p['Qtd_Cofres'].sum(), "Não consomem doca padrão", "#95A5A6")
+            exibir_kpi("Isentos (Cofres)", df_limite_1p['Qtd_Cofres'].sum(), "Não consomem Carga padrão", "#95A5A6")
     else: st.info("Nenhuma agenda do canal 1P Fornecedor encontrada.")
 
     # ====================================================================
@@ -633,7 +633,7 @@ if pagina == "🏠 Painel Operacional":
                 st.subheader("Balanço Lego (Planejado)")
                 exibir_kpi("Dias Estourados", df_limite_lego['Estourou_Limite'].sum(), "Dias acima do plano", "#E74C3C")
                 exibir_kpi("Volume Planejado", df_limite_lego['Total_Planejado'].sum(), "Total vagas liberadas", "#3498DB")
-                exibir_kpi("Isentos (Cofres)", df_limite_lego['Vagas_Isentas'].sum(), "Não consumem doca padrão", "#95A5A6")
+                exibir_kpi("Isentos (Cofres)", df_limite_lego['Vagas_Isentas'].sum(), "Não consumem Carga padrão", "#95A5A6")
         else:
             st.info("Nenhuma vaga liberada no Lego para o período filtrado.")
     else:
@@ -864,7 +864,7 @@ elif pagina == "📅 Previsão de Agendas":
     cores_canais = {'1P Fornecedor': '#0086FF', 'Fulfillment': '#F39C12', 'Transferência': '#9B59B6'}
     
     with col_g1:
-        fig_v = px.pie(df_macro, values='Veiculos', names='Canal', title='Distribuição de Doca (Veículos)', hole=0.5, color='Canal', color_discrete_map=cores_canais)
+        fig_v = px.pie(df_macro, values='Veiculos', names='Canal', title='Distribuição de Carga (Veículos)', hole=0.5, color='Canal', color_discrete_map=cores_canais)
         fig_v.update_traces(textposition='inside', textinfo='percent+label')
         fig_v = aplicar_estilo_premium(fig_v)
         fig_v.update_layout(showlegend=False)
@@ -1061,7 +1061,7 @@ elif pagina == "📈 Simulador Cenário APC":
 elif pagina == "👷 Simulador Mão de Obra":
     st.title("⚖️ Simulador Mão de Obra | Inteligência Logística")
     st.markdown("""
-    Esta visão utiliza um algoritmo de **Otimização Matemática** para balancear as docas. 
+    Esta visão utiliza um algoritmo de **Otimização Matemática** para balancear as Cargas. 
     O objetivo é garantir que nenhuma equipe fique sobrecarregada enquanto outra está ociosa, 
     minimizando o custo de Horas Extras (HE).
     """)
@@ -1139,7 +1139,7 @@ elif pagina == "👷 Simulador Mão de Obra":
 
         # --- FASE 4: O MOTOR DE OTIMIZAÇÃO (IA) ---
         if ativar_ia and total_equipes > 1:
-            with st.spinner("🤖 IA otimizando balanceamento de docas..."):
+            with st.spinner("🤖 IA otimizando balanceamento de cargas..."):
                 import random
                 # O algoritmo tentará 2000 iterações de melhoria
                 for _ in range(2000):
@@ -1210,7 +1210,7 @@ elif pagina == "👷 Simulador Mão de Obra":
             fig_opt.update_layout(height=800, bargap=0.2)
             st.plotly_chart(fig_opt, use_container_width=True)
             
-            st.info("💡 **Dica do Especialista:** O algoritmo priorizou o nivelamento das docas. As cargas de Madeira foram concentradas nas equipes especialistas para otimizar o tempo de conferência física.")
+            st.info("💡 **Dica do Especialista:** O algoritmo priorizou o nivelamento das Cargas. As cargas de Madeira foram concentradas nas equipes especialistas para otimizar o tempo de conferência física.")
         else:
             st.warning("Nenhuma carga encontrada no agendamento para este dia.")
     else:
@@ -1584,7 +1584,7 @@ elif pagina == "📝 Solicitações Extras":
         st.info("Nenhuma exceção válida registrada ou as colunas não batem com o padrão.")
 
 # ==============================================================================
-# PÁGINA 7: REGISTRO DE BACKLOG (SOBRAS DE DOCA)
+# PÁGINA 7: REGISTRO DE BACKLOG (SOBRAS DE Carga)
 # ==============================================================================
 elif pagina == "📦 Registro de Backlog":
     st.title("📦 Registro de Backlog Diário")
@@ -1666,7 +1666,7 @@ elif pagina == "📦 Registro de Backlog":
         st.info("A planilha de BACKLOG será criada automaticamente assim que você registrar a primeira sobra acima.")
 
 # ==============================================================================
-# PÁGINA 8: ASSISTENTE VIRTUAL (COPILOT DA DOCA)
+# PÁGINA 8: ASSISTENTE VIRTUAL (COPILOT DA Carga)
 # ==============================================================================
 elif pagina == "🤖 IA Recebimento":
     st.title("🤖 IA Recebimento | Assistente de IA")
@@ -1731,15 +1731,15 @@ elif pagina == "🤖 IA Recebimento":
 
     [📚 MAPA DO SISTEMA - COMO AJUDAR O USUÁRIO A USAR O SITE]
     Sempre que o usuário pedir ajuda para fazer uma tarefa, indique a aba correta do nosso sistema:
-    1. '🏠 Painel Operacional': Para ver o status das docas hoje em tempo real, painel de ausências (No-Show), consumo do teto 1P e a Matriz de Risco Crítico.
+    1. '🏠 Painel Operacional': Para ver o status das Cargas hoje em tempo real, painel de ausências (No-Show), consumo do teto 1P e a Matriz de Risco Crítico.
     2. '📅 Previsão de Agendas': Para ter a visão executiva e estratégica (Mix de veículos e SKUs).
     3. '📈 Simulador What-If': Para testar o estresse da malha. O usuário pode adicionar cargas virtuais e projetar o impacto na semana.
     4. '👷 Simulador Mão de Obra': Onde fica nossa IA de Auto-Balanceamento. Ela distribui os caminhões entre as equipes para zerar ociosidade e Horas Extras.
     5. '🧩 Planejamento Lego': S&OP. Compara o que o Comercial planejou vs o que foi realizado (Mapa de calor: Vermelho=Estourado, Verde=Livre).
     6. '🚛 Transferências': Rastreio de cargas 325.
-    7. '📝 Solicitações Extras' e '📦 Registro de Backlog': Para registrar autorizações de teto e cargas que sobraram na doca.
+    7. '📝 Solicitações Extras' e '📦 Registro de Backlog': Para registrar autorizações de teto e cargas que sobraram na Carga.
 
-    [🚨 REGRAS DE OURO DA DOCA (RISCO DE CAPOTAMENTO)]
+    [🚨 REGRAS DE OURO DA Carga (RISCO DE CAPOTAMENTO)]
     Se o usuário pedir para analisar a semana, cruze as "Regras de Ouro" abaixo com a "Lista de Cargas Diárias" e alerte imediatamente se algum dia quebrar a regra:
     - 3 ou mais cargas de Madeira no mesmo dia = CAPOTA.
     - 2 ou mais cargas de Pneu = CAPOTA.
@@ -1781,7 +1781,7 @@ elif pagina == "🤖 IA Recebimento":
         # Prepara a mensagem pra mandar pra IA (juntando o contexto oculto + a pergunta)
         prompt_final = contexto_operacao + "\n\nPergunta do Gerente: " + pergunta_usuario
 
-        with st.spinner("🧠 Analisando a doca..."):
+        with st.spinner("🧠 Analisando a Carga..."):
             try:
                 # Chama o Gemini
                 resposta = model.generate_content(prompt_final)
