@@ -1669,7 +1669,7 @@ elif pagina == "📦 Registro de Backlog":
 # PÁGINA 8: IA RECEBIMENTO (OMNI-CÉREBRO PREDADOR)
 # ==============================================================================
 elif "IA Recebimento" in pagina:
-    st.title("🤖 Cérebro Predador | OMNI-RADAR")
+    st.title("🤖 Robozinho Inteligente | OMNI-REC")
     st.markdown("⚠️ **Atenção:** Inteligência conectada a **todos** os módulos do CD2900 (Teto 1P, Lego, APC, Risco e Nuvem).")
 
     try:
