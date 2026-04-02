@@ -1674,32 +1674,36 @@ elif "IA Recebimento" in pagina:
 
     st.markdown("### 🎯 Comandos de Acesso Rápido:")
     
-    # Cria 3 colunas para colocar os botões lado a lado
-    col1, col2, col3 = st.columns(3)
+    # Atualizado para 4 colunas para caber o rastreio
+    col1, col2, col3, col4 = st.columns(4)
     comando_clicado = None
     
-    if col1.button("🚨 Ofensores da Semana"):
+    if col1.button("🚨 Ofensores"):
         comando_clicado = "Quais os dias de maior risco na semana e os fornecedores ofensores?"
         
-    if col2.button("⏱️ Risco de Hora Extra (APC)"):
-        comando_clicado = "Qual o cenário da nossa APC? Vamos estourar o limite de 2.562 min em algum dia?"
+    if col2.button("⏱️ Risco APC"):
+        comando_clicado = "Qual o cenário da nossa APC? Vamos estourar o limite de 2.562 min?"
         
-    if col3.button("🧩 Estouro Comercial (Lego)"):
+    if col3.button("🧩 Lego vs Real"):
         comando_clicado = "O Comercial aprovou mais vagas no Lego do que a nossa capacidade suporta?"
+
+    if col4.button("📦 Rastrear SKU"):
+        # Este botão serve como um guia rápido para o usuário
+        comando_clicado = "Quais as próximas chegadas previstas para o item 8034670?"
 
     st.markdown("---")
     
-    # Mantém a barra de digitação para rastreios específicos
-    pergunta_digitada = st.chat_input("Ou digite comando livre (Ex: 'Quando chega o item 123?')...")
+    # Ajustei o placeholder para ser mais instrutivo
+    pergunta_digitada = st.chat_input("Digite o SKU (Ex: 'Item 8034670') ou faça uma pergunta livre...")
 
-    # A IA vai ser ativada se ele CLICAR no botão OU se ele DIGITAR algo
+    # Ativação por clique ou por digitação
     pergunta_usuario = comando_clicado or pergunta_digitada
 
     if pergunta_usuario:
         st.chat_message("user").markdown(pergunta_usuario)
         st.session_state.mensagens_chat.append({"role": "user", "content": pergunta_usuario})
 
-        with st.spinner("🧠 Varrendo todas as planilhas do sistema..."):
+        with st.spinner("🧠 Cérebro varrendo planilhas e rastreando alvos..."):
             # ... Daqui pra baixo o seu código continua igual (hoje_str, etc)
             
             # ==============================================================================
