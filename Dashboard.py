@@ -1674,7 +1674,7 @@ elif pagina == "🤖 IA Recebimento":
 
     # 1. Configura a IA com a sua chave secreta e acha o modelo sozinho!
     try:
-        genai.configure(api_key=st.secrets["AIzaSyCK2jyjPAjhGWq78PID-p6ClnSHa3NWJqQ"])
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         
         # O robô vai listar todos os modelos do Google e pegar o 1º que aceita chat de texto
         modelo_disponivel = None
