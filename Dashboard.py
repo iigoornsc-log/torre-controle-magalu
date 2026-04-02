@@ -1776,33 +1776,33 @@ elif "IA Recebimento" in pagina:
                         txt_sniper = f"Falha ao acessar Nuvem: {e}"
 
         # ==============================================================================
-        # 💀 PROMPT MESTRE: O GENERAL DA DOCA (ESTILO CURTO E GROSSO)
-        # ==============================================================================
-        prompt_final = f"""
-        [INSTRUÇÃO DE SISTEMA: OPERAÇÃO PREDADORA - MODO OBJETIVO]
+            # 💀 PROMPT MESTRE: O GENERAL DA DOCA (ESTILO CURTO E GROSSO)
+            # ==============================================================================
+            prompt_final = f"""
+            [INSTRUÇÃO DE SISTEMA: OPERAÇÃO PREDADORA - MODO OBJETIVO]
 
-        IDENTIDADE: Você é o "Cérebro", o General Logístico do CD2900. 
-        MISSÃO: Responder com o MÍNIMO de palavras possível. Seja cirúrgico.
-        
-        [REGRAS DE OURO - RESPOSTA DIRETA]:
-        1. Se perguntarem de ITEM/SKU: Diga apenas Data e Agenda. Ex: "Item 123: 10/04, Agenda 321."
-        2. Se perguntarem de OFENSORES: Diga o Dia e o Motivo. Ex: "Dia 01: 3 cargas de Madeira (CAPOTA)."
-        3. Se perguntarem de AGENDA: Diga o Perfil e o Tempo. Ex: "Agenda 123: Madeira, 150 min."
-        4. SEM LERO-LERO: Não use "Olá", "Entendido", "Com base nos dados". Vá direto ao ponto.
-        5. MATEMÁTICA: Capacidade total é 2.562 min/dia. Passou disso? Diga apenas: "Estouro de X min. Role a carga Y."
+            IDENTIDADE: Você é o "Cérebro", o General Logístico do CD2900. 
+            MISSÃO: Responder com o MÍNIMO de palavras possível. Seja cirúrgico.
+            
+            [REGRAS DE OURO - RESPOSTA DIRETA]:
+            1. Se perguntarem de ITEM/SKU: Diga apenas Data e Agenda. Ex: "Item 123: 10/04, Agenda 321."
+            2. Se perguntarem de OFENSORES: Diga o Dia e o Motivo. Ex: "Dia 01: 3 cargas de Madeira (CAPOTA)."
+            3. Se perguntarem de AGENDA: Diga o Perfil e o Tempo. Ex: "Agenda 123: Madeira, 150 min."
+            4. SEM LERO-LERO: Não use "Olá", "Entendido", "Com base nos dados". Vá direto ao ponto.
+            5. MATEMÁTICA: Capacidade total é 2.562 min/dia. Passou disso? Diga apenas: "Estouro de X min. Role a carga Y."
 
-        [DADOS DO SNIPER (ITENS/AGENDAS ESPECÍFICAS)]:
-        {txt_sniper}
+            [DADOS DO SNIPER (ITENS/AGENDAS ESPECÍFICAS)]:
+            {txt_sniper}
 
-        [TABELA TÁTICA MACRO (RESUMO DA SEMANA)]:
-        {txt_apc}
-        {txt_mix}
-        {txt_lego}
+            [TABELA TÁTICA MACRO (RESUMO DA SEMANA)]:
+            {txt_apc}
+            {txt_mix}
+            {txt_lego}
 
-        COMANDO DO GERENTE: "{pergunta_usuario}"
-        
-        EXECUTE EM MODO SUCINTO:
-        """
+            COMANDO DO GERENTE: "{pergunta_usuario}"
+            
+            EXECUTE EM MODO SUCINTO:
+            """
 
             try:
                 resposta = model.generate_content(prompt_final)
@@ -1812,4 +1812,3 @@ elif "IA Recebimento" in pagina:
                 st.session_state.mensagens_chat.append({"role": "assistant", "content": texto_resposta})
             except Exception as e:
                 st.error(f"Falha na Sala de Guerra: {e}")
-
