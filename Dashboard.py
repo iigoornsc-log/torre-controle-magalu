@@ -1734,16 +1734,24 @@ elif "IA Recebimento" in pagina:
                 txt_apc, txt_mix = "Sem dados 1P.", "Sem dados de mix."
 
             # MÓDULO 2: PLANEJAMENTO LEGO (Da tabela df_plan)
-            df_lego = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy() if 'df_plan' in locals() else pd.DataFrame()
-            if not df_lego.empty:
-                df_lego['Data_Str'] = df_lego['data'].dt.strftime('%d/%m/%Y')
-                resumo_lego = df_lego.groupby(['Data_Str', 'categoria']).agg(
-                    Vagas_Liberadas=('quantidade_planejado', 'sum'),
-                    Vagas_Ocupadas=('quantidade_real', 'sum')
-                ).reset_index()
-                txt_lego = resumo_lego.to_csv(index=False, sep='|')
-            else:
-                txt_lego = "Sem dados do Comercial (Lego)."
+            txt_lego = "Sem dados do Comercial (Lego) para o período."
+            if 'df_plan' in locals() and not df_plan.empty:
+                # O código acha a coluna de data não importa se está escrito Data, DATA ou data
+                col_data_lego = next((col for col in df_plan.columns if col.upper() == 'DATA'), None)
+                col_cat_lego = next((col for col in df_plan.columns if col.upper() == 'CATEGORIA'), None)
+                col_plan_lego = next((col for col in df_plan.columns if 'PLANEJADO' in col.upper()), None)
+                col_real_lego = next((col for col in df_plan.columns if 'REAL' in col.upper()), None)
+
+                if col_data_lego and col_cat_lego and col_plan_lego and col_real_lego:
+                    df_lego = df_plan[(df_plan[col_data_lego] >= ts_inicio) & (df_plan[col_data_lego] <= ts_fim)].copy()
+                    
+                    if not df_lego.empty:
+                        df_lego['Data_Str'] = df_lego[col_data_lego].dt.strftime('%d/%m/%Y')
+                        resumo_lego = df_lego.groupby(['Data_Str', col_cat_lego]).agg(
+                            Vagas_Liberadas=(col_plan_lego, 'sum'),
+                            Vagas_Ocupadas=(col_real_lego, 'sum')
+                        ).reset_index()
+                        txt_lego = resumo_lego.to_csv(index=False, sep='|')
 
             # MÓDULO 3: RASTREIO NUVEM (SNIPER DE ITENS)
             txt_sniper = "Nenhuma busca de item solicitada."
