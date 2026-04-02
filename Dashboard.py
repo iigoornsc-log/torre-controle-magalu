@@ -1678,7 +1678,7 @@ with st.sidebar.popover("🤖 Falar com a IA (Copilot)", use_container_width=Tru
     try:
         import google.generativeai as genai
         # Coloque a sua chave direta aqui novamente:
-        genai.configure(api_key="AIzaSyCK2jyjPAjhGWq78PID-p6ClnSHa3NWJqQ") 
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         
         modelo_disponivel = None
         for m in genai.list_models():
