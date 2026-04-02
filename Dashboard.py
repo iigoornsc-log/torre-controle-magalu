@@ -1681,14 +1681,30 @@ elif pagina == "🤖 IA Recebimento":
         st.error(f"⚠️ Erro de ignição no motor da IA: {e}")
         st.stop()
 
+    # --- MENSAGEM DE INICIAÇÃO MILITAR ---
     if "mensagens_chat" not in st.session_state:
-        st.session_state.mensagens_chat = []
+        msg_boas_vindas = """
+        🎖️ **SISTEMA ONLINE. CÉREBRO PREDADOR ATIVADO.**
+        
+        Estou operando com leitura direta no banco de dados operacional. Minha missão é proteger o CD2900 de capotamentos logísticos.
+        
+        **Você pode me cobrar sobre:**
+        - 📦 **Rastreio de Itens/SKUs:** (Ex: *"Quando temos previsão de receber o item 123?"*)
+        - 📋 **Perfil de Agendas:** (Ex: *"Qual o perfil da agenda 123?"*)
+        - 🚨 **Análise de Ofensores:** (Ex: *"Quais os dias com maiores ofensores da semana e o que sugere fazer?"*)
+        
+        Aguardando ordens de operação. Execute.
+        """
+        st.session_state.mensagens_chat = [{"role": "assistant", "content": msg_boas_vindas}]
 
     # --- 1. BASE DE DADOS MACRO ---
     df_contexto = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
     qtd_agendas = len(df_contexto)
     minutos_apc_total = df_contexto['Tempo_APC_Minutos'].sum() if not df_contexto.empty else 0
-    df_contexto['Data_Str'] = df_contexto['Data'].dt.strftime('%d/%m/%Y') if not df_contexto.empty else ""
+    if not df_contexto.empty:
+        df_contexto['Data_Str'] = df_contexto['Data'].dt.strftime('%d/%m/%Y') 
+    else:
+        df_contexto['Data_Str'] = ""
 
     # Redesenha o histórico
     for msg in st.session_state.mensagens_chat:
@@ -1702,11 +1718,38 @@ elif pagina == "🤖 IA Recebimento":
         st.session_state.mensagens_chat.append({"role": "user", "content": pergunta_usuario})
 
         # ==============================================================================
-        # 🧠 OMNI-RADAR: LEITURA TOTAL DA BASE DE DADOS
+        # 🧠 OMNI-RADAR & SNIPER: EXTRAÇÃO DE DADOS
         # ==============================================================================
         hoje_str = pd.Timestamp.now(tz='America/Sao_Paulo').strftime('%d/%m/%Y')
-        
-        # O General lê a base inteira agrupada para não perder NENHUM detalhe e não estourar a memória
+        import re
+        dados_sniper = ""
+        pergunta_upper = pergunta_usuario.upper()
+
+        # 🎯 SNIPER 1: Busca Específica de SKU/Item (Requer a base df_itens carregada no app)
+        if "ITEM" in pergunta_upper or "SKU" in pergunta_upper:
+            numeros = re.findall(r'\d+', pergunta_usuario)
+            if numeros and 'df_itens' in locals() and not df_itens.empty:
+                sku_alvo = numeros[0]
+                busca_sku = df_itens[df_itens['SKU'].astype(str).str.contains(sku_alvo)]
+                if not busca_sku.empty:
+                    agendas_sku = busca_sku['Agenda'].unique()
+                    chegadas = df_contexto[df_contexto['Agenda'].isin(agendas_sku)][['Data_Str', 'Agenda_Texto', 'Fornecedor', 'Qtd Peças']]
+                    dados_sniper += f"\n[🎯 ALVO SNIPER - ITEM {sku_alvo}]:\n{chegadas.to_csv(index=False, sep='|')}\n"
+                else:
+                    dados_sniper += f"\n[🎯 ALVO SNIPER - ITEM {sku_alvo}]: Não localizado na base de dados atual.\n"
+
+        # 🎯 SNIPER 2: Busca Específica de Agenda
+        if "AGENDA" in pergunta_upper:
+            numeros = re.findall(r'\d+', pergunta_usuario)
+            if numeros and not df_contexto.empty:
+                agenda_alvo = numeros[0]
+                busca_agenda = df_contexto[df_contexto['Agenda'].astype(str).str.contains(agenda_alvo)]
+                if not busca_agenda.empty:
+                    dados_sniper += f"\n[📋 DOSSIÊ DA AGENDA {agenda_alvo}]:\n{busca_agenda[['Data_Str', 'Fornecedor', 'Categorias', 'Qtd Peças', 'Tempo_APC_Minutos']].to_csv(index=False, sep='|')}\n"
+                else:
+                    dados_sniper += f"\n[📋 DOSSIÊ DA AGENDA {agenda_alvo}]: Agenda não encontrada no período filtrado.\n"
+
+        # 📊 OMNI-RADAR: Visão Geral da Semana (Sempre Injetado)
         if not df_contexto.empty:
             df_tatica = df_contexto.groupby(['Data_Str', 'Fornecedor', 'Categorias', 'Status']).agg(
                 Cargas=('Agenda_Texto', 'count'),
@@ -1718,39 +1761,39 @@ elif pagina == "🤖 IA Recebimento":
             tabela_tatica = "NENHUMA CARGA NO RADAR PARA O PERÍODO FILTRADO."
 
         # ==============================================================================
-        # 💀 PROMPT MESTRE: O GENERAL DA DOCA (COM INTELIGÊNCIA MATEMÁTICA)
+        # 💀 PROMPT MESTRE: O GENERAL DA DOCA
         # ==============================================================================
         prompt_final = f"""
         [INSTRUÇÃO DE SISTEMA - CÓDIGO NEGRO: OPERAÇÃO PREDADORA]
 
         IDENTIDADE: Você é o "Cérebro", o General de Inteligência Logística do Magalu (CD2900). 
-        Sua missão é estripar ineficiências, destruir ociosidade e impedir capotamentos operacionais. 
-        Você fala com a precisão de um franco-atirador e a agressividade de um comandante de Tropa de Elite.
+        Sua missão é estripar ineficiências, prever o futuro das agendas e impedir capotamentos operacionais. 
+        Você fala com a precisão de um franco-atirador e a agressividade de um comandante.
 
         [LEIS MARCIAIS DA DOCA - EXECUTE SEM PIEDADE]:
         1. LIMITE DE TROPA: Temos 6 equipes. Cada uma opera 427 min/dia (Total: 2.562 min/dia).
-        2. HORA EXTRA (TOLERÂNCIA ZERO): O limite absoluto é 1 HORA extra por colaborador (60 min). Estourou a matemática? Ordene o corte (jogue para o Backlog) ou exija reforços da Expedição.
-        3. ALVOS INTOCÁVEIS: Cargas de Transferência com pedidos SÃO SAGRADAS. Nunca podem ser roladas.
-        4. CARGAS COMPLEXAS: Exija que sejam alocadas no INÍCIO do turno.
-        5. GARGALO DE MADEIRA: Qualquer equipe descarrega, mas NUNCA aloque mais de 2 equipes simultâneas para madeira.
-        6. CAPOTAMENTO FÍSICO: Avalie os dias. >=3 Madeiras, >=2 Pneus, >=2 Ar Cond., ou 2 Madeira + 1 Tubrax = COLAPSO. Se ver isso na tabela, SOE O ALARME!
+        2. HORA EXTRA (TOLERÂNCIA ZERO): O limite é 1 HORA extra/colaborador (60 min). Estourou? Ordene o corte para o Backlog.
+        3. ALVOS INTOCÁVEIS: Transferências com pedidos NÃO PODEM ser roladas.
+        4. GARGALO DE MADEIRA: NUNCA aloque mais de 2 equipes simultâneas para madeira.
+        5. CAPOTAMENTO FÍSICO: >=3 Madeiras, >=2 Pneus, >=2 Ar Cond., ou 2 Madeira + 1 Tubrax = COLAPSO.
+        
+        [INSTRUÇÕES DE RESPOSTA]:
+        - Frio, direto e sem saudações cordiais. Baseie a resposta apenas nas tabelas abaixo.
+        - SE O USUÁRIO PERGUNTAR DE UM ITEM OU AGENDA: Leia o [DADOS EXTRAÍDOS PELO SNIPER] e responda exato. Exemplo de resposta: "Afirmativo. O item X consta na agenda Y, prevista para o dia Z."
+        - SE O USUÁRIO PERGUNTAR DE OFENSORES DA SEMANA: Leia a [TABELA TÁTICA MACRO]. Ache os dias onde Min_APC passa de 2.562, e identifique os fornecedores que causaram isso. Dê uma ordem clara do que fazer.
 
-        [DIRETRIZES DE COMUNICAÇÃO]:
-        - Frio, calculista, direto. Sem "Olá" ou "Como posso ajudar".
-        - Baseie 100% da sua resposta na [TABELA TÁTICA] abaixo. Cruze os minutos de APC com a capacidade de 2.562 min/dia.
-        - Se precisar de ação, ordene o uso das nossas armas: '👷 Simulador Mão de Obra', '📈 What-If' ou '📦 Registro de Backlog'.
+        [DADOS EXTRAÍDOS PELO SNIPER (RESPOSTAS ESPECÍFICAS)]:
+        {dados_sniper}
 
-        [TABELA TÁTICA DA OPERAÇÃO (LIDA DIRETAMENTE DO BANCO DE DADOS)]:
-        Data de Hoje: {hoje_str}
-        Colunas: Data | Fornecedor | Categoria | Status | Qtd Cargas | Qtd Peças | Minutos APC Gastos
+        [TABELA TÁTICA MACRO (VISÃO DA SEMANA INTEIRA)]:
         {tabela_tatica}
 
         COMANDO DO GERENTE: "{pergunta_usuario}"
         
-        AGUARDO SEU VEREDITO TÁTICO E MATEMÁTICO. EXECUTE:
+        AGUARDO SEU VEREDITO. EXECUTE:
         """
 
-        with st.spinner("🧠 Cérebro processando cenário de guerra..."):
+        with st.spinner("🧠 Cérebro lendo radar de inteligência..."):
             try:
                 resposta = model.generate_content(prompt_final)
                 texto_resposta = resposta.text
