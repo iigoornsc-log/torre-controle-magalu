@@ -1753,7 +1753,7 @@ elif "IA Recebimento" in pagina:
                         ).reset_index()
                         txt_lego = resumo_lego.head(100).to_csv(index=False, sep='|')
 
-            # MÓDULO 3: RASTREIO NUVEM (SNIPER DE ITENS)
+            # MÓDULO 3: RASTREIO NUVEM (SNIPER DE ITENS OTIMIZADO)
             txt_sniper = "Nenhuma busca de item solicitada."
             if "ITEM" in pergunta_usuario.upper() or "SKU" in pergunta_usuario.upper():
                 import re
@@ -1761,47 +1761,60 @@ elif "IA Recebimento" in pagina:
                 if numeros:
                     sku_alvo = numeros[0]
                     try:
-                        # Conecta na planilha real para caçar o item
                         cliente_google = conectar_google()
                         ws_principal = cliente_google.open_by_key('1WA5GjT1f-jpQ4Sw_OfvXBERyz5MehfH7uaFrIfUMrtw')
-                        ws_itens = ws_principal.worksheet("Item Agenda") # <-- COLOQUE O NOME DA ABA AQUI
+                        ws_itens = ws_principal.worksheet("NOME_DA_SUA_ABA_AQUI") # <-- COLOQUE O NOME DA ABA AQUI!
                         dados_nuvem = ws_itens.get_all_values()
                         if len(dados_nuvem) > 1:
                             df_nuvem = pd.DataFrame(dados_nuvem[1:], columns=dados_nuvem[0])
-                            col_sku = next((c for c in df_nuvem.columns if 'SKU' in c.upper() or 'ITEM' in c.upper()), None)
+                            
+                            col_sku = next((c for c in df_nuvem.columns if 'SKU' in c.upper() or 'ITEM' in c.upper() or 'CÓD' in c.upper()), None)
+                            
                             if col_sku:
                                 busca = df_nuvem[df_nuvem[col_sku].astype(str).str.contains(sku_alvo)]
-                                txt_sniper = busca.head(50).to_csv(index=False, sep='|') if not busca.empty else f"Item {sku_alvo} não encontrado na Nuvem."
+                                if not busca.empty:
+                                    # Pega todas as ocorrências (até 50 linhas) para ele listar TUDO
+                                    txt_sniper = busca.head(50).to_csv(index=False, sep='|')
+                                else:
+                                    txt_sniper = f"Item {sku_alvo} não encontrado na base da nuvem."
                     except Exception as e:
                         txt_sniper = f"Falha ao acessar Nuvem: {e}"
 
-        # ==============================================================================
-            # 💀 PROMPT MESTRE: O GENERAL DA DOCA (ESTILO CURTO E GROSSO)
+            # ==============================================================================
+            # 💀 PROMPT MESTRE OMNI-CHANNEL (MODO EXECUTIVO - EQUILIBRADO)
             # ==============================================================================
             prompt_final = f"""
-            [INSTRUÇÃO DE SISTEMA: OPERAÇÃO PREDADORA - MODO OBJETIVO]
+            [CÓDIGO NEGRO: OPERAÇÃO PREDADORA - MODO EXECUTIVO]
 
             IDENTIDADE: Você é o "Cérebro", o General Logístico do CD2900. 
-            MISSÃO: Responder com o MÍNIMO de palavras possível. Seja cirúrgico.
+            MISSÃO: Responder de forma direta, clara e COMPLETA. Sem textos longos, mas NUNCA esconda dados.
             
-            [REGRAS DE OURO - RESPOSTA DIRETA]:
-            1. Se perguntarem de ITEM/SKU: Diga apenas Data e Agenda. Ex: "Item 123: 10/04, Agenda 321."
-            2. Se perguntarem de OFENSORES: Diga o Dia e o Motivo. Ex: "Dia 01: 3 cargas de Madeira (CAPOTA)."
-            3. Se perguntarem de AGENDA: Diga o Perfil e o Tempo. Ex: "Agenda 123: Madeira, 150 min."
-            4. SEM LERO-LERO: Não use "Olá", "Entendido", "Com base nos dados". Vá direto ao ponto.
-            5. MATEMÁTICA: Capacidade total é 2.562 min/dia. Passou disso? Diga apenas: "Estouro de X min. Role a carga Y."
+            [REGRAS DE OURO - COMO RESPONDER]:
+            1. RASTREIO DE ITENS: Liste TODAS as datas em que o item vai chegar. Leia o [MÓDULO 4]. 
+               - Pegue a agenda na coluna exata chamada 'CODAGENDA'. 
+               - Pegue a quantidade na coluna exata chamada 'QTAGENDA'.
+               - Exemplo de Resposta: 
+                 "O item 123 está previsto nas seguintes agendas:
+                 - Dia 10/04 | Agenda 321 | 50 peças.
+                 - Dia 12/04 | Agenda 405 | 120 peças."
+            2. OFENSORES: Diga o dia exato e o motivo. Ex: "No dia 01 teremos impacto: 3 cargas de Madeira agendadas (Risco de Colapso)."
+            3. MATEMÁTICA: A capacidade é 2.562 min/dia. Se passar disso, avise de forma direta quantos minutos estouraram.
+            4. POSTURA: Profissional e analítico. Use marcadores (bullet points) para facilitar a leitura.
 
-            [DADOS DO SNIPER (ITENS/AGENDAS ESPECÍFICAS)]:
-            {txt_sniper}
-
-            [TABELA TÁTICA MACRO (RESUMO DA SEMANA)]:
+            [MÓDULO 1: VISÃO APC E TETO 1P (CUSTO DE TEMPO)]:
             {txt_apc}
+
+            [MÓDULO 2: MIX DE CARGAS (RISCO CRÍTICO)]:
             {txt_mix}
+
+            [MÓDULO 3: PLANEJAMENTO LEGO (COMERCIAL VS REAL)]:
             {txt_lego}
 
+            [MÓDULO 4: SNIPER DE ITENS (DADOS DA NUVEM PARA A BUSCA)]:
+            {txt_sniper}
+
             COMANDO DO GERENTE: "{pergunta_usuario}"
-            
-            EXECUTE EM MODO SUCINTO:
+            EXECUTE:
             """
 
             try:
