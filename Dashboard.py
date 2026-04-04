@@ -597,22 +597,21 @@ st.sidebar.markdown("""
 
 # 2. O TEXTO DO FAQ (Aparece só se o botão for clicado)
 if st.session_state.get("mostrar_faq_ari", False):
-    st.sidebar.markdown("""
-    <div style="background-color: #F8F9FA; padding: 15px; border-radius: 10px; border-left: 4px solid #64FFDA; margin-bottom: 15px; font-size: 13px;">
-        <b style="color: #1E272E;">🤖 Onde o A.R.I atua?</b><br><br>
-        <b>1. IA Recebimento (Omni-Radar):</b><br>
+    st.sidebar.markdown(
+        """
+        <div style="background-color: #F8F9FA; padding: 15px; border-radius: 10px; border-left: 4px solid #64FFDA; margin-bottom: 15px; font-size: 13px;">
+            <b style="color: #1E272E;">🤖 Onde o A.R.I atua?</b><br><br>
+                    <b>1. IA Recebimento (Omni-Radar):</b><br>
         Conectado a 100% da malha (Lego, APC, Nuvem). O A.R.I. analisa ofensores da semana, rastreia SKUs e calcula risco de hora extra.<br><br>
         <b>2. Planejamento Lego:</b><br>
-        O A.R.I. cruza o saldo de vagas liberadas pelo Comercial com o Risco de Capotamento da Doca, sugerindo remanejamento inteligente de cargas para evitar o caos.<br><br>
-        
-        <hr style="margin: 10px 0; border-top: 1px solid #E1E8ED;">
-        
-        <i style="color: #576574; line-height: 2;">Toda função que tiver o selo 
-        <div class="ari-inline-badge" style="margin: 0 4px; transform: scale(0.85); transform-origin: center; display: inline-flex;">
-            <div class="ari-dot"></div>
-            <span>IA - A.R.I</span>
-        </div> 
-        é totalmente gerada por IA.</i>
+        O A.R.I. cruza o saldo de vagas liberadas pelo Comercial com o Risco de Gargalo Operacional, sugerindo remanejamento inteligente de cargas para evitar o caos.<br><br>
+        <b>3. Matriz de Risco:</b><br>
+        Analiso todos os perfils de carga, identifico os mais demorados, e alerto caso tenha vários deles no mesmo dia<br><br>
+        <b>4. Simulador Mão de Obra:</b><br>
+        Tento distribuir da melhor forma, as agendas do dia para a quantidade de equipes disponives<br><br>
+        <b>4. Possíveis Gargalos:</b><br>
+        Analiso seu cenário operacional de forma complexa e listo os dias com riscos, e deixo uma lista prontinha para você consultar o perfil do dia<br><br>
+        <i>Procure pelo selo luminoso nas páginas para ativar a IA!</i>
     </div>
     """, unsafe_allow_html=True)
 
