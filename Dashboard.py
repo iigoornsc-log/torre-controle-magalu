@@ -141,6 +141,21 @@ def conectar_google():
 
     return gspread.authorize(creds)
 
+# --- MOTOR DE INTELIGÊNCIA ARTIFICIAL GLOBAL ---
+def consultar_ia_contextual(prompt_contexto, mensagem_carregamento="🧠 IA analisando cenário..."):
+    import google.generativeai as genai
+    try:
+        # Substitua pela sua chave real
+        genai.configure(api_key="SUA_CHAVE_AQUI") 
+        modelo_nome = next((m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods), "gemini-1.5-flash")
+        model = genai.GenerativeModel(modelo_nome)
+        
+        with st.spinner(mensagem_carregamento):
+            resposta = model.generate_content(prompt_final)
+            return resposta.text
+    except Exception as e:
+        return f"🚨 Falha de comunicação com a IA: {e}"
+
 # --- EXTRAÇÃO DE DADOS (MULTIPLAS PLANILHAS & AGRUPAMENTOS) ---
 @st.cache_data(ttl=300)
 def carregar_dados():
@@ -1320,6 +1335,66 @@ elif pagina == "🧩 Planejamento Lego":
 
                 tabela_estilizada = pivot.style.format("{:.0f}").apply(formatar_tabela_lego, axis=None)
                 st.dataframe(tabela_estilizada, use_container_width=True, height=600)
+
+                # ====================================================================
+                # 🧠 IA EMBUTIDA: ASSISTENTE DE REDISTRIBUIÇÃO LEGO vs APC
+                # ====================================================================
+                st.markdown("---")
+                col_ia_txt, col_ia_btn = st.columns([3, 1])
+                with col_ia_txt:
+                    st.markdown("### 🧠 Otimização de Malha com IA")
+                    st.caption("A IA cruzará o saldo de vagas desta tabela com o risco de Hora Extra (APC) para sugerir a redistribuição de cargas.")
+                
+                with col_ia_btn:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    btn_ia_lego = st.button("✨ Sugerir Redistribuição", use_container_width=True)
+
+                if btn_ia_lego:
+                    # 1. Prepara os dados de Vagas do Lego
+                    txt_vagas_lego = df_plan_filtrado.groupby(['data', 'categoria']).agg(
+                        Planejado=('quantidade_planejado', 'sum'),
+                        Realizado=('quantidade_real', 'sum')
+                    ).reset_index()
+                    txt_vagas_lego['Saldo'] = txt_vagas_lego['Planejado'] - txt_vagas_lego['Realizado']
+                    txt_vagas_lego['data'] = txt_vagas_lego['data'].dt.strftime('%d/%m/%Y')
+                    tabela_vagas_prompt = txt_vagas_lego.to_csv(index=False, sep='|')
+
+                    # 2. Prepara os dados de Gargalo da APC (Calculando rápido aqui)
+                    df_base_apc = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
+                    if not df_base_apc.empty:
+                        df_base_apc['Data_Str'] = df_base_apc['Data'].dt.strftime('%d/%m/%Y')
+                        df_gargalo = df_base_apc.groupby('Data_Str').agg({'Tempo_APC_Minutos': 'sum'}).reset_index()
+                        df_gargalo['Equipes_Necessarias'] = (df_gargalo['Tempo_APC_Minutos'] / 427).apply(math.ceil)
+                        df_gargalo['Risco_Gargalo'] = df_gargalo['Equipes_Necessarias'].apply(lambda x: 'CRÍTICO' if x > 6 else 'TRANQUILO')
+                        tabela_gargalo_prompt = df_gargalo.to_csv(index=False, sep='|')
+                    else:
+                        tabela_gargalo_prompt = "Sem dados de APC."
+
+                    # 3. Chama a Função Global da IA
+                    prompt_final = f"""
+                    Você é o Gerente Sênior de S&OP do CD2900 Magalu. 
+                    Sua missão é analisar o cruzamento entre as Vagas do Comercial (Lego) e a Capacidade Operacional (APC).
+                    
+                    Temos um limite de 6 equipes por dia. 
+                    
+                    [DADOS DE GARGALO APC (COMO ESTÁ A OPERAÇÃO)]:
+                    {tabela_gargalo_prompt}
+
+                    [DADOS DO LEGO (SALDO DE VAGAS DO COMERCIAL)]:
+                    {tabela_vagas_prompt}
+
+                    TAREFA:
+                    1. Identifique os dias marcados como 'CRÍTICO' no gargalo APC, mas que ainda possuem 'Saldo' positivo de vagas no Lego. (Ou seja, o Comercial ainda acha que cabe carga, mas a doca já capotou).
+                    2. Identifique os dias marcados como 'TRANQUILO' no APC.
+                    3. Gere uma sugestão direta, em formato de "Plano de Ação", orientando o usuário a bloquear as categorias X no dia crítico e mover os agendamentos para o dia tranquilo.
+                    4. Seja executivo, use bullet points e seja curto. Não use jargões de IA.
+                    """
+                    
+                    resposta_ia = consultar_ia_contextual(prompt_final, "🧠 Cruzando Gargalos Operacionais com Vagas Comerciais...")
+                    
+                    # Exibe a resposta em um balão de destaque
+                    st.info("💡 **Veredito da Inteligência Artificial:**")
+                    st.markdown(resposta_ia)
             else:
                 st.info("Nenhuma vaga com valor preenchido no período selecionado.")
         else:
