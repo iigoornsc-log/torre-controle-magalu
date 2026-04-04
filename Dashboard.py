@@ -62,7 +62,8 @@ if "ari_boas_vindas" not in st.session_state:
             A.R.I. ONLINE
         </h4>
         <p>Este sistema conta com o <b>A.R.I. (Agente de Recebimento Inteligente)</b> para análises e planejamento tático.<br><br>
-        As funções com auxílio de I.A. estarão identificadas com um selo nas páginas. <b>Sempre revise os dados</b> antes de executar qualquer ação.</p>
+        As funções com auxílio de I.A. estarão identificadas com um selo nas páginas. <b>Sempre revise os dados</b> antes de executar qualquer ação.<br><br>
+        <i>💡 Se você tiver interesse em saber mais sobre o que o A.R.I. faz, aperte no botão <b>"❓ FAQ A.R.I"</b> no menu lateral para entender todas as suas funções e onde ele está presente!</i></p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -582,6 +583,26 @@ if df.empty and df_transf.empty:
     st.stop()
 
 # --- BARRA LATERAL E NAVEGAÇÃO ---
+
+# 1. BOTÃO DO FAQ A.R.I. (Acima da logo)
+if st.sidebar.button("❓ FAQ A.R.I (Conheça a IA)", use_container_width=True):
+    # Isso funciona como um interruptor liga/desliga para mostrar o texto
+    st.session_state["mostrar_faq_ari"] = not st.session_state.get("mostrar_faq_ari", False)
+
+# 2. O TEXTO DO FAQ (Aparece só se o botão for clicado)
+if st.session_state.get("mostrar_faq_ari", False):
+    st.sidebar.markdown("""
+    <div style="background-color: #F8F9FA; padding: 15px; border-radius: 10px; border-left: 4px solid #64FFDA; margin-bottom: 15px; font-size: 13px;">
+        <b style="color: #1E272E;">🤖 Onde o A.R.I atua?</b><br><br>
+        <b>1. IA Recebimento (Omni-Radar):</b><br>
+        Conectado a 100% da malha (Lego, APC, Nuvem). O A.R.I. analisa ofensores da semana, rastreia SKUs e calcula risco de hora extra.<br><br>
+        <b>2. Planejamento Lego:</b><br>
+        O A.R.I. cruza o saldo de vagas liberadas pelo Comercial com o Risco de Capotamento da Doca, sugerindo remanejamento inteligente de cargas para evitar o caos.<br><br>
+        <i>Procure pelo selo luminoso nas páginas para ativar a IA!</i>
+    </div>
+    """, unsafe_allow_html=True)
+
+# 3. A LOGO DO MAGALOG (Agora abaixo do FAQ)
 st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
