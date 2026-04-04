@@ -10,7 +10,7 @@ import json
 st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="🛍️", layout="wide", initial_sidebar_state="expanded")
 
 # ==============================================================================
-# 🎨 FRONT-END SÊNIOR | IDENTIDADE VISUAL MAGALU
+# 🎨 FRONT-END SÊNIOR | IDENTIDADE VISUAL MAGALU E A.R.I.
 # ==============================================================================
 st.markdown("""
 <style>
@@ -80,18 +80,16 @@ st.markdown("""
         font-weight: 700 !important;
         color: #0086FF !important;
     }
-</style>
-""", unsafe_allow_html=True)
 
     /* ========================================================= */
     /* 🤖 IDENTIDADE VISUAL A.R.I. (FUTURISTA / NEON)            */
     /* ========================================================= */
     .ari-badge {
         position: fixed;
-        top: 70px; /* Fica logo abaixo do cabeçalho do Streamlit */
+        top: 70px;
         right: 30px;
         background: linear-gradient(135deg, #0A192F 0%, #112240 100%);
-        color: #64FFDA; /* Ciano Tecnológico */
+        color: #64FFDA;
         padding: 10px 20px;
         border-radius: 30px;
         font-size: 13px;
@@ -108,7 +106,6 @@ st.markdown("""
         backdrop-filter: blur(10px);
     }
 
-    /* O pontinho verde piscando dentro do botão */
     .ari-dot {
         width: 10px;
         height: 10px;
@@ -128,6 +125,17 @@ st.markdown("""
         0%, 100% { opacity: 1; }
         50% { opacity: 0.4; }
     }
+</style>
+""", unsafe_allow_html=True)
+
+# --- 🤖 SENSOR DE PRESENÇA DA IA (A.R.I) ---
+def ativar_ari(mensagem="A.R.I. ONLINE NESTA PÁGINA"):
+    st.markdown(f"""
+    <div class="ari-badge">
+        <div class="ari-dot"></div>
+        <span>🤖 {mensagem}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- ESTILIZADOR DE GRÁFICOS (PLOTLY SÊNIOR) ---
 def aplicar_estilo_premium(fig):
