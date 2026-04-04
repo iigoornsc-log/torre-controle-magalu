@@ -1179,6 +1179,10 @@ elif pagina == "👷 Simulador Mão de Obra":
 elif pagina == "🧩 Planejamento Lego":
     st.title("🧩 Visão planejamento capacidade LEGO")
 
+    st.sidebar.markdown("---")
+    st.sidebar.header("⚙️ Parâmetros do Lego")
+    limite_agendas_1p = st.sidebar.number_input("Teto Agendas 1P/Dia", min_value=1, max_value=50, value=14)
+
     df_plan_filtrado = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy() if not df_plan.empty else pd.DataFrame()
 
     if not df_plan.empty:
