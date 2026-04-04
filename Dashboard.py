@@ -82,60 +82,46 @@ st.markdown("""
     }
 
     /* ========================================================= */
-    /* 🤖 IDENTIDADE VISUAL A.R.I. (FUTURISTA / NEON)            */
+    /* 🤖 SELO INLINE A.R.I. (FUTURISTA / NEON)                  */
     /* ========================================================= */
-    .ari-badge {
-        position: fixed;
-        top: 70px;
-        right: 30px;
+    .ari-inline-badge {
         background: linear-gradient(135deg, #0A192F 0%, #112240 100%);
         color: #64FFDA;
-        padding: 10px 20px;
-        border-radius: 30px;
-        font-size: 13px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
         font-weight: 900;
-        letter-spacing: 1.5px;
+        letter-spacing: 1px;
         text-transform: uppercase;
-        box-shadow: 0 0 15px rgba(100, 255, 218, 0.3);
+        box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
         border: 1px solid #64FFDA;
-        z-index: 9999;
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 10px;
+        gap: 6px;
         animation: ari-pulse 2.5s infinite;
-        backdrop-filter: blur(10px);
+        vertical-align: middle;
+        margin-left: 15px; /* Dá um espacinho do título */
     }
 
     .ari-dot {
-        width: 10px;
-        height: 10px;
+        width: 6px;
+        height: 6px;
         background-color: #64FFDA;
         border-radius: 50%;
-        box-shadow: 0 0 10px #64FFDA;
+        box-shadow: 0 0 8px #64FFDA;
         animation: ari-blink 1.5s infinite;
     }
 
     @keyframes ari-pulse {
-        0% { box-shadow: 0 0 15px rgba(100, 255, 218, 0.2); transform: scale(1); }
-        50% { box-shadow: 0 0 25px rgba(100, 255, 218, 0.6); transform: scale(1.02); }
-        100% { box-shadow: 0 0 15px rgba(100, 255, 218, 0.2); transform: scale(1); }
+        0% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.2); transform: scale(1); }
+        50% { box-shadow: 0 0 15px rgba(100, 255, 218, 0.6); transform: scale(1.02); }
+        100% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.2); transform: scale(1); }
     }
 
     @keyframes ari-blink {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.4; }
     }
-</style>
-""", unsafe_allow_html=True)
-
-# --- 🤖 SENSOR DE PRESENÇA DA IA (A.R.I) ---
-def ativar_ari(mensagem="A.R.I. ONLINE NESTA PÁGINA"):
-    st.markdown(f"""
-    <div class="ari-badge">
-        <div class="ari-dot"></div>
-        <span>🤖 {mensagem}</span>
-    </div>
-    """, unsafe_allow_html=True)
 
 # --- ESTILIZADOR DE GRÁFICOS (PLOTLY SÊNIOR) ---
 def aplicar_estilo_premium(fig):
