@@ -83,6 +83,52 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+    /* ========================================================= */
+    /* 🤖 IDENTIDADE VISUAL A.R.I. (FUTURISTA / NEON)            */
+    /* ========================================================= */
+    .ari-badge {
+        position: fixed;
+        top: 70px; /* Fica logo abaixo do cabeçalho do Streamlit */
+        right: 30px;
+        background: linear-gradient(135deg, #0A192F 0%, #112240 100%);
+        color: #64FFDA; /* Ciano Tecnológico */
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        box-shadow: 0 0 15px rgba(100, 255, 218, 0.3);
+        border: 1px solid #64FFDA;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: ari-pulse 2.5s infinite;
+        backdrop-filter: blur(10px);
+    }
+
+    /* O pontinho verde piscando dentro do botão */
+    .ari-dot {
+        width: 10px;
+        height: 10px;
+        background-color: #64FFDA;
+        border-radius: 50%;
+        box-shadow: 0 0 10px #64FFDA;
+        animation: ari-blink 1.5s infinite;
+    }
+
+    @keyframes ari-pulse {
+        0% { box-shadow: 0 0 15px rgba(100, 255, 218, 0.2); transform: scale(1); }
+        50% { box-shadow: 0 0 25px rgba(100, 255, 218, 0.6); transform: scale(1.02); }
+        100% { box-shadow: 0 0 15px rgba(100, 255, 218, 0.2); transform: scale(1); }
+    }
+
+    @keyframes ari-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+
 # --- ESTILIZADOR DE GRÁFICOS (PLOTLY SÊNIOR) ---
 def aplicar_estilo_premium(fig):
     fig.update_layout(
