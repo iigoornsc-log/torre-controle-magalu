@@ -123,17 +123,7 @@ st.markdown("""
         50% { opacity: 0.4; }
     }
 </style>
-# --- 🤖 GERADOR DE TÍTULOS COM SELO A.R.I ---
-def titulo_com_ari(texto_titulo, texto_selo="IA - A.R.I"):
-    st.markdown(f"""
-    <div style="display: flex; align-items: center; margin-bottom: 1rem; margin-top: 1rem;">
-        <h2 style="margin: 0; padding: 0;">{texto_titulo}</h2>
-        <div class="ari-inline-badge">
-            <div class="ari-dot"></div>
-            <span>{texto_selo}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # --- 🤖 GERADOR DE TÍTULOS COM SELO A.R.I ---
 def titulo_com_ari(texto_titulo, texto_selo="IA - A.R.I"):
