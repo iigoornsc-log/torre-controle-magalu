@@ -623,7 +623,6 @@ if st.session_state.get("mostrar_faq_ari", False):
         """, 
         unsafe_allow_html=True
     )
-
 # 3. A LOGO DO MAGALOG (Agora abaixo de tudo)
 st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
