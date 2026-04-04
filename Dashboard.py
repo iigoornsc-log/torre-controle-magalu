@@ -1351,49 +1351,66 @@ elif pagina == "🧩 Planejamento Lego":
                     btn_ia_lego = st.button("✨ Sugerir Redistribuição", use_container_width=True)
 
                 if btn_ia_lego:
-                    # 1. Prepara os dados de Vagas do Lego
-                    txt_vagas_lego = df_plan_filtrado.groupby(['data', 'categoria']).agg(
+                    # 1. DADOS DO LEGO (Detalhado por Categoria e Vagas Livres)
+                    df_plan_ia = df_plan_filtrado.copy()
+                    df_plan_ia['data_str'] = df_plan_ia['data'].dt.strftime('%d/%m/%Y')
+                    # Marca os isentos para a IA saber que Cofre não conta no teto
+                    df_plan_ia['Isento'] = df_plan_ia['categoria'].apply(lambda x: 'Sim' if 'COFRE' in str(x).upper() else 'Não')
+
+                    txt_vagas_lego = df_plan_ia.groupby(['data_str', 'categoria', 'Isento']).agg(
                         Planejado=('quantidade_planejado', 'sum'),
                         Realizado=('quantidade_real', 'sum')
                     ).reset_index()
-                    txt_vagas_lego['Saldo'] = txt_vagas_lego['Planejado'] - txt_vagas_lego['Realizado']
-                    txt_vagas_lego['data'] = txt_vagas_lego['data'].dt.strftime('%d/%m/%Y')
+                    # A "Gordura" que a gente pode mexer
+                    txt_vagas_lego['Saldo_Livre'] = txt_vagas_lego['Planejado'] - txt_vagas_lego['Realizado']
                     tabela_vagas_prompt = txt_vagas_lego.to_csv(index=False, sep='|')
 
-                    # 2. Prepara os dados de Gargalo da APC (Calculando rápido aqui)
+                    # 2. RESUMO DO TETO 1P (O Risco do Comercial - Limite Físico)
+                    df_resumo_teto = df_plan_ia[df_plan_ia['Isento'] == 'Não'].groupby('data_str').agg(
+                        Total_Planejado=('quantidade_planejado', 'sum'),
+                        Total_Realizado=('quantidade_real', 'sum')
+                    ).reset_index()
+                    tabela_teto_prompt = df_resumo_teto.to_csv(index=False, sep='|')
+
+                    # 3. DADOS DE APC (O Risco de Mão de Obra)
                     df_base_apc = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
                     if not df_base_apc.empty:
                         df_base_apc['Data_Str'] = df_base_apc['Data'].dt.strftime('%d/%m/%Y')
                         df_gargalo = df_base_apc.groupby('Data_Str').agg({'Tempo_APC_Minutos': 'sum'}).reset_index()
                         df_gargalo['Equipes_Necessarias'] = (df_gargalo['Tempo_APC_Minutos'] / 427).apply(math.ceil)
-                        df_gargalo['Risco_Gargalo'] = df_gargalo['Equipes_Necessarias'].apply(lambda x: 'CRÍTICO' if x > 6 else 'TRANQUILO')
                         tabela_gargalo_prompt = df_gargalo.to_csv(index=False, sep='|')
                     else:
                         tabela_gargalo_prompt = "Sem dados de APC."
 
-                    # 3. Chama a Função Global da IA
+                    # 4. PROMPT FINAL (A Mente do Arquiteto S&OP)
                     prompt_final = f"""
-                    Você é o Gerente Sênior de S&OP do CD2900 Magalu. 
-                    Sua missão é analisar o cruzamento entre as Vagas do Comercial (Lego) e a Capacidade Operacional (APC).
+                    Seu nome é A.R.I (Agente de Recebimento Inteligente) a sua função é da um suporte para o planejamento operacional, seja um cara simpatico mas que entenda do assunto.
+
+                    [LEIS DA FÍSICA DO CD2900 - DECORE]:
+                    1. TETO DE AGENDAS 1P: O limite máximo é de {limite_agendas_1p} carros/dia (Ignorar 'COFRES', pois são isentos).
+                    2. LIMITE DE EQUIPES (APC): Máximo de 6 equipes/dia.
+                    3. REGRA DE OURO (TIMING): Se num dia sobrecarregado o 'Realizado' for igual ou maior que o 'Planejado', nós PERDEMOS O TIMING. Não podemos alterar o que já foi agendado.
+                    4. AÇÃO: Você só pode sugerir mover cargas de um dia crítico SE houver 'Saldo_Livre' (Planejado > Realizado) daquela categoria.
                     
-                    Temos um limite de 6 equipes por dia. 
-                    
-                    [DADOS DE GARGALO APC (COMO ESTÁ A OPERAÇÃO)]:
+                    [TABELA 1: CAPACIDADE DIÁRIA (TOTAL DE CARROS PLANEJADOS VS LIMITE DE {limite_agendas_1p})]:
+                    {tabela_teto_prompt}
+
+                    [TABELA 2: CUSTO DE MÃO DE OBRA (APC VS LIMITE DE 6 EQUIPES)]:
                     {tabela_gargalo_prompt}
 
-                    [DADOS DO LEGO (SALDO DE VAGAS DO COMERCIAL)]:
+                    [TABELA 3: DETALHAMENTO DE VAGAS POR CATEGORIA (BUSQUE AQUI O 'SALDO_LIVRE' PARA MOVER)]:
                     {tabela_vagas_prompt}
 
-                    TAREFA:
-                    1. Identifique os dias marcados como 'CRÍTICO' no gargalo APC, mas que ainda possuem 'Saldo' positivo de vagas no Lego. (Ou seja, o Comercial ainda acha que cabe carga, mas a doca já capotou).
-                    2. Identifique os dias marcados como 'TRANQUILO' no APC.
-                    3. Gere uma sugestão direta, em formato de "Plano de Ação", orientando o usuário a bloquear as categorias X no dia crítico e mover os agendamentos para o dia tranquilo.
-                    4. Seja executivo, use bullet points e seja curto. Não use jargões de IA.
+                    TAREFA TÁTICA:
+                    1. Cruze as três tabelas. Ache os dias que vão capotar a doca (Seja pelo Teto Físico de {limite_agendas_1p} carros OU por exigir mais de 6 equipes).
+                    2. Verifique se nesses dias de caos ainda existe 'Saldo_Livre' em alguma categoria na Tabela 3. Se não tiver saldo (Realizado já bateu o planejado), diga: "Dia X estourado, mas perdemos o timing de atuação. As cargas já estão confirmadas."
+                    3. Se houver 'Saldo_Livre', dê uma ordem exata de REMANEJAMENTO: Indique qual categoria bloquear no dia crítico e para qual dia transferir (escolha um dia onde os carros < {limite_agendas_1p} e a equipe < 6).
+                    4. Responda em formato de 'Plano de Ação' com bullet points. Seja cirúrgico, sem blá-blá-blá.
                     """
                     
-                    resposta_ia = consultar_ia_contextual(prompt_final, "🧠 Cruzando Gargalos Operacionais com Vagas Comerciais...")
+                    resposta_ia = consultar_ia_contextual(prompt_final, "🧠 Cruzando Teto Físico, Mão de Obra e Vagas Residuais...")
                     
-                    # Exibe a resposta em um balão de destaque
+                    # Exibe a resposta
                     st.info("💡 **Veredito da Inteligência Artificial:**")
                     st.markdown(resposta_ia)
             else:
