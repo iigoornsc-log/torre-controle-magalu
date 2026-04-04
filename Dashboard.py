@@ -10,6 +10,63 @@ import json
 st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="🛍️", layout="wide", initial_sidebar_state="expanded")
 
 # ==============================================================================
+# 🤖 POP-UP DE BOAS-VINDAS A.R.I. (APARECE SÓ 1x AO ENTRAR)
+# ==============================================================================
+if "ari_boas_vindas" not in st.session_state:
+    st.session_state["ari_boas_vindas"] = True
+    st.markdown("""
+    <style>
+        @keyframes slideInLeftARI {
+            0% { transform: translateX(-120%); opacity: 0; visibility: visible; }
+            10% { transform: translateX(0); opacity: 1; visibility: visible; }
+            90% { transform: translateX(0); opacity: 1; visibility: visible; }
+            100% { transform: translateX(-120%); opacity: 0; visibility: hidden; }
+        }
+        
+        .ari-popup-container {
+            position: fixed;
+            bottom: 40px;
+            left: 30px;
+            background: linear-gradient(135deg, #0A192F 0%, #112240 100%);
+            color: #E6F1FF;
+            padding: 20px 25px;
+            border-radius: 12px;
+            border-left: 5px solid #64FFDA;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 999999;
+            max-width: 350px;
+            animation: slideInLeftARI 10s forwards; /* Duração de 10 segundos */
+            font-family: 'Nunito Sans', sans-serif;
+        }
+        
+        .ari-popup-container h4 {
+            margin: 0 0 10px 0;
+            color: #64FFDA !important;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ari-popup-container p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #A8B2D1;
+        }
+    </style>
+    
+    <div class="ari-popup-container">
+        <h4>
+            <div style="width: 8px; height: 8px; background-color: #64FFDA; border-radius: 50%; box-shadow: 0 0 10px #64FFDA; animation: ari-blink 1.5s infinite;"></div>
+            A.R.I. ONLINE
+        </h4>
+        <p>Este sistema conta com o <b>A.R.I. (Agente de Recebimento Inteligente)</b> para análises e planejamento tático.<br><br>
+        As funções com auxílio de I.A. estarão identificadas com um selo nas páginas. <b>Sempre revise os dados</b> antes de executar qualquer ação.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ==============================================================================
 # 🎨 FRONT-END SÊNIOR | IDENTIDADE VISUAL MAGALU E A.R.I.
 # ==============================================================================
 st.markdown("""
