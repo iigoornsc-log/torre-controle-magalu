@@ -584,10 +584,16 @@ if df.empty and df_transf.empty:
 
 # --- BARRA LATERAL E NAVEGAÇÃO ---
 
-# 1. BOTÃO DO FAQ A.R.I. (Acima da logo)
-if st.sidebar.button("❓ FAQ A.R.I (Conheça a IA)", use_container_width=True):
-    # Isso funciona como um interruptor liga/desliga para mostrar o texto
+# 1. BOTÃO DO FAQ A.R.I. (Clean e Minimalista)
+if st.sidebar.button("❓ FAQ A.R.I", use_container_width=True):
     st.session_state["mostrar_faq_ari"] = not st.session_state.get("mostrar_faq_ari", False)
+
+# Subtítulo "grudado" embaixo do botão para compor o bloco visual
+st.sidebar.markdown("""
+    <div style="text-align: center; margin-top: -12px; margin-bottom: 15px;">
+        <span style="font-size: 11.5px; color: #8395A7; font-weight: 600;">Conheça a IA de Análise de Recebimento Inteligente</span>
+    </div>
+""", unsafe_allow_html=True)
 
 # 2. O TEXTO DO FAQ (Aparece só se o botão for clicado)
 if st.session_state.get("mostrar_faq_ari", False):
@@ -597,18 +603,20 @@ if st.session_state.get("mostrar_faq_ari", False):
         <b>1. IA Recebimento (Omni-Radar):</b><br>
         Conectado a 100% da malha (Lego, APC, Nuvem). O A.R.I. analisa ofensores da semana, rastreia SKUs e calcula risco de hora extra.<br><br>
         <b>2. Planejamento Lego:</b><br>
-        O A.R.I. cruza o saldo de vagas liberadas pelo Comercial com o Risco de Gargalo Operacional, sugerindo remanejamento inteligente de cargas para evitar o caos.<br><br>
-        <b>3. Matriz de Risco:</b><br>
-        Analiso todos os perfils de carga, identifico os mais demorados, e alerto caso tenha vários deles no mesmo dia<br><br>
-        <b>4. Simulador Mão de Obra:</b><br>
-        Tento distribuir da melhor forma, as agendas do dia para a quantidade de equipes disponives<br><br>
-        <b>4. Possíveis Gargalos:</b><br>
-        Analiso seu cenário operacional de forma complexa e listo os dias com riscos, e deixo uma lista prontinha para você consultar o perfil do dia<br><br>
-        <i>Procure pelo selo luminoso nas páginas para ativar a IA!</i>
+        O A.R.I. cruza o saldo de vagas liberadas pelo Comercial com o Risco de Capotamento da Doca, sugerindo remanejamento inteligente de cargas para evitar o caos.<br><br>
+        
+        <hr style="margin: 10px 0; border-top: 1px solid #E1E8ED;">
+        
+        <i style="color: #576574; line-height: 2;">Toda função que tiver o selo 
+        <div class="ari-inline-badge" style="margin: 0 4px; transform: scale(0.85); transform-origin: center; display: inline-flex;">
+            <div class="ari-dot"></div>
+            <span>IA - A.R.I</span>
+        </div> 
+        é totalmente gerada por IA.</i>
     </div>
     """, unsafe_allow_html=True)
 
-# 3. A LOGO DO MAGALOG (Agora abaixo do FAQ)
+# 3. A LOGO DO MAGALOG (Agora abaixo de tudo)
 st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
