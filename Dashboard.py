@@ -1293,6 +1293,55 @@ elif pagina == "👷 Simulador Mão de Obra":
             capacidade_total_cd = total_equipes * 427
             equipes_estouradas = sum(1 for v in tempo_equipes.values() if v > 427)
 
+            # ====================================================================
+            # 🧠 IA EMBUTIDA: A.R.I. ESTRATEGISTA DE TROPA
+            # ====================================================================
+            st.markdown("---")
+            col_ia_tropa_txt, col_ia_tropa_btn = st.columns([3, 1])
+            with col_ia_tropa_txt:
+                st.markdown("### 🧠 A.R.I. | Otimizador de Headcount")
+                st.caption("Deixe o A.R.I. analisar a volumetria exata deste dia e sugerir a melhor formação tática para as suas equipes operacionais.")
+            
+            with col_ia_tropa_btn:
+                st.markdown("<br>", unsafe_allow_html=True)
+                btn_ia_tropa = st.button("✨ Sugerir Formação Ideal", use_container_width=True)
+
+            if btn_ia_tropa:
+                # O A.R.I junta todos os pedaços de carga do dia para entender a guerra
+                qtd_transf_fixa = sum(1 for x in cargas_alocadas if 'Transferência Fixa' in x['Tipo Carga'])
+                qtd_mad = len(cargas_madeira_lista)
+                min_mad = sum(x[0] for x in cargas_madeira_lista)
+                qtd_outras = len(cargas_restante)
+                min_outras = sum(x[0] for x in cargas_restante)
+
+                prompt_tropa = f"""
+                Você é o A.R.I., Estrategista Logístico do CD2900 Magalu.
+                
+                [CENÁRIO OPERACIONAL DO DIA {dia_simulacao}]:
+                - Headcount Total Disponível: {total_equipes} equipes.
+                - Capacidade Máxima por Equipe: 427 minutos úteis.
+                - Minutos Totais Exigidos pela Carga: {minutos_totais} min.
+                
+                [PERFIL DA CARGA A SER DESCARREGADA]:
+                - Transferências Fixas: {qtd_transf_fixa} rotas de 240 minutos cada.
+                - Cargas de Madeira (Críticas): {qtd_mad} cargas (Totalizando {min_mad} minutos).
+                - Cargas Diversas (1P/Full): {qtd_outras} cargas (Totalizando {min_outras} minutos).
+                
+                [SUA MISSÃO TÁTICA]:
+                Como devemos configurar nossas {total_equipes} equipes no painel (Quantas focadas em Transferência, quantas focadas em Madeira e quantas ficarão Mistas) para que a distribuição das barras no gráfico fique o mais reta (equalizada) possível, evitando que uma equipe exploda de 427 minutos enquanto outra fica à toa?
+                
+                [REGRAS DE RESPOSTA]:
+                1. Dê a ordem direta de como o usuário deve preencher o menu lateral. Ex: "Para equalizar hoje, coloque X na Transferência, Y na Madeira."
+                2. Explique a matemática por trás da sua escolha de forma curta e genérica.
+                3. Se os minutos exigidos pela carga ({minutos_totais}) forem MAIORES que a capacidade total ({capacidade_total_cd}), emita um "🚨 ALERTA DE COLAPSO" dizendo que a melhor formação apenas ameniza os danos, mas o déficit de horas extras é inevitável. Seja curto e direto!
+                """
+                
+                resposta_ia = consultar_ia_contextual(prompt_tropa, "🧠 Simulando milhares de combinações de equipes...")
+                
+                st.info("💡 **Formação Tática sugerida pelo A.R.I.:**")
+                st.markdown(resposta_ia)
+            # ====================================================================
+
             st.markdown("---")
             col_s1, col_s2, col_s3 = st.columns(3)
             with col_s1: exibir_kpi("Equipes em Sobrecarga", f"{equipes_estouradas} de {total_equipes}", "Mesmo equalizando 100%", "#E74C3C")
