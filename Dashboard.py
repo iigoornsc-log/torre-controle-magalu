@@ -809,7 +809,7 @@ if pagina == "🏠 Painel Operacional":
         st.success("✅ Nenhuma combinação crítica (Risco de Capotamento) identificada no período filtrado.")
 
     st.markdown("---")
-    st.header("🔥 Possíveis Gargalos")
+    titulo_com_ari("🔥 Possíveis Gargalos")
     df_apc_sobrecarga = df_apc[df_apc['Gap_Equipes'] > 0]
 
     if not df_apc_sobrecarga.empty:
