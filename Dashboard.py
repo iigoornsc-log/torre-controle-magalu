@@ -888,6 +888,7 @@ if pagina == "🏠 Painel Operacional":
 
     else: st.success("✅ A operação fluiu sem gargalos no período analisado!")
 
+ativar_ari("A.R.I. VIGIANDO A DOCA")
 # ==============================================================================
 # PÁGINA 2: PREVISÃO DE AGENDAS (CENÁRIO SÊNIOR)
 # ==============================================================================
