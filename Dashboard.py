@@ -1412,7 +1412,7 @@ elif pagina == "🧩 Planejamento Lego":
                     4. Responda em formato de 'Plano de Ação' com bullet points. Seja cirúrgico, sem blá-blá-blá.
                     """
                     
-                    resposta_ia = consultar_ia_contextual(prompt_final, "🧠 Cruzando Teto Físico, Mão de Obra e Vagas Residuais...")
+                    resposta_ia = consultar_ia_contextual(prompt_final, "🧠 Cruzando capacidade, Teto de agendas do mês, e Vagas no Lego...")
                     
                     # Exibe a resposta
                     st.info("💡 **Veredito da Inteligência Artificial:**")
