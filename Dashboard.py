@@ -1128,7 +1128,7 @@ elif pagina == "📈 Simulador Cenário APC":
 # PÁGINA 3: PROVA DE SOBRECARGA (COMERCIAL)
 # ==============================================================================
 elif pagina == "👷 Simulador Mão de Obra":
-    st.title("⚖️ Análise de Mão de obra")
+    titulo_com_ari("⚖️ Análise de Mão de obra")
     st.markdown("Esta visão simula o cenário do dia selecionado, balanceando as cargas de acordo com a quantidade de equipes disponíveis.")
 
     dias_disponiveis = sorted(df[df['Data'].notna()]['Data'].dt.strftime('%d/%m/%Y').unique())
