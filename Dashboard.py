@@ -739,7 +739,7 @@ if pagina == "🏠 Painel Operacional":
     # NOVA VISÃO: MATRIZ DE RISCO CRÍTICO (REGRAS DE CAPOTAMENTO)
     # ====================================================================
     st.markdown("---")
-    st.header("🚨 Matriz de Risco Crítico (Regras de Operação)")
+    titulo_com_ari("🚨 Matriz de Risco Crítico (Regras de Operação)")
 
     # 1. Cria as flags para identificar os perfis de carga do dia
     df_risco = df_filtrado_op.copy()
