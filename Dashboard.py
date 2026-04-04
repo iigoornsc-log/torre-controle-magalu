@@ -145,13 +145,14 @@ def conectar_google():
 def consultar_ia_contextual(prompt_contexto, mensagem_carregamento="🧠 IA analisando cenário..."):
     import google.generativeai as genai
     try:
-        # Substitua pela sua chave real
-        genai.configure(api_key="SUA_CHAVE_AQUI") 
-        modelo_nome = next((m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods), "gemini-1.5-flash")
+        # Puxando a chave com segurança direto do cofre do Streamlit
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"]) 
+        modelo_nome = next((m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods), "gemini-pro")
         model = genai.GenerativeModel(modelo_nome)
         
         with st.spinner(mensagem_carregamento):
-            resposta = model.generate_content(prompt_final)
+            # Passando a variável correta para o modelo gerar a resposta
+            resposta = model.generate_content(prompt_contexto)
             return resposta.text
     except Exception as e:
         return f"🚨 Falha de comunicação com a IA: {e}"
