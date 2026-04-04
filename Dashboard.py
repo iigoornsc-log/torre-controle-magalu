@@ -100,7 +100,7 @@ st.markdown("""
         gap: 6px;
         animation: ari-pulse 2.5s infinite;
         vertical-align: middle;
-        margin-left: 15px; /* Dá um espacinho do título */
+        margin-left: 15px;
     }
 
     .ari-dot {
@@ -122,6 +122,20 @@ st.markdown("""
         0%, 100% { opacity: 1; }
         50% { opacity: 0.4; }
     }
+</style>
+""", unsafe_allow_html=True)
+
+# --- 🤖 GERADOR DE TÍTULOS COM SELO A.R.I ---
+def titulo_com_ari(texto_titulo, texto_selo="IA - A.R.I"):
+    st.markdown(f"""
+    <div style="display: flex; align-items: center; margin-bottom: 1rem; margin-top: 1rem;">
+        <h2 style="margin: 0; padding: 0; color: #1E272E; font-family: 'Nunito Sans', sans-serif; font-weight: 800; letter-spacing: -0.5px;">{texto_titulo}</h2>
+        <div class="ari-inline-badge">
+            <div class="ari-dot"></div>
+            <span>{texto_selo}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- ESTILIZADOR DE GRÁFICOS (PLOTLY SÊNIOR) ---
 def aplicar_estilo_premium(fig):
