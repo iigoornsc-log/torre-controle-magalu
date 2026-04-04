@@ -597,7 +597,7 @@ if st.session_state.get("mostrar_faq_ari", False):
         <b>1. IA Recebimento (Omni-Radar):</b><br>
         Conectado a 100% da malha (Lego, APC, Nuvem). O A.R.I. analisa ofensores da semana, rastreia SKUs e calcula risco de hora extra.<br><br>
         <b>2. Planejamento Lego:</b><br>
-        O A.R.I. cruza o saldo de vagas liberadas pelo Comercial com o Risco de Capotamento da Doca, sugerindo remanejamento inteligente de cargas para evitar o caos.<br><br>
+        O A.R.I. cruza o saldo de vagas liberadas pelo Comercial com o Risco de Gargalo Operacional, sugerindo remanejamento inteligente de cargas para evitar o caos.<br><br>
         <b>3. Matriz de Risco:</b><br>
         Analiso todos os perfils de carga, identifico os mais demorados, e alerto caso tenha vários deles no mesmo dia<br><br>
         <b>4. Simulador Mão de Obra:</b><br>
