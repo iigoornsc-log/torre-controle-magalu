@@ -856,13 +856,43 @@ if pagina == "🏠 Painel Operacional":
             pecas = pd.to_numeric(row.get('Qtd Peças', 0), errors='coerce') or 0
             skus = pd.to_numeric(row.get(col_sku, 1), errors='coerce') or 1
 
+            # Pega o nome bonitinho da categoria para mostrar no alerta
+            nome_exibicao = cat.title() if cat else linha.title()
+
             is_altissimo = False
             motivo = ""
 
-            # Regra: Base Altíssima (Madeira, Pneus, Ar Condicionado)
-            if any(x in cat or x in linha for x in ['MADEIRA', 'PNEU', 'AR CONDICIONADO']):
+            # Regra: Base Altíssima (Agora separada para dizer o nome EXATO)
+            if 'MADEIRA' in cat or 'MADEIRA' in linha:
                 is_altissimo = True
-                motivo = "Madeira/Pneu/Ar"
+                motivo = "Madeira"
+            elif 'PNEU' in cat or 'PNEU' in linha:
+                is_altissimo = True
+                motivo = "Pneus"
+            elif 'AR CONDICIONADO' in cat or 'AR CONDICIONADO' in linha:
+                is_altissimo = True
+                motivo = "Ar Condicionado"
+
+            # Mutação: Volume Massivo (>1000 peças) - Diz a categoria exata
+            elif pecas >= 1000 and any(x in cat or x in linha for x in ['PORTATEIS', 'UD', 'CM', 'FERRAMENTA', 'DIVERSOS', 'AUDIO', 'AUTOMOTIVO', 'MERCADO', 'BLOCADO']):
+                is_altissimo = True
+                motivo = f"{nome_exibicao} (>1k peças)"
+
+            # Mutação: Fragmentação de SKUs (>10 SKUs) - Diz a categoria exata
+            elif skus >= 10 and any(x in cat or x in linha for x in ['BENS DE CONSUMO', 'FREEPASS', 'ALIMENTO']):
+                is_altissimo = True
+                motivo = f"{nome_exibicao} (>10 SKUs)"
+
+            if is_altissimo:
+                cargas_altissimo.append(motivo)
+
+            # Alertas Secundários de Atenção (Não viram altíssima, mas dão dor de cabeça)
+            if any(x in cat or x in linha for x in ['COLCH', 'ESTOFADO', 'MO2']) and skus >= 5:
+                alertas_dia.append(f"🟡 **Atenção:** {nome_exibicao} super fragmentado ({skus} SKUs). Vai travar endereço.")
+            if 'COFRE' in cat and pecas >= 5000:
+                alertas_dia.append(f"🟡 **Atenção:** Volume brutal de Cofres ({pecas:,.0f} peças).".replace(',', '.'))
+            if any(x in cat for x in ['BB', 'BR', 'BKF']) and pecas >= 400:
+                alertas_dia.append(f"🟡 **Atenção:** Carga pesada de {nome_exibicao} ({pecas:,.0f} peças).".replace(',', '.'))
 
             # Mutação: Volume Massivo (>1000 peças)
             elif pecas >= 1000 and any(x in cat or x in linha for x in ['PORTATEIS', 'UD', 'CM', 'FERRAMENTA', 'DIVERSOS', 'AUDIO', 'AUTOMOTIVO', 'MERCADO', 'BLOCADO']):
