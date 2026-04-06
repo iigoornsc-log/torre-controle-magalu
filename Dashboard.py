@@ -831,8 +831,8 @@ if pagina == "🏠 Painel Operacional":
     # NOVA VISÃO: MATRIZ DE RISCO CRÍTICO SÊNIOR (DEEP ANALYTICS A.R.I.)
     # ====================================================================
     st.markdown("---")
-    titulo_com_ari("🚨 Matriz de Risco Crítico (Deep Analytics)")
-    st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento e colapso de doca. Clique nos alertas para expandir os detalhes.")
+    titulo_com_ari("🚨 Matriz de Risco Crítico")
+    st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento e impactos de recebimento. Clique nos alertas para expandir os detalhes.")
 
     df_risco = df_filtrado_op.copy()
     col_sku = 'Qtd SKUs' if 'Qtd SKUs' in df_risco.columns else 'Qtd_SKUs'
@@ -929,7 +929,7 @@ if pagina == "🏠 Painel Operacional":
             
             # Define a gravidade do título do Expander
             if len(cargas_altissimo) >= 3:
-                titulo_alerta = f"🚨 DIA {dia_str}: COLAPSO DETECTADO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
+                titulo_alerta = f"🚨 DIA {dia_str}: RISCO DETECTADO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
                 cor_status = "#C0392B"
             elif len(cargas_altissimo) > 0:
                 titulo_alerta = f"⚠️ DIA {dia_str}: AVISO DE RISCO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
