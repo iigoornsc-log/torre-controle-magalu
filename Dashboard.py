@@ -890,7 +890,7 @@ if pagina == "🏠 Painel Operacional":
             if any(x in cat or x in linha for x in ['COLCH', 'ESTOFADO', 'MO2']) and skus >= 5:
                 alertas_dia.append(f"🟡 **Atenção:** {nome_exibicao} super fragmentado ({skus} SKUs). Vai travar endereço.")
             if 'COFRE' in cat and pecas >= 5000:
-                alertas_dia.append(f"🟡 **Atenção:** Volume brutal de Cofres ({pecas:,.0f} peças).".replace(',', '.'))
+                alertas_dia.append(f"🟡 **Atenção:** Volume Grande de Cofres ({pecas:,.0f} peças).".replace(',', '.'))
             if any(x in cat for x in ['BB', 'BR', 'BKF']) and pecas >= 400:
                 alertas_dia.append(f"🟡 **Atenção:** Carga pesada de {nome_exibicao} ({pecas:,.0f} peças).".replace(',', '.'))
 
