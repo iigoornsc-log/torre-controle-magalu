@@ -832,7 +832,7 @@ if pagina == "🏠 Painel Operacional":
     # ====================================================================
     st.markdown("---")
     titulo_com_ari("🚨 Matriz de Risco Crítico (Deep Analytics)")
-    st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento e colapso de doca.")
+    st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento e colapso de doca. Clique nos alertas para expandir os detalhes.")
 
     df_risco = df_filtrado_op.copy()
     col_sku = 'Qtd SKUs' if 'Qtd SKUs' in df_risco.columns else 'Qtd_SKUs'
@@ -842,9 +842,16 @@ if pagina == "🏠 Painel Operacional":
     for dia, df_dia in df_risco.groupby('Data'):
         cargas_altissimo = []
         alertas_dia = []
+        cargas_detalhadas = [] 
+
+        # 🧠 O SEGREDO: Memória do A.R.I para não contar a mesma agenda duas vezes!
+        agendas_vistas_altissimo = set()
+        agendas_vistas_atencao = set()
 
         # 1. Regra de Volume de Agendas no Dia (Trava Endereço)
-        agendas_por_cat = df_dia['Categorias'].astype(str).str.upper().value_counts()
+        # Remove as linhas duplicadas de agenda para olhar o cenário real
+        df_dia_unico = df_dia.drop_duplicates(subset=['Agendas']) if 'Agendas' in df_dia.columns else df_dia
+        agendas_por_cat = df_dia_unico['Categorias'].astype(str).str.upper().value_counts()
         for cat, qtd in agendas_por_cat.items():
             if qtd >= 8 and any(x in cat for x in ['ELETRO', 'IMAGEM']):
                 alertas_dia.append(f"📍 **Risco Trava Endereço:** {qtd} agendas de {cat} simultâneas.")
@@ -855,96 +862,111 @@ if pagina == "🏠 Painel Operacional":
             linha = str(row.get('Linhas', '')).upper()
             pecas = pd.to_numeric(row.get('Qtd Peças', 0), errors='coerce') or 0
             skus = pd.to_numeric(row.get(col_sku, 1), errors='coerce') or 1
-
-            # Pega o nome bonitinho da categoria para mostrar no alerta
+            
+            agenda_id = str(row.get('Agendas', row.get('Fornecedor', 'N/D')))
             nome_exibicao = cat.title() if cat else linha.title()
-
+            
             is_altissimo = False
             motivo = ""
+            alerta_secundario = ""
 
-            # Regra: Base Altíssima (Agora separada para dizer o nome EXATO)
+            # Regra: Base Altíssima
             if 'MADEIRA' in cat or 'MADEIRA' in linha:
-                is_altissimo = True
-                motivo = "Madeira"
+                is_altissimo = True; motivo = "Madeira"
             elif 'PNEU' in cat or 'PNEU' in linha:
-                is_altissimo = True
-                motivo = "Pneus"
+                is_altissimo = True; motivo = "Pneus"
             elif 'AR CONDICIONADO' in cat or 'AR CONDICIONADO' in linha:
-                is_altissimo = True
-                motivo = "Ar Condicionado"
-
-            # Mutação: Volume Massivo (>1000 peças) - Diz a categoria exata
-            elif pecas >= 1000 and any(x in cat or x in linha for x in ['PORTATEIS', 'UD', 'CM', 'FERRAMENTA', 'DIVERSOS', 'AUDIO', 'AUTOMOTIVO', 'MERCADO', 'BLOCADO']):
-                is_altissimo = True
-                motivo = f"{nome_exibicao} (>1k peças)"
-
-            # Mutação: Fragmentação de SKUs (>10 SKUs) - Diz a categoria exata
-            elif skus >= 10 and any(x in cat or x in linha for x in ['BENS DE CONSUMO', 'FREEPASS', 'ALIMENTO']):
-                is_altissimo = True
-                motivo = f"{nome_exibicao} (>10 SKUs)"
-
-            if is_altissimo:
-                cargas_altissimo.append(motivo)
-
-            # Alertas Secundários de Atenção (Não viram altíssima, mas dão dor de cabeça)
-            if any(x in cat or x in linha for x in ['COLCH', 'ESTOFADO', 'MO2']) and skus >= 5:
-                alertas_dia.append(f"🟡 **Atenção:** {nome_exibicao} super fragmentado ({skus} SKUs). Vai travar endereço.")
-            if 'COFRE' in cat and pecas >= 5000:
-                alertas_dia.append(f"🟡 **Atenção:** Volume Grande de Cofres ({pecas:,.0f} peças).".replace(',', '.'))
-            if any(x in cat for x in ['BB', 'BR', 'BKF']) and pecas >= 400:
-                alertas_dia.append(f"🟡 **Atenção:** Carga pesada de {nome_exibicao} ({pecas:,.0f} peças).".replace(',', '.'))
+                is_altissimo = True; motivo = "Ar Condicionado"
 
             # Mutação: Volume Massivo (>1000 peças)
             elif pecas >= 1000 and any(x in cat or x in linha for x in ['PORTATEIS', 'UD', 'CM', 'FERRAMENTA', 'DIVERSOS', 'AUDIO', 'AUTOMOTIVO', 'MERCADO', 'BLOCADO']):
-                is_altissimo = True
-                motivo = f"Diversos/Misto com >1k peças"
+                is_altissimo = True; motivo = f"{nome_exibicao} (>1k peças)"
 
             # Mutação: Fragmentação de SKUs (>10 SKUs)
             elif skus >= 10 and any(x in cat or x in linha for x in ['BENS DE CONSUMO', 'FREEPASS', 'ALIMENTO']):
-                is_altissimo = True
-                motivo = f"Fragmentado (>10 SKUs)"
+                is_altissimo = True; motivo = f"{nome_exibicao} (>10 SKUs)"
 
-            if is_altissimo:
-                cargas_altissimo.append(motivo)
-
-            # Alertas Secundários de Atenção (Não viram altíssima, mas dão dor de cabeça)
+            # Alertas Secundários
             if any(x in cat or x in linha for x in ['COLCH', 'ESTOFADO', 'MO2']) and skus >= 5:
-                alertas_dia.append(f"🟡 **Atenção:** Estofado/Colchão super fragmentado ({skus} SKUs). Vai travar endereço.")
+                alerta_secundario = f"{nome_exibicao} super fragmentado"
             if 'COFRE' in cat and pecas >= 5000:
-                alertas_dia.append(f"🟡 **Atenção:** Volume brutal de Cofres ({pecas:,.0f} peças).".replace(',', '.'))
+                alerta_secundario = f"Volume brutal de Cofres"
             if any(x in cat for x in ['BB', 'BR', 'BKF']) and pecas >= 400:
-                alertas_dia.append(f"🟡 **Atenção:** Carga pesada de Linha Branca/BB ({pecas:,.0f} peças).".replace(',', '.'))
+                alerta_secundario = f"Carga pesada de {nome_exibicao}"
 
-        # 3. O Veredito do Dia (Juntando as peças)
-        # Regra do Colapso: 3 ou mais cargas de nível altíssimo no mesmo dia
+            registrou_algo = False
+
+            # 🛡️ VERIFICAÇÃO DE DUPLICIDADE: Só conta se a Agenda for inédita para aquele problema
+            if is_altissimo:
+                chave_alt = f"{agenda_id}-{motivo}"
+                if chave_alt not in agendas_vistas_altissimo:
+                    cargas_altissimo.append(motivo)
+                    agendas_vistas_altissimo.add(chave_alt)
+                    registrou_algo = True
+
+            if alerta_secundario:
+                chave_at = f"{agenda_id}-{alerta_secundario}"
+                if chave_at not in agendas_vistas_atencao:
+                    alertas_dia.append(f"🟡 **Atenção:** Agenda {agenda_id} - {alerta_secundario} ({pecas:,.0f} pts / {skus} skus).".replace(',', '.'))
+                    agendas_vistas_atencao.add(chave_at)
+                    registrou_algo = True
+
+            # Se for um risco novo (já bloqueou os duplicados), joga na tabela de Raio-X
+            if registrou_algo:
+                cargas_detalhadas.append({
+                    "Agenda / Origem": agenda_id,
+                    "Categoria": nome_exibicao,
+                    "Motivo do Risco": motivo if is_altissimo else alerta_secundario,
+                    "Qtd Peças": pecas,
+                    "Qtd SKUs": skus
+                })
+
+        # 3. O Veredito do Dia
         if len(cargas_altissimo) >= 3 or alertas_dia:
             dia_str = dia.strftime('%d/%m/%Y')
-            
-            # Conta quantas de cada tipo deram problema para o texto ficar natural
             resumo_altissimo = pd.Series(cargas_altissimo).value_counts()
             txt_altissimo = ", ".join([f"{qtd} {nome}" for nome, qtd in resumo_altissimo.items()])
             
-            texto_ia = f"<b style='color: #1E272E; font-size: 15px;'>🗓️ Análise do Dia {dia_str}:</b><br>"
-            
+            # Define a gravidade do título do Expander
             if len(cargas_altissimo) >= 3:
-                texto_ia += f"<span style='color: #C0392B;'>🚨 <b>Risco detectado:</b> Temos {len(cargas_altissimo)} cargas de complexidade ALTA agendadas juntas. Sendo: {txt_altissimo}. Isso geralmente tem impacto na entrega do dia.</span><br>"
+                titulo_alerta = f"🚨 DIA {dia_str}: COLAPSO DETECTADO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
+                cor_status = "#C0392B"
             elif len(cargas_altissimo) > 0:
-                texto_ia += f"<span style='color: #D35400;'>⚠️ <b>Aviso:</b> Dia com {len(cargas_altissimo)} carga(s) de alta complexidade ({txt_altissimo}).</span><br>"
-                
-            if alertas_dia:
-                texto_ia += "<br>".join(alertas_dia)
-                
-            dias_criticos_report.append(texto_ia)
+                titulo_alerta = f"⚠️ DIA {dia_str}: AVISO DE RISCO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
+                cor_status = "#D35400"
+            else:
+                titulo_alerta = f"🟡 DIA {dia_str}: ATENÇÃO REQUERIDA (Travamento de Endereço/SKUs)"
+                cor_status = "#F39C12"
 
-    # Renderiza o relatório na tela
+            dias_criticos_report.append({
+                "titulo": titulo_alerta,
+                "cor": cor_status,
+                "txt_altissimo": txt_altissimo,
+                "qtd_altissimo": len(cargas_altissimo),
+                "alertas": alertas_dia,
+                "df_detalhes": pd.DataFrame(cargas_detalhadas) if cargas_detalhadas else pd.DataFrame()
+            })
+
+    # Renderiza o relatório na tela (Os famosos Expanders Interativos)
     if dias_criticos_report:
         st.error("⚠️ **O A.R.I. detectou configurações críticas de carga que exigem plano de ação imediato:**")
-        for relatorio in dias_criticos_report:
-            st.markdown(f"""
-            <div style="background-color: #FFFFFF; border-left: 5px solid #E74C3C; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); line-height: 1.6;">
-                {relatorio}
-            </div>
-            """, unsafe_allow_html=True)
+        
+        for rep in dias_criticos_report:
+            with st.expander(rep["titulo"]):
+                if rep["qtd_altissimo"] >= 3:
+                    st.markdown(f"<span style='color: {rep['cor']}; font-weight: bold;'>O A.R.I. identificou uma combinação fatal:</span> {rep['txt_altissimo']}. Isso inviabiliza a doca.", unsafe_allow_html=True)
+                elif rep["qtd_altissimo"] > 0:
+                    st.markdown(f"<span style='color: {rep['cor']}; font-weight: bold;'>O A.R.I. mapeou:</span> {rep['txt_altissimo']}.", unsafe_allow_html=True)
+                
+                for alerta in rep["alertas"]:
+                    st.markdown(alerta)
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                # Tabela de Detalhes (O Drill-down)
+                if not rep["df_detalhes"].empty:
+                    st.markdown("🔍 **Raio-X das Agendas Infratoras:**")
+                    st.dataframe(rep["df_detalhes"], use_container_width=True, hide_index=True)
     else:
         st.success("✅ **A.R.I. INFORMA:** Cenário Operacional limpo. Nenhuma mutação de risco (ex: Diversos com >1k peças ou excesso de SKUs) identificada no período.")
 
