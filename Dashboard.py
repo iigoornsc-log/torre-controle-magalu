@@ -828,77 +828,95 @@ if pagina == "🏠 Painel Operacional":
         st.plotly_chart(fig_equipes, use_container_width=True)
 
     # ====================================================================
-    # NOVA VISÃO: MATRIZ DE RISCO CRÍTICO (REGRAS DE CAPOTAMENTO)
+    # NOVA VISÃO: MATRIZ DE RISCO CRÍTICO SÊNIOR (DEEP ANALYTICS A.R.I.)
     # ====================================================================
     st.markdown("---")
-    titulo_com_ari("🚨 Matriz de Risco Crítico (Regras de Operação)")
+    titulo_com_ari("🚨 Matriz de Risco Crítico (Deep Analytics)")
+    st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento e colapso de doca.")
 
-    # 1. Cria as flags para identificar os perfis de carga do dia
     df_risco = df_filtrado_op.copy()
+    col_sku = 'Qtd SKUs' if 'Qtd SKUs' in df_risco.columns else 'Qtd_SKUs'
 
-    # Usa uppercase para garantir a leitura correta
-    df_risco['Cat_Upper'] = df_risco['Categorias'].astype(str).str.upper()
-    df_risco['Lin_Upper'] = df_risco['Linhas'].astype(str).str.upper()
-    df_risco['Forn_Upper'] = df_risco['Fornecedor'].astype(str).str.upper()
+    dias_criticos_report = []
 
-    df_risco['is_madeira'] = df_risco['Cat_Upper'].apply(lambda x: 1 if 'MADEIRA' in x else 0)
-    df_risco['is_tubrax'] = df_risco['Forn_Upper'].apply(lambda x: 1 if 'TUBRAX' in x else 0)
-    df_risco['is_pneu'] = df_risco['Cat_Upper'].apply(lambda x: 1 if 'PNEU' in x else 0)
-    df_risco['is_ar'] = df_risco['Lin_Upper'].apply(lambda x: 1 if 'AR CONDICIONADO' in x or 'AR E VENTILA' in x else 0)
-    df_risco['is_div_pesado'] = df_risco.apply(lambda x: 1 if ('DIV PEQUENOS' in x['Cat_Upper'] and x['Qtd Peças'] >= 1000) else 0, axis=1)
+    for dia, df_dia in df_risco.groupby('Data'):
+        cargas_altissimo = []
+        alertas_dia = []
 
-    # 2. Agrupa contando quantos de cada tipo tem no dia
-    df_risco_dia = df_risco.groupby('Data').agg(
-        Qtd_Madeira=('is_madeira', 'sum'),
-        Qtd_Tubrax=('is_tubrax', 'sum'),
-        Qtd_Pneu=('is_pneu', 'sum'),
-        Qtd_Ar=('is_ar', 'sum'),
-        Qtd_DivPesado=('is_div_pesado', 'sum')
-    ).reset_index()
+        # 1. Regra de Volume de Agendas no Dia (Trava Endereço)
+        agendas_por_cat = df_dia['Categorias'].astype(str).str.upper().value_counts()
+        for cat, qtd in agendas_por_cat.items():
+            if qtd >= 8 and any(x in cat for x in ['ELETRO', 'IMAGEM']):
+                alertas_dia.append(f"📍 **Risco Trava Endereço:** {qtd} agendas de {cat} simultâneas.")
 
-    # 3. O Motor de Regras: Aplica as condições que você definiu
-    def identificar_regras_quebradas(row):
-        alertas = []
-        if row['Qtd_Madeira'] >= 3: 
-            alertas.append("🔴 3+ Cargas de Madeira")
-        if row['Qtd_Pneu'] >= 2: 
-            alertas.append("🔴 2+ Cargas de Pneu")
-        if row['Qtd_Madeira'] >= 2 and row['Qtd_Tubrax'] >= 1: 
-            alertas.append("🔴 2 Madeira + 1 Tubrax")
-        if row['Qtd_Madeira'] >= 2 and row['Qtd_DivPesado'] >= 1: 
-            alertas.append("🔴 2 Madeira + 1 Diversos (>1k peças)")
-        if row['Qtd_Ar'] >= 2: 
-            alertas.append("🔴 2+ Cargas de Ar Condicionado")
+        # 2. Avaliação Linha a Linha (Mutações de Risco)
+        for _, row in df_dia.iterrows():
+            cat = str(row.get('Categorias', '')).upper()
+            linha = str(row.get('Linhas', '')).upper()
+            pecas = pd.to_numeric(row.get('Qtd Peças', 0), errors='coerce') or 0
+            skus = pd.to_numeric(row.get(col_sku, 1), errors='coerce') or 1
 
-        return " | ".join(alertas) if alertas else "OK"
+            is_altissimo = False
+            motivo = ""
 
-    df_risco_dia['Alerta de Risco'] = df_risco_dia.apply(identificar_regras_quebradas, axis=1)
+            # Regra: Base Altíssima (Madeira, Pneus, Ar Condicionado)
+            if any(x in cat or x in linha for x in ['MADEIRA', 'PNEU', 'AR CONDICIONADO']):
+                is_altissimo = True
+                motivo = "Madeira/Pneu/Ar"
 
-    # 4. Filtra apenas os dias que deram problema
-    df_dias_criticos = df_risco_dia[df_risco_dia['Alerta de Risco'] != "OK"].copy()
+            # Mutação: Volume Massivo (>1000 peças)
+            elif pecas >= 1000 and any(x in cat or x in linha for x in ['PORTATEIS', 'UD', 'CM', 'FERRAMENTA', 'DIVERSOS', 'AUDIO', 'AUTOMOTIVO', 'MERCADO', 'BLOCADO']):
+                is_altissimo = True
+                motivo = f"Diversos/Misto com >1k peças"
 
-    if not df_dias_criticos.empty:
-        st.error("⚠️ **ATENÇÃO:** O sistema identificou dias com combinações críticas de carga que exigem plano de ação imediato!")
+            # Mutação: Fragmentação de SKUs (>10 SKUs)
+            elif skus >= 10 and any(x in cat or x in linha for x in ['BENS DE CONSUMO', 'FREEPASS', 'ALIMENTO']):
+                is_altissimo = True
+                motivo = f"Fragmentado (>10 SKUs)"
 
-        # Formata a tabela para exibição
-        df_dias_criticos['Data'] = df_dias_criticos['Data'].dt.strftime('%d/%m/%Y')
-        df_dias_criticos = df_dias_criticos.rename(columns={
-            'Qtd_Madeira': 'Madeiras', 'Qtd_Tubrax': 'Tubrax', 
-            'Qtd_Pneu': 'Pneus', 'Qtd_Ar': 'Ar Cond.', 'Qtd_DivPesado': 'Diversos (>1k)'
-        })
+            if is_altissimo:
+                cargas_altissimo.append(motivo)
 
-        # Reordena para o Alerta ficar logo no começo
-        colunas_exibir = ['Data', 'Alerta de Risco', 'Madeiras', 'Tubrax', 'Pneus', 'Ar Cond.', 'Diversos (>1k)']
-        df_exibir_risco = df_dias_criticos[colunas_exibir]
+            # Alertas Secundários de Atenção (Não viram altíssima, mas dão dor de cabeça)
+            if any(x in cat or x in linha for x in ['COLCH', 'ESTOFADO', 'MO2']) and skus >= 5:
+                alertas_dia.append(f"🟡 **Atenção:** Estofado/Colchão super fragmentado ({skus} SKUs). Vai travar endereço.")
+            if 'COFRE' in cat and pecas >= 5000:
+                alertas_dia.append(f"🟡 **Atenção:** Volume brutal de Cofres ({pecas:,.0f} peças).".replace(',', '.'))
+            if any(x in cat for x in ['BB', 'BR', 'BKF']) and pecas >= 400:
+                alertas_dia.append(f"🟡 **Atenção:** Carga pesada de Linha Branca/BB ({pecas:,.0f} peças).".replace(',', '.'))
 
-        # Aplica uma cor de fundo suave na tabela para destacar
-        def cor_tabela_risco(val):
-            return 'background-color: #FDEDEC; color: #C0392B; font-weight: bold;'
+        # 3. O Veredito do Dia (Juntando as peças)
+        # Regra do Colapso: 3 ou mais cargas de nível altíssimo no mesmo dia
+        if len(cargas_altissimo) >= 3 or alertas_dia:
+            dia_str = dia.strftime('%d/%m/%Y')
+            
+            # Conta quantas de cada tipo deram problema para o texto ficar natural
+            resumo_altissimo = pd.Series(cargas_altissimo).value_counts()
+            txt_altissimo = ", ".join([f"{qtd} {nome}" for nome, qtd in resumo_altissimo.items()])
+            
+            texto_ia = f"<b style='color: #1E272E; font-size: 15px;'>🗓️ Análise do Dia {dia_str}:</b><br>"
+            
+            if len(cargas_altissimo) >= 3:
+                texto_ia += f"<span style='color: #C0392B;'>🚨 <b>COLAPSO DETECTADO:</b> Temos {len(cargas_altissimo)} cargas de complexidade ALTA agendadas juntas. Sendo: {txt_altissimo}. Isso inviabiliza a doca.</span><br>"
+            elif len(cargas_altissimo) > 0:
+                texto_ia += f"<span style='color: #D35400;'>⚠️ <b>Aviso:</b> Dia com {len(cargas_altissimo)} carga(s) de alta complexidade ({txt_altissimo}).</span><br>"
+                
+            if alertas_dia:
+                texto_ia += "<br>".join(alertas_dia)
+                
+            dias_criticos_report.append(texto_ia)
 
-        tabela_risco_estilizada = df_exibir_risco.style.map(cor_tabela_risco, subset=['Alerta de Risco'])
-        st.dataframe(tabela_risco_estilizada, use_container_width=True, hide_index=True)
+    # Renderiza o relatório na tela
+    if dias_criticos_report:
+        st.error("⚠️ **O A.R.I. detectou configurações críticas de carga que exigem plano de ação imediato:**")
+        for relatorio in dias_criticos_report:
+            st.markdown(f"""
+            <div style="background-color: #FFFFFF; border-left: 5px solid #E74C3C; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); line-height: 1.6;">
+                {relatorio}
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        st.success("✅ Nenhuma combinação crítica (Risco de Capotamento) identificada no período filtrado.")
+        st.success("✅ **A.R.I. INFORMA:** Cenário Operacional limpo. Nenhuma mutação de risco (ex: Diversos com >1k peças ou excesso de SKUs) identificada no período.")
 
     st.markdown("---")
     titulo_com_ari("🔥 Possíveis Gargalos")
