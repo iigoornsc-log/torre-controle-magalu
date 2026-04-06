@@ -35,7 +35,7 @@ if "ari_boas_vindas" not in st.session_state:
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             z-index: 999999;
             max-width: 350px;
-            animation: slideInLeftARI 10s forwards; /* Duração de 10 segundos */
+            animation: slideInLeftARI 20s forwards; /* Duração de 10 segundos */
             font-family: 'Nunito Sans', sans-serif;
         }
         
