@@ -965,7 +965,7 @@ if pagina == "🏠 Painel Operacional":
                 
                 # Tabela de Detalhes (O Drill-down)
                 if not rep["df_detalhes"].empty:
-                    st.markdown("🔍 **Raio-X das Agendas Infratoras:**")
+                    st.markdown("🔍 **Raio-X das Agendas :**")
                     st.dataframe(rep["df_detalhes"], use_container_width=True, hide_index=True)
     else:
         st.success("✅ **A.R.I. INFORMA:** Cenário Operacional limpo. Nenhuma mutação de risco (ex: Diversos com >1k peças ou excesso de SKUs) identificada no período.")
