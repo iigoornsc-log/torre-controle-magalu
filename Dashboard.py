@@ -927,7 +927,7 @@ if pagina == "🏠 Painel Operacional":
             texto_ia = f"<b style='color: #1E272E; font-size: 15px;'>🗓️ Análise do Dia {dia_str}:</b><br>"
             
             if len(cargas_altissimo) >= 3:
-                texto_ia += f"<span style='color: #C0392B;'>🚨 <b>COLAPSO DETECTADO:</b> Temos {len(cargas_altissimo)} cargas de complexidade ALTA agendadas juntas. Sendo: {txt_altissimo}. Isso inviabiliza a doca.</span><br>"
+                texto_ia += f"<span style='color: #C0392B;'>🚨 <b>Risco detectado:</b> Temos {len(cargas_altissimo)} cargas de complexidade ALTA agendadas juntas. Sendo: {txt_altissimo}. Isso geralmente tem impacto na entrega do dia.</span><br>"
             elif len(cargas_altissimo) > 0:
                 texto_ia += f"<span style='color: #D35400;'>⚠️ <b>Aviso:</b> Dia com {len(cargas_altissimo)} carga(s) de alta complexidade ({txt_altissimo}).</span><br>"
                 
