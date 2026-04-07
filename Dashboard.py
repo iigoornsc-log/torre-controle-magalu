@@ -1061,7 +1061,8 @@ elif pagina == "📅 Previsão de Agendas":
     st.markdown("<br>", unsafe_allow_html=True)
     
     data_consulta_ts = pd.Timestamp(data_consulta_dashboard)
-    df_dia = df_vazio.copy() if df_vazio.empty else df_vazio[df_vazio['Data'] == data_consulta_ts].copy()
+    # Se o seu dataframe principal chamar df_filtrado_op:
+    df_dia = df_filtrado_op[df_filtrado_op['Data'] == data_consulta_ts].copy() if not df_filtrado_op.empty else pd.DataFrame()
 
     # --- 🧠 PREPARAÇÃO DE DADOS PARA O A.R.I (IA) ---
     df_1p_ia = df_dia[df_dia['Origem'] == '1P'].copy()
