@@ -1061,168 +1061,120 @@ elif pagina == "📅 Previsão de Agendas":
         data_consulta_dashboard = st.date_input("🗓️ Selecione o Dia para Previsão", data_padrao)
     st.markdown("<br>", unsafe_allow_html=True)
     
-    data_consulta_ts = pd.Timestamp(data_consulta_dashboard)
+    # 🔍 TRATAMENTO DE DATA (O segredo para não vir vazio)
+    data_alvo = data_consulta_dashboard # Objeto date do Streamlit
+
+    # 2. LOCALIZAÇÃO DA TABELA DE TRANSFERÊNCIA
+    # Se na outra página funciona, vamos tentar achar a variável que ela usa. 
+    # Geralmente você a definiu no topo do seu código (ex: df_transf, df_transferencia, df_plan_transf)
     
-    # Puxa os dados globais do dia (1P e Seller)
-    if 'Data' in df.columns:
-        df_dia = df[df['Data'] == data_consulta_ts].copy()
-    elif 'data' in df.columns:
-        df_dia = df[df['data'] == data_consulta_ts].copy()
-    else:
-        df_dia = pd.DataFrame()
-
-    # Nomes flexíveis das colunas (Base Principal)
-    col_agendas = 'Agendas' if 'Agendas' in df_dia.columns else ('Agenda' if 'Agenda' in df_dia.columns else None)
-    col_sku = 'Qtd SKUs' if 'Qtd SKUs' in df_dia.columns else ('Qtd_SKUs' if 'Qtd_SKUs' in df_dia.columns else None)
-    col_pecas = 'Qtd Peças' if 'Qtd Peças' in df_dia.columns else None
-    col_cat = 'Categorias' if 'Categorias' in df_dia.columns else ('Linhas' if 'Linhas' in df_dia.columns else None)
-    col_canal = next((c for c in df_dia.columns if c.strip().upper() in ['CANAL', 'ORIGEM', 'TIPO CANAL', 'TIPO', 'TIPO ORIGEM']), None)
-
-    # --- 🧠 SEPARAÇÃO DE CANAIS (1P / SELLER) ---
-    if col_canal and not df_dia.empty:
-        df_dia['Canal_Aux'] = df_dia[col_canal].astype(str).str.strip().str.upper()
-        df_1p_ia = df_dia[df_dia['Canal_Aux'].str.contains('1P', na=False)].copy()
-        df_seller_ia = df_dia[df_dia['Canal_Aux'].str.contains('FULFILLMENT|SELLER|3P', na=False)].copy()
-    else:
-        df_1p_ia = df_dia.copy()
-        df_seller_ia = pd.DataFrame()
-
-    # --- 🔗 CONEXÃO DIRETA: PLANILHA DE TRANSFERÊNCIA ---
-    @st.cache_data(ttl=600)
-    def puxar_transferencias_direto():
-        url_transf = "https://docs.google.com/spreadsheets/d/1PMgqjZr2nieniRShicaPyxAe6J6j7I04FFE5aNWnm_s/export?format=csv"
+    base_transf = pd.DataFrame()
+    
+    # Tenta encontrar a variável global que você usa na página de transferência
+    for nome_var in ['df_transf', 'df_transferencia', 'df_transferencias', 'df_plan_transf']:
+        if nome_var in globals():
+            base_transf = globals()[nome_var]
+            break
+            
+    # Se ainda estiver vazia, tentamos ler do link que você passou
+    if base_transf.empty:
         try:
-            return pd.read_csv(url_transf)
+            url_t = "https://docs.google.com/spreadsheets/d/1PMgqjZr2nieniRShicaPyxAe6J6j7I04FFE5aNWnm_s/export?format=csv"
+            base_transf = pd.read_csv(url_t)
         except:
-            return pd.DataFrame()
+            pass
 
-    base_transf = puxar_transferencias_direto()
+    # --- FILTRAGEM DE TRANSFERÊNCIA (O MOTOR DE BUSCA) ---
     df_transf_ia = pd.DataFrame()
-
     if not base_transf.empty:
-        # Acha a coluna de data independente do nome (Data, DATA, data_agendamento)
-        col_data_t = next((c for c in base_transf.columns if 'DATA' in c.strip().upper()), None)
-        if col_data_t:
-            # Força a conversão para data pura, resolvendo conflitos de formato
-            base_transf[col_data_t] = pd.to_datetime(base_transf[col_data_t], errors='coerce').dt.date
-            # Filtra pro dia exato do dashboard
-            df_transf_ia = base_transf[base_transf[col_data_t] == data_consulta_ts.date()].copy()
+        # Acha a coluna de data
+        col_dt_t = next((c for c in base_transf.columns if 'DATA' in c.strip().upper()), None)
+        if col_dt_t:
+            # Força tudo a virar "Data Pura" para a comparação ser perfeita
+            base_transf[col_dt_t] = pd.to_datetime(base_transf[col_dt_t], errors='coerce')
+            df_transf_ia = base_transf[base_transf[col_dt_t].dt.date == data_alvo].copy()
 
-    # Acha as colunas da transferência (blindado)
-    col_ag_t = next((c for c in df_transf_ia.columns if 'AGENDA' in c.strip().upper()), None) if not df_transf_ia.empty else None
-    col_pc_t = next((c for c in df_transf_ia.columns if 'PEÇA' in c.strip().upper() or 'PECAS' in c.strip().upper()), None) if not df_transf_ia.empty else None
-    col_sk_t = next((c for c in df_transf_ia.columns if 'SKU' in c.strip().upper()), None) if not df_transf_ia.empty else None
-    col_cat_t = next((c for c in df_transf_ia.columns if 'CATEGORIA' in c.strip().upper() or 'LINHA' in c.strip().upper()), None) if not df_transf_ia.empty else None
+    # --- FILTRAGEM DE 1P/SELLER (BASE PRINCIPAL) ---
+    df_dia = df[pd.to_datetime(df['Data']).dt.date == data_alvo].copy() if not df.empty else pd.DataFrame()
 
-    # 🛡️ CÁLCULO DE KPIs MACRO (Soma Principal + Transferência)
-    tot_agendas_main = df_dia[col_agendas].nunique() if col_agendas and not df_dia.empty else 0
-    tot_skus_main = df_dia[col_sku].sum() if col_sku and not df_dia.empty else 0
-    tot_pecas_main = df_dia[col_pecas].sum() if col_pecas and not df_dia.empty else 0
+    # --- IDENTIFICAÇÃO DE COLUNAS ---
+    col_ag = 'Agendas' if 'Agendas' in df_dia.columns else ('Agenda' if 'Agenda' in df_dia.columns else df_dia.columns[0])
+    col_pc = 'Qtd Peças' if 'Qtd Peças' in df_dia.columns else 'Qtd Peças'
+    col_sk = 'Qtd SKUs' if 'Qtd SKUs' in df_dia.columns else 'Qtd_SKUs'
+    col_ct = 'Categorias' if 'Categorias' in df_dia.columns else 'Linhas'
+    col_cn = next((c for c in df_dia.columns if c.strip().upper() in ['CANAL', 'ORIGEM']), 'Canal')
 
-    tot_agendas_tra = df_transf_ia[col_ag_t].nunique() if col_ag_t and not df_transf_ia.empty else 0
-    tot_skus_tra = pd.to_numeric(df_transf_ia[col_sk_t], errors='coerce').sum() if col_sk_t and not df_transf_ia.empty else 0
-    tot_pecas_tra = pd.to_numeric(df_transf_ia[col_pc_t], errors='coerce').sum() if col_pc_t and not df_transf_ia.empty else 0
+    # Separa 1P e Seller
+    if col_cn in df_dia.columns:
+        df_dia['C_AUX'] = df_dia[col_cn].astype(str).str.upper()
+        df_1p_ia = df_dia[df_dia['C_AUX'].str.contains('1P', na=False)].copy()
+        df_seller_ia = df_dia[df_dia['C_AUX'].str.contains('FULFILLMENT|SELLER|3P', na=False)].copy()
+    else:
+        df_1p_ia = df_dia.copy(); df_seller_ia = pd.DataFrame()
 
-    # Totalzão
-    total_agendas_macro = tot_agendas_main + tot_agendas_tra
-    total_skus_macro = tot_skus_main + tot_skus_tra
-    total_pecas_macro = tot_pecas_main + tot_pecas_tra
+    # --- CÁLCULO DOS KPIS TOTAIS ---
+    tot_ag_main = df_dia[col_ag].nunique() if not df_dia.empty else 0
+    tot_pc_main = df_dia[col_pc].sum() if not df_dia.empty and col_pc in df_dia.columns else 0
+    tot_sk_main = df_dia[col_sk].sum() if not df_dia.empty and col_sk in df_dia.columns else 0
 
-    # 2. CABEÇALHO KPI NEON SÊNIOR
+    col_ag_t = next((c for c in df_transf_ia.columns if 'AGENDA' in c.upper()), 'Agendas') if not df_transf_ia.empty else 'Agendas'
+    col_pc_t = next((c for c in df_transf_ia.columns if 'PEÇA' in c.upper() or 'PECAS' in c.upper()), 'Qtd Peças') if not df_transf_ia.empty else 'Qtd Peças'
+    
+    tot_ag_tra = df_transf_ia[col_ag_t].nunique() if not df_transf_ia.empty else 0
+    tot_pc_tra = pd.to_numeric(df_transf_ia[col_pc_t], errors='coerce').sum() if not df_transf_ia.empty else 0
+
+    # 3. CABEÇALHO KPI NEON SÊNIOR
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, #FF6F61 0%, #0086FF 100%); padding: 20px 25px; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 134, 255, 0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
         <div style="display: flex; align-items: center; gap: 15px; color: #FFFFFF; font-family: 'Nunito Sans', sans-serif;">
             <div class="ari-dot" style="width: 16px; height: 16px; box-shadow: 0 0 15px #64FFDA; background-color: #64FFDA;"></div>
-            <h3 style="margin: 0; color: #FFFFFF !important; font-weight: 900; font-size: 26px; letter-spacing: -0.5px;">Previsão {data_consulta_dashboard.strftime('%d/%m/%Y')}</h3>
+            <h3 style="margin: 0; color: #FFFFFF !important; font-weight: 900; font-size: 26px; letter-spacing: -0.5px;">Dashboard {data_alvo.strftime('%d/%m/%Y')}</h3>
         </div>
         <div style="display: flex; gap: 15px; flex-wrap: wrap;">
             <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
-                <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">Agendas</span><br>
-                <span style="font-size: 24px; font-weight: 900; color: #1E272E; line-height: 1.2;">{total_agendas_macro:,.0f}</span>
+                <span style="font-size: 11px; font-weight: 800; color: #8395A7; text-transform: uppercase;">Agendas</span><br>
+                <span style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_ag_main + tot_ag_tra:,.0f}</span>
             </div>
             <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
-                <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">SKUs</span><br>
-                <span style="font-size: 24px; font-weight: 900; color: #1E272E; line-height: 1.2;">{total_skus_macro:,.0f}</span>
-            </div>
-            <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
-                <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">Peças</span><br>
-                <span style="font-size: 24px; font-weight: 900; color: #0086FF; line-height: 1.2;">{total_pecas_macro:,.0f}</span>
+                <span style="font-size: 11px; font-weight: 800; color: #8395A7; text-transform: uppercase;">Peças</span><br>
+                <span style="font-size: 24px; font-weight: 900; color: #0086FF;">{tot_pc_main + tot_pc_tra:,.0f}</span>
             </div>
         </div>
     </div>
     """.replace(',', '.'), unsafe_allow_html=True)
-    
-    # 3. DASHBOARD VISUAL (3 COLUNAS)
-    col1p, colsel, coltra = st.columns(3)
-    cols_detalhe_main = [c for c in [col_agendas, 'Fornecedor', col_cat, col_pecas, col_sku, col_canal] if c is not None and c in df_dia.columns]
 
-    # --- COLUNA 1P (FORNECEDOR) ---
-    with col1p:
-        total_pecas_1p = df_1p_ia[col_pecas].sum() if col_pecas and not df_1p_ia.empty else 0
-        total_agendas_1p = df_1p_ia[col_agendas].nunique() if col_agendas and not df_1p_ia.empty else 0
-        
-        st.markdown(f"""
-        <div style="padding: 10px; border-bottom: 2px solid #0086FF; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🛒 1P FORNECEDOR ({total_agendas_1p:,.0f})</h4>
-            <span style="font-size: 13px; color: #576574;">{total_pecas_1p:,.0f} Peças</span>
-        </div>
-        """.replace(',', '.'), unsafe_allow_html=True)
-        
-        if not df_1p_ia.empty and col_cat:
-            df_1p_grafico = df_1p_ia.groupby(col_cat).agg(Qtd=(col_agendas, 'nunique')).reset_index()
-            fig1p = px.bar(df_1p_grafico.sort_values(by='Qtd', ascending=True), y=col_cat, x='Qtd', orientation='h', title='AGENDAS 1P', color='Qtd', color_continuous_scale='Blues')
-            fig1p.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
-            st.plotly_chart(fig1p, use_container_width=True, key="fig_1p_cat_previsao")
-            
-            with st.expander("🔍 Ver Agendas Detalhadas (1P)"):
-                st.dataframe(df_1p_ia[cols_detalhe_main].drop_duplicates(), use_container_width=True, hide_index=True)
-        else:
-            st.info("Nenhum dado 1P identificado.")
+    # 4. COLUNAS (1P | SELLER | TRANSF)
+    c1, c2, c3 = st.columns(3)
 
-    # --- COLUNA SELLER (FULFILLMENT) ---
-    with colsel:
-        total_pecas_sel = df_seller_ia[col_pecas].sum() if col_pecas and not df_seller_ia.empty else 0
-        total_agendas_sel = df_seller_ia[col_agendas].nunique() if col_agendas and not df_seller_ia.empty else 0
-        
-        st.markdown(f"""
-        <div style="padding: 10px; border-bottom: 2px solid #00C6FF; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🚚 SELLER FULFILLMENT ({total_agendas_sel:,.0f})</h4>
-            <span style="font-size: 13px; color: #576574;">{total_pecas_sel:,.0f} Peças</span>
-        </div>
-        """.replace(',', '.'), unsafe_allow_html=True)
-        
-        if not df_seller_ia.empty and col_cat:
-            df_sel_grafico = df_seller_ia.groupby(col_cat).agg(Qtd=(col_agendas, 'nunique')).reset_index()
-            figsel = px.bar(df_sel_grafico.sort_values(by='Qtd', ascending=True), y=col_cat, x='Qtd', orientation='h', title='AGENDAS SELLER', color='Qtd', color_continuous_scale='Cividis')
-            figsel.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
-            st.plotly_chart(figsel, use_container_width=True, key="fig_sel_cat_previsao")
-            
-            with st.expander("🔍 Ver Agendas Detalhadas (Seller)"):
-                st.dataframe(df_seller_ia[cols_detalhe_main].drop_duplicates(), use_container_width=True, hide_index=True)
+    with c1:
+        st.markdown(f"#### 🛒 1P ({tot_ag_main})")
+        if not df_1p_ia.empty:
+            st.plotly_chart(px.bar(df_1p_ia.groupby(col_ct).size().reset_index(name='Qtd'), y=col_ct, x='Qtd', orientation='h', height=250), use_container_width=True)
+            with st.expander("Ver Agendas 1P"):
+                st.dataframe(df_1p_ia, use_container_width=True, hide_index=True)
+        else: st.info("Sem dados 1P")
+
+    with c2:
+        st.markdown(f"#### 🚚 Seller ({df_seller_ia[col_ag].nunique() if not df_seller_ia.empty else 0})")
+        if not df_seller_ia.empty:
+            st.plotly_chart(px.bar(df_seller_ia.groupby(col_ct).size().reset_index(name='Qtd'), y=col_ct, x='Qtd', orientation='h', height=250), use_container_width=True)
+            with st.expander("Ver Agendas Seller"):
+                st.dataframe(df_seller_ia, use_container_width=True, hide_index=True)
+        else: st.info("Sem dados Seller")
+
+    with c3:
+        st.markdown(f"#### 📦 Transf ({tot_ag_tra})")
+        if not df_transf_ia.empty:
+            # Gráfico de categoria da transferência
+            col_ct_t = next((c for c in df_transf_ia.columns if 'CAT' in c.upper() or 'LINHA' in c.upper()), df_transf_ia.columns[0])
+            st.plotly_chart(px.bar(df_transf_ia.groupby(col_ct_t).size().reset_index(name='Qtd'), y=col_ct_t, x='Qtd', orientation='h', height=250, color_discrete_sequence=['#FF6F61']), use_container_width=True)
+            with st.expander("Ver Agendas Transf"):
+                st.dataframe(df_transf_ia, use_container_width=True, hide_index=True)
         else:
-            st.info("Nenhum dado Fulfillment identificado.")
-                
-    # --- COLUNA TRANSFERÊNCIA ---
-    with coltra:
-        st.markdown(f"""
-        <div style="padding: 10px; border-bottom: 2px solid #FF6F61; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">📦 TRANSFERÊNCIA ({tot_agendas_tra:,.0f})</h4>
-            <span style="font-size: 13px; color: #576574;">{tot_pecas_tra:,.0f} Peças</span>
-        </div>
-        """.replace(',', '.'), unsafe_allow_html=True)
-        
-        if not df_transf_ia.empty and col_cat_t:
-            df_tra_grafico = df_transf_ia.groupby(col_cat_t).agg(Qtd=(col_ag_t, 'nunique')).reset_index()
-            figtra = px.bar(df_tra_grafico.sort_values(by='Qtd', ascending=True), y=col_cat_t, x='Qtd', orientation='h', title='AGENDAS TRANSFERÊNCIA', color='Qtd', color_continuous_scale='Reds')
-            figtra.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
-            st.plotly_chart(figtra, use_container_width=True, key="fig_tra_cat_previsao")
-            
-            # Puxa o máximo de colunas que achar para o expander ficar rico
-            cols_detalhe_tra = [c for c in [col_ag_t, 'Origem', 'Destino', col_cat_t, col_pc_t, col_sk_t] if c is not None and c in df_transf_ia.columns]
-            with st.expander("🔍 Ver Agendas Detalhadas (Transf)"):
-                st.dataframe(df_transf_ia[cols_detalhe_tra].drop_duplicates(), use_container_width=True, hide_index=True)
-        else:
-             st.info("Nenhuma agenda extra/transferência encontrada para este dia.")
+            st.warning("⚠️ Planilha de transferência vazia ou data não encontrada.")
+            # Pequeno Debug para você ver o que está acontecendo:
+            if st.checkbox("Debug: Ver base bruta Transf"):
+                st.write(base_transf.head(5))
 # ==============================================================================
 # PÁGINA 2.5: Simulador Cenário APC
 # ==============================================================================
