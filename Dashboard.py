@@ -1061,22 +1061,16 @@ elif pagina == "📅 Previsão de Agendas":
         data_consulta_dashboard = st.date_input("🗓️ Selecione o Dia para Previsão", data_padrao)
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 🔍 TRATAMENTO DE DATA (O segredo para não vir vazio)
-    data_alvo = data_consulta_dashboard # Objeto date do Streamlit
+    # 🔍 TRATAMENTO DE DATA
+    data_alvo = data_consulta_dashboard 
 
     # 2. LOCALIZAÇÃO DA TABELA DE TRANSFERÊNCIA
-    # Se na outra página funciona, vamos tentar achar a variável que ela usa. 
-    # Geralmente você a definiu no topo do seu código (ex: df_transf, df_transferencia, df_plan_transf)
-    
     base_transf = pd.DataFrame()
-    
-    # Tenta encontrar a variável global que você usa na página de transferência
     for nome_var in ['df_transf', 'df_transferencia', 'df_transferencias', 'df_plan_transf']:
         if nome_var in globals():
             base_transf = globals()[nome_var]
             break
             
-    # Se ainda estiver vazia, tentamos ler do link que você passou
     if base_transf.empty:
         try:
             url_t = "https://docs.google.com/spreadsheets/d/1PMgqjZr2nieniRShicaPyxAe6J6j7I04FFE5aNWnm_s/export?format=csv"
@@ -1084,44 +1078,45 @@ elif pagina == "📅 Previsão de Agendas":
         except:
             pass
 
-    # --- FILTRAGEM DE TRANSFERÊNCIA (O MOTOR DE BUSCA) ---
+    # --- FILTRAGEM DE TRANSFERÊNCIA ---
     df_transf_ia = pd.DataFrame()
     if not base_transf.empty:
-        # Acha a coluna de data
-        col_dt_t = next((c for c in base_transf.columns if 'DATA' in c.strip().upper()), None)
+        col_dt_t = next((c for c in base_transf.columns if 'DATA' in str(c).strip().upper()), None)
         if col_dt_t:
-            # Força tudo a virar "Data Pura" para a comparação ser perfeita
             base_transf[col_dt_t] = pd.to_datetime(base_transf[col_dt_t], errors='coerce')
             df_transf_ia = base_transf[base_transf[col_dt_t].dt.date == data_alvo].copy()
 
     # --- FILTRAGEM DE 1P/SELLER (BASE PRINCIPAL) ---
-    df_dia = df[pd.to_datetime(df['Data']).dt.date == data_alvo].copy() if not df.empty else pd.DataFrame()
+    df_dia = df[pd.to_datetime(df['Data']).dt.date == data_alvo].copy() if not df.empty and 'Data' in df.columns else pd.DataFrame()
 
-    # --- IDENTIFICAÇÃO DE COLUNAS ---
-    col_ag = 'Agendas' if 'Agendas' in df_dia.columns else ('Agenda' if 'Agenda' in df_dia.columns else df_dia.columns[0])
-    col_pc = 'Qtd Peças' if 'Qtd Peças' in df_dia.columns else 'Qtd Peças'
-    col_sk = 'Qtd SKUs' if 'Qtd SKUs' in df_dia.columns else 'Qtd_SKUs'
-    col_ct = 'Categorias' if 'Categorias' in df_dia.columns else 'Linhas'
-    col_cn = next((c for c in df_dia.columns if c.strip().upper() in ['CANAL', 'ORIGEM']), 'Canal')
+    # --- IDENTIFICAÇÃO DE COLUNAS PRINCIPAIS ---
+    col_ag = 'Agendas' if 'Agendas' in df_dia.columns else ('Agenda' if 'Agenda' in df_dia.columns else (df_dia.columns[0] if not df_dia.empty else None))
+    col_pc = 'Qtd Peças' if 'Qtd Peças' in df_dia.columns else None
+    col_sk = 'Qtd SKUs' if 'Qtd SKUs' in df_dia.columns else ('Qtd_SKUs' if 'Qtd_SKUs' in df_dia.columns else None)
+    col_ct = 'Categorias' if 'Categorias' in df_dia.columns else ('Linhas' if 'Linhas' in df_dia.columns else None)
+    col_cn = next((c for c in df_dia.columns if str(c).strip().upper() in ['CANAL', 'ORIGEM']), None)
 
     # Separa 1P e Seller
-    if col_cn in df_dia.columns:
+    if col_cn and not df_dia.empty:
         df_dia['C_AUX'] = df_dia[col_cn].astype(str).str.upper()
         df_1p_ia = df_dia[df_dia['C_AUX'].str.contains('1P', na=False)].copy()
         df_seller_ia = df_dia[df_dia['C_AUX'].str.contains('FULFILLMENT|SELLER|3P', na=False)].copy()
     else:
-        df_1p_ia = df_dia.copy(); df_seller_ia = pd.DataFrame()
+        df_1p_ia = df_dia.copy()
+        df_seller_ia = pd.DataFrame()
 
-    # --- CÁLCULO DOS KPIS TOTAIS ---
-    tot_ag_main = df_dia[col_ag].nunique() if not df_dia.empty else 0
-    tot_pc_main = df_dia[col_pc].sum() if not df_dia.empty and col_pc in df_dia.columns else 0
-    tot_sk_main = df_dia[col_sk].sum() if not df_dia.empty and col_sk in df_dia.columns else 0
+    # --- 🛡️ CÁLCULO DOS KPIS TOTAIS (AGORA BLINDADO CONTRA KEYERROR) ---
+    tot_ag_main = df_dia[col_ag].nunique() if (col_ag and not df_dia.empty) else 0
+    tot_pc_main = df_dia[col_pc].sum() if (col_pc and not df_dia.empty) else 0
+    tot_sk_main = df_dia[col_sk].sum() if (col_sk and not df_dia.empty) else 0
 
-    col_ag_t = next((c for c in df_transf_ia.columns if 'AGENDA' in c.upper()), 'Agendas') if not df_transf_ia.empty else 'Agendas'
-    col_pc_t = next((c for c in df_transf_ia.columns if 'PEÇA' in c.upper() or 'PECAS' in c.upper()), 'Qtd Peças') if not df_transf_ia.empty else 'Qtd Peças'
+    # Acha colunas da transferência dinamincamente e com segurança
+    col_ag_t = next((c for c in df_transf_ia.columns if 'AGENDA' in str(c).upper()), None) if not df_transf_ia.empty else None
+    col_pc_t = next((c for c in df_transf_ia.columns if 'PEÇA' in str(c).upper() or 'PECAS' in str(c).upper() or 'QTD' in str(c).upper() or 'QUANT' in str(c).upper()), None) if not df_transf_ia.empty else None
     
-    tot_ag_tra = df_transf_ia[col_ag_t].nunique() if not df_transf_ia.empty else 0
-    tot_pc_tra = pd.to_numeric(df_transf_ia[col_pc_t], errors='coerce').sum() if not df_transf_ia.empty else 0
+    # Só soma se a coluna realmente existir (Isso mata o KeyError!)
+    tot_ag_tra = df_transf_ia[col_ag_t].nunique() if (col_ag_t and col_ag_t in df_transf_ia.columns) else 0
+    tot_pc_tra = pd.to_numeric(df_transf_ia[col_pc_t], errors='coerce').sum() if (col_pc_t and col_pc_t in df_transf_ia.columns) else 0
 
     # 3. CABEÇALHO KPI NEON SÊNIOR
     st.markdown(f"""
@@ -1148,15 +1143,16 @@ elif pagina == "📅 Previsão de Agendas":
 
     with c1:
         st.markdown(f"#### 🛒 1P ({tot_ag_main})")
-        if not df_1p_ia.empty:
+        if not df_1p_ia.empty and col_ct:
             st.plotly_chart(px.bar(df_1p_ia.groupby(col_ct).size().reset_index(name='Qtd'), y=col_ct, x='Qtd', orientation='h', height=250), use_container_width=True)
             with st.expander("Ver Agendas 1P"):
                 st.dataframe(df_1p_ia, use_container_width=True, hide_index=True)
         else: st.info("Sem dados 1P")
 
     with c2:
-        st.markdown(f"#### 🚚 Seller ({df_seller_ia[col_ag].nunique() if not df_seller_ia.empty else 0})")
-        if not df_seller_ia.empty:
+        qtd_sel = df_seller_ia[col_ag].nunique() if (not df_seller_ia.empty and col_ag) else 0
+        st.markdown(f"#### 🚚 Seller ({qtd_sel})")
+        if not df_seller_ia.empty and col_ct:
             st.plotly_chart(px.bar(df_seller_ia.groupby(col_ct).size().reset_index(name='Qtd'), y=col_ct, x='Qtd', orientation='h', height=250), use_container_width=True)
             with st.expander("Ver Agendas Seller"):
                 st.dataframe(df_seller_ia, use_container_width=True, hide_index=True)
@@ -1165,16 +1161,17 @@ elif pagina == "📅 Previsão de Agendas":
     with c3:
         st.markdown(f"#### 📦 Transf ({tot_ag_tra})")
         if not df_transf_ia.empty:
-            # Gráfico de categoria da transferência
-            col_ct_t = next((c for c in df_transf_ia.columns if 'CAT' in c.upper() or 'LINHA' in c.upper()), df_transf_ia.columns[0])
-            st.plotly_chart(px.bar(df_transf_ia.groupby(col_ct_t).size().reset_index(name='Qtd'), y=col_ct_t, x='Qtd', orientation='h', height=250, color_discrete_sequence=['#FF6F61']), use_container_width=True)
+            col_ct_t = next((c for c in df_transf_ia.columns if 'CAT' in str(c).upper() or 'LINHA' in str(c).upper() or 'TIPO' in str(c).upper()), None)
+            
+            if col_ct_t:
+                st.plotly_chart(px.bar(df_transf_ia.groupby(col_ct_t).size().reset_index(name='Qtd'), y=col_ct_t, x='Qtd', orientation='h', height=250, color_discrete_sequence=['#FF6F61']), use_container_width=True)
+            
             with st.expander("Ver Agendas Transf"):
                 st.dataframe(df_transf_ia, use_container_width=True, hide_index=True)
         else:
-            st.warning("⚠️ Planilha de transferência vazia ou data não encontrada.")
-            # Pequeno Debug para você ver o que está acontecendo:
+            st.warning("⚠️ Sem transferências nesta data.")
             if st.checkbox("Debug: Ver base bruta Transf"):
-                st.write(base_transf.head(5))
+                st.write(base_transf.head(5) if not base_transf.empty else "Tabela Vazia")
 # ==============================================================================
 # PÁGINA 2.5: Simulador Cenário APC
 # ==============================================================================
