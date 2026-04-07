@@ -1100,27 +1100,25 @@ elif pagina == "📅 Previsão de Agendas":
         df_seller_ia = pd.DataFrame()
         df_transf_ia = pd.DataFrame()
 
-    # 2. CABEÇALHO KPI NEON
+    # 2. CABEÇALHO KPI NEON SÊNIOR (ALTO CONTRASTE)
     st.markdown(f"""
-    <div style="background: linear-gradient(90deg, #FF6F61 0%, #00C6FF 100%); padding: 15px 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-        <div style="display: flex; justify-content: space-between; align-items: center; color: #FFFFFF; font-family: 'Nunito Sans', sans-serif;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <h3 style="margin: 0; color: #FFFFFF !important; font-weight: 800; font-size: 22px;">📅 Previsão {data_consulta_dashboard.strftime('%d/%m/%Y')}</h3>
-                <div class="ari-dot" style="width: 12px; height: 12px; box-shadow: 0 0 10px #64FFDA; background-color: #64FFDA;"></div>
+    <div style="background: linear-gradient(135deg, #FF6F61 0%, #0086FF 100%); padding: 20px 25px; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 134, 255, 0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px; color: #FFFFFF; font-family: 'Nunito Sans', sans-serif;">
+            <div class="ari-dot" style="width: 16px; height: 16px; box-shadow: 0 0 15px #64FFDA; background-color: #64FFDA;"></div>
+            <h3 style="margin: 0; color: #FFFFFF !important; font-weight: 900; font-size: 26px; letter-spacing: -0.5px;">Previsão {data_consulta_dashboard.strftime('%d/%m/%Y')}</h3>
+        </div>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
+                <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">Agendas</span><br>
+                <span style="font-size: 24px; font-weight: 900; color: #1E272E; line-height: 1.2;">{total_agendas_previstas:,.0f}</span>
             </div>
-            <div style="display: flex; gap: 15px;">
-                <div style="background-color: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 8px; text-align: center;">
-                    <span style="font-size: 11px; font-weight: 700; opacity: 0.9;">AGENDAS TOTAIS</span><br>
-                    <span style="font-size: 18px; font-weight: 900;">{total_agendas_previstas:,.0f}</span>
-                </div>
-                <div style="background-color: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 8px; text-align: center;">
-                    <span style="font-size: 11px; font-weight: 700; opacity: 0.9;">SKUS TOTAIS</span><br>
-                    <span style="font-size: 18px; font-weight: 900;">{total_skus_previstos:,.0f}</span>
-                </div>
-                <div style="background-color: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 8px; text-align: center;">
-                    <span style="font-size: 11px; font-weight: 700; opacity: 0.9;">PEÇAS TOTAIS</span><br>
-                    <span style="font-size: 18px; font-weight: 900;">{total_pecas_previstas:,.0f}</span>
-                </div>
+            <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
+                <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">SKUs</span><br>
+                <span style="font-size: 24px; font-weight: 900; color: #1E272E; line-height: 1.2;">{total_skus_previstos:,.0f}</span>
+            </div>
+            <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
+                <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">Peças</span><br>
+                <span style="font-size: 24px; font-weight: 900; color: #0086FF; line-height: 1.2;">{total_pecas_previstas:,.0f}</span>
             </div>
         </div>
     </div>
