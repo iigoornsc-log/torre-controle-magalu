@@ -1087,23 +1087,32 @@ elif pagina == "📅 Previsão de Agendas":
         df_1p_ia = df_dia.copy()
         df_seller_ia = pd.DataFrame()
 
-    # --- 🧠 PUXANDO A PLANILHA DE TRANSFERÊNCIA ---
-    # O A.R.I. tenta achar como você nomeou a base de transferência no seu código
-    df_transf_ia = pd.DataFrame()
-    base_transf = None
-    if 'df_transf' in globals(): base_transf = globals()['df_transf']
-    elif 'df_transferencias' in globals(): base_transf = globals()['df_transferencias']
-    
-    if base_transf is not None and not base_transf.empty:
-        col_data_t = 'Data' if 'Data' in base_transf.columns else ('data' if 'data' in base_transf.columns else None)
-        if col_data_t:
-            df_transf_ia = base_transf[base_transf[col_data_t] == data_consulta_ts].copy()
+    # --- 🔗 CONEXÃO DIRETA: PLANILHA DE TRANSFERÊNCIA ---
+    @st.cache_data(ttl=600)
+    def puxar_transferencias_direto():
+        url_transf = "https://docs.google.com/spreadsheets/d/1PMgqjZr2nieniRShicaPyxAe6J6j7I04FFE5aNWnm_s/export?format=csv"
+        try:
+            return pd.read_csv(url_transf)
+        except:
+            return pd.DataFrame()
 
-    # Identificando colunas da Transferência
-    col_ag_t = 'Agendas' if 'Agendas' in df_transf_ia.columns else ('Agenda' if 'Agenda' in df_transf_ia.columns else None)
-    col_pc_t = 'Qtd Peças' if 'Qtd Peças' in df_transf_ia.columns else ('Peças' if 'Peças' in df_transf_ia.columns else None)
-    col_sk_t = 'Qtd SKUs' if 'Qtd SKUs' in df_transf_ia.columns else None
-    col_cat_t = 'Categorias' if 'Categorias' in df_transf_ia.columns else ('Linhas' if 'Linhas' in df_transf_ia.columns else None)
+    base_transf = puxar_transferencias_direto()
+    df_transf_ia = pd.DataFrame()
+
+    if not base_transf.empty:
+        # Acha a coluna de data independente do nome (Data, DATA, data_agendamento)
+        col_data_t = next((c for c in base_transf.columns if 'DATA' in c.strip().upper()), None)
+        if col_data_t:
+            # Força a conversão para data pura, resolvendo conflitos de formato
+            base_transf[col_data_t] = pd.to_datetime(base_transf[col_data_t], errors='coerce').dt.date
+            # Filtra pro dia exato do dashboard
+            df_transf_ia = base_transf[base_transf[col_data_t] == data_consulta_ts.date()].copy()
+
+    # Acha as colunas da transferência (blindado)
+    col_ag_t = next((c for c in df_transf_ia.columns if 'AGENDA' in c.strip().upper()), None) if not df_transf_ia.empty else None
+    col_pc_t = next((c for c in df_transf_ia.columns if 'PEÇA' in c.strip().upper() or 'PECAS' in c.strip().upper()), None) if not df_transf_ia.empty else None
+    col_sk_t = next((c for c in df_transf_ia.columns if 'SKU' in c.strip().upper()), None) if not df_transf_ia.empty else None
+    col_cat_t = next((c for c in df_transf_ia.columns if 'CATEGORIA' in c.strip().upper() or 'LINHA' in c.strip().upper()), None) if not df_transf_ia.empty else None
 
     # 🛡️ CÁLCULO DE KPIs MACRO (Soma Principal + Transferência)
     tot_agendas_main = df_dia[col_agendas].nunique() if col_agendas and not df_dia.empty else 0
@@ -1111,15 +1120,15 @@ elif pagina == "📅 Previsão de Agendas":
     tot_pecas_main = df_dia[col_pecas].sum() if col_pecas and not df_dia.empty else 0
 
     tot_agendas_tra = df_transf_ia[col_ag_t].nunique() if col_ag_t and not df_transf_ia.empty else 0
-    tot_skus_tra = df_transf_ia[col_sk_t].sum() if col_sk_t and not df_transf_ia.empty else 0
-    tot_pecas_tra = df_transf_ia[col_pc_t].sum() if col_pc_t and not df_transf_ia.empty else 0
+    tot_skus_tra = pd.to_numeric(df_transf_ia[col_sk_t], errors='coerce').sum() if col_sk_t and not df_transf_ia.empty else 0
+    tot_pecas_tra = pd.to_numeric(df_transf_ia[col_pc_t], errors='coerce').sum() if col_pc_t and not df_transf_ia.empty else 0
 
-    # Totalzão que vai pro Banner Neon
+    # Totalzão
     total_agendas_macro = tot_agendas_main + tot_agendas_tra
     total_skus_macro = tot_skus_main + tot_skus_tra
     total_pecas_macro = tot_pecas_main + tot_pecas_tra
 
-    # 2. CABEÇALHO KPI NEON SÊNIOR (ALTO CONTRASTE)
+    # 2. CABEÇALHO KPI NEON SÊNIOR
     st.markdown(f"""
     <div style="background: linear-gradient(135deg, #FF6F61 0%, #0086FF 100%); padding: 20px 25px; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0, 134, 255, 0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
         <div style="display: flex; align-items: center; gap: 15px; color: #FFFFFF; font-family: 'Nunito Sans', sans-serif;">
@@ -1208,14 +1217,12 @@ elif pagina == "📅 Previsão de Agendas":
             figtra.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
             st.plotly_chart(figtra, use_container_width=True, key="fig_tra_cat_previsao")
             
+            # Puxa o máximo de colunas que achar para o expander ficar rico
             cols_detalhe_tra = [c for c in [col_ag_t, 'Origem', 'Destino', col_cat_t, col_pc_t, col_sk_t] if c is not None and c in df_transf_ia.columns]
             with st.expander("🔍 Ver Agendas Detalhadas (Transf)"):
                 st.dataframe(df_transf_ia[cols_detalhe_tra].drop_duplicates(), use_container_width=True, hide_index=True)
         else:
              st.info("Nenhuma agenda extra/transferência encontrada para este dia.")
-
-    # ====================================================================
-
 # ==============================================================================
 # PÁGINA 2.5: Simulador Cenário APC
 # ==============================================================================
