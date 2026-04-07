@@ -1063,7 +1063,7 @@ elif pagina == "📅 Previsão de Agendas":
     
     data_consulta_ts = pd.Timestamp(data_consulta_dashboard)
     
-    # Puxa os dados globais do dia
+    # Puxa os dados globais do dia (1P e Seller)
     if 'Data' in df.columns:
         df_dia = df[df['Data'] == data_consulta_ts].copy()
     elif 'data' in df.columns:
@@ -1071,34 +1071,53 @@ elif pagina == "📅 Previsão de Agendas":
     else:
         df_dia = pd.DataFrame()
 
-    # Nomes flexíveis das colunas para não dar erro
+    # Nomes flexíveis das colunas (Base Principal)
     col_agendas = 'Agendas' if 'Agendas' in df_dia.columns else ('Agenda' if 'Agenda' in df_dia.columns else None)
     col_sku = 'Qtd SKUs' if 'Qtd SKUs' in df_dia.columns else ('Qtd_SKUs' if 'Qtd_SKUs' in df_dia.columns else None)
     col_pecas = 'Qtd Peças' if 'Qtd Peças' in df_dia.columns else None
     col_cat = 'Categorias' if 'Categorias' in df_dia.columns else ('Linhas' if 'Linhas' in df_dia.columns else None)
     col_canal = next((c for c in df_dia.columns if c.strip().upper() in ['CANAL', 'ORIGEM', 'TIPO CANAL', 'TIPO', 'TIPO ORIGEM']), None)
 
-    # 🛡️ CÁLCULO DE KPIs MACRO (Topo da página)
-    total_agendas_previstas = df_dia[col_agendas].nunique() if col_agendas and not df_dia.empty else 0
-    total_skus_previstos = df_dia[col_sku].sum() if col_sku and not df_dia.empty else 0
-    total_pecas_previstas = df_dia[col_pecas].sum() if col_pecas and not df_dia.empty else 0
-
-    # --- 🧠 SEPARAÇÃO DE CANAIS (1P / SELLER / TRANSFERÊNCIA) ---
+    # --- 🧠 SEPARAÇÃO DE CANAIS (1P / SELLER) ---
     if col_canal and not df_dia.empty:
         df_dia['Canal_Aux'] = df_dia[col_canal].astype(str).str.strip().str.upper()
-        
-        # 1P = Tem '1P' no nome
         df_1p_ia = df_dia[df_dia['Canal_Aux'].str.contains('1P', na=False)].copy()
-        
-        # Seller = Tem 'FULFILLMENT', 'SELLER' ou '3P'
         df_seller_ia = df_dia[df_dia['Canal_Aux'].str.contains('FULFILLMENT|SELLER|3P', na=False)].copy()
-        
-        # Transferência = Tudo que NÃO for 1P nem Seller (O que sobrou)
-        df_transf_ia = df_dia[~df_dia['Canal_Aux'].str.contains('1P|FULFILLMENT|SELLER|3P', na=False)].copy()
     else:
         df_1p_ia = df_dia.copy()
         df_seller_ia = pd.DataFrame()
-        df_transf_ia = pd.DataFrame()
+
+    # --- 🧠 PUXANDO A PLANILHA DE TRANSFERÊNCIA ---
+    # O A.R.I. tenta achar como você nomeou a base de transferência no seu código
+    df_transf_ia = pd.DataFrame()
+    base_transf = None
+    if 'df_transf' in globals(): base_transf = globals()['df_transf']
+    elif 'df_transferencias' in globals(): base_transf = globals()['df_transferencias']
+    
+    if base_transf is not None and not base_transf.empty:
+        col_data_t = 'Data' if 'Data' in base_transf.columns else ('data' if 'data' in base_transf.columns else None)
+        if col_data_t:
+            df_transf_ia = base_transf[base_transf[col_data_t] == data_consulta_ts].copy()
+
+    # Identificando colunas da Transferência
+    col_ag_t = 'Agendas' if 'Agendas' in df_transf_ia.columns else ('Agenda' if 'Agenda' in df_transf_ia.columns else None)
+    col_pc_t = 'Qtd Peças' if 'Qtd Peças' in df_transf_ia.columns else ('Peças' if 'Peças' in df_transf_ia.columns else None)
+    col_sk_t = 'Qtd SKUs' if 'Qtd SKUs' in df_transf_ia.columns else None
+    col_cat_t = 'Categorias' if 'Categorias' in df_transf_ia.columns else ('Linhas' if 'Linhas' in df_transf_ia.columns else None)
+
+    # 🛡️ CÁLCULO DE KPIs MACRO (Soma Principal + Transferência)
+    tot_agendas_main = df_dia[col_agendas].nunique() if col_agendas and not df_dia.empty else 0
+    tot_skus_main = df_dia[col_sku].sum() if col_sku and not df_dia.empty else 0
+    tot_pecas_main = df_dia[col_pecas].sum() if col_pecas and not df_dia.empty else 0
+
+    tot_agendas_tra = df_transf_ia[col_ag_t].nunique() if col_ag_t and not df_transf_ia.empty else 0
+    tot_skus_tra = df_transf_ia[col_sk_t].sum() if col_sk_t and not df_transf_ia.empty else 0
+    tot_pecas_tra = df_transf_ia[col_pc_t].sum() if col_pc_t and not df_transf_ia.empty else 0
+
+    # Totalzão que vai pro Banner Neon
+    total_agendas_macro = tot_agendas_main + tot_agendas_tra
+    total_skus_macro = tot_skus_main + tot_skus_tra
+    total_pecas_macro = tot_pecas_main + tot_pecas_tra
 
     # 2. CABEÇALHO KPI NEON SÊNIOR (ALTO CONTRASTE)
     st.markdown(f"""
@@ -1110,15 +1129,15 @@ elif pagina == "📅 Previsão de Agendas":
         <div style="display: flex; gap: 15px; flex-wrap: wrap;">
             <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
                 <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">Agendas</span><br>
-                <span style="font-size: 24px; font-weight: 900; color: #1E272E; line-height: 1.2;">{total_agendas_previstas:,.0f}</span>
+                <span style="font-size: 24px; font-weight: 900; color: #1E272E; line-height: 1.2;">{total_agendas_macro:,.0f}</span>
             </div>
             <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
                 <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">SKUs</span><br>
-                <span style="font-size: 24px; font-weight: 900; color: #1E272E; line-height: 1.2;">{total_skus_previstos:,.0f}</span>
+                <span style="font-size: 24px; font-weight: 900; color: #1E272E; line-height: 1.2;">{total_skus_macro:,.0f}</span>
             </div>
             <div style="background-color: #FFFFFF; padding: 12px 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.15); min-width: 120px;">
                 <span style="font-size: 11px; font-weight: 800; color: #8395A7; letter-spacing: 1px; text-transform: uppercase;">Peças</span><br>
-                <span style="font-size: 24px; font-weight: 900; color: #0086FF; line-height: 1.2;">{total_pecas_previstas:,.0f}</span>
+                <span style="font-size: 24px; font-weight: 900; color: #0086FF; line-height: 1.2;">{total_pecas_macro:,.0f}</span>
             </div>
         </div>
     </div>
@@ -1126,9 +1145,7 @@ elif pagina == "📅 Previsão de Agendas":
     
     # 3. DASHBOARD VISUAL (3 COLUNAS)
     col1p, colsel, coltra = st.columns(3)
-    
-    # Colunas que queremos mostrar no detalhamento (se existirem na base)
-    cols_detalhe = [c for c in [col_agendas, 'Fornecedor', col_cat, col_pecas, col_sku, col_canal] if c is not None and c in df_dia.columns]
+    cols_detalhe_main = [c for c in [col_agendas, 'Fornecedor', col_cat, col_pecas, col_sku, col_canal] if c is not None and c in df_dia.columns]
 
     # --- COLUNA 1P (FORNECEDOR) ---
     with col1p:
@@ -1144,13 +1161,12 @@ elif pagina == "📅 Previsão de Agendas":
         
         if not df_1p_ia.empty and col_cat:
             df_1p_grafico = df_1p_ia.groupby(col_cat).agg(Qtd=(col_agendas, 'nunique')).reset_index()
-            fig1p = px.bar(df_1p_grafico.sort_values(by='Qtd', ascending=True), y=col_cat, x='Qtd', orientation='h', title='AGENDAS 1P (CATEGORIA)', color='Qtd', color_continuous_scale='Blues')
+            fig1p = px.bar(df_1p_grafico.sort_values(by='Qtd', ascending=True), y=col_cat, x='Qtd', orientation='h', title='AGENDAS 1P', color='Qtd', color_continuous_scale='Blues')
             fig1p.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
             st.plotly_chart(fig1p, use_container_width=True, key="fig_1p_cat_previsao")
             
-            # 🔍 O DETALHADO VOLTOU!
             with st.expander("🔍 Ver Agendas Detalhadas (1P)"):
-                st.dataframe(df_1p_ia[cols_detalhe].drop_duplicates(), use_container_width=True, hide_index=True)
+                st.dataframe(df_1p_ia[cols_detalhe_main].drop_duplicates(), use_container_width=True, hide_index=True)
         else:
             st.info("Nenhum dado 1P identificado.")
 
@@ -1168,46 +1184,37 @@ elif pagina == "📅 Previsão de Agendas":
         
         if not df_seller_ia.empty and col_cat:
             df_sel_grafico = df_seller_ia.groupby(col_cat).agg(Qtd=(col_agendas, 'nunique')).reset_index()
-            figsel = px.bar(df_sel_grafico.sort_values(by='Qtd', ascending=True), y=col_cat, x='Qtd', orientation='h', title='SELLER (CATEGORIA)', color='Qtd', color_continuous_scale='Cividis')
+            figsel = px.bar(df_sel_grafico.sort_values(by='Qtd', ascending=True), y=col_cat, x='Qtd', orientation='h', title='AGENDAS SELLER', color='Qtd', color_continuous_scale='Cividis')
             figsel.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
             st.plotly_chart(figsel, use_container_width=True, key="fig_sel_cat_previsao")
             
-            # 🔍 O DETALHADO VOLTOU!
             with st.expander("🔍 Ver Agendas Detalhadas (Seller)"):
-                st.dataframe(df_seller_ia[cols_detalhe].drop_duplicates(), use_container_width=True, hide_index=True)
+                st.dataframe(df_seller_ia[cols_detalhe_main].drop_duplicates(), use_container_width=True, hide_index=True)
         else:
-            st.info("Nenhum dado Seller/Fulfillment identificado.")
+            st.info("Nenhum dado Fulfillment identificado.")
                 
     # --- COLUNA TRANSFERÊNCIA ---
     with coltra:
-        total_pecas_tra = df_transf_ia[col_pecas].sum() if col_pecas and not df_transf_ia.empty else 0
-        total_agendas_tra = df_transf_ia[col_agendas].nunique() if col_agendas and not df_transf_ia.empty else 0
-        
         st.markdown(f"""
         <div style="padding: 10px; border-bottom: 2px solid #FF6F61; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">📦 TRANSFERÊNCIA ({total_agendas_tra:,.0f})</h4>
-            <span style="font-size: 13px; color: #576574;">{total_pecas_tra:,.0f} Peças</span>
+            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">📦 TRANSFERÊNCIA ({tot_agendas_tra:,.0f})</h4>
+            <span style="font-size: 13px; color: #576574;">{tot_pecas_tra:,.0f} Peças</span>
         </div>
         """.replace(',', '.'), unsafe_allow_html=True)
         
-        if not df_transf_ia.empty and col_cat:
-            df_tra_grafico = df_transf_ia.groupby(col_cat).agg(Qtd=(col_agendas, 'nunique')).reset_index()
-            figtra = px.bar(df_tra_grafico.sort_values(by='Qtd', ascending=True), y=col_cat, x='Qtd', orientation='h', title='TRANSFERÊNCIA (CATEGORIA)', color='Qtd', color_continuous_scale='Reds')
+        if not df_transf_ia.empty and col_cat_t:
+            df_tra_grafico = df_transf_ia.groupby(col_cat_t).agg(Qtd=(col_ag_t, 'nunique')).reset_index()
+            figtra = px.bar(df_tra_grafico.sort_values(by='Qtd', ascending=True), y=col_cat_t, x='Qtd', orientation='h', title='AGENDAS TRANSFERÊNCIA', color='Qtd', color_continuous_scale='Reds')
             figtra.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
             st.plotly_chart(figtra, use_container_width=True, key="fig_tra_cat_previsao")
             
-            # 🔍 O DETALHADO VOLTOU E PUXANDO TRANSFERÊNCIA!
+            cols_detalhe_tra = [c for c in [col_ag_t, 'Origem', 'Destino', col_cat_t, col_pc_t, col_sk_t] if c is not None and c in df_transf_ia.columns]
             with st.expander("🔍 Ver Agendas Detalhadas (Transf)"):
-                st.dataframe(df_transf_ia[cols_detalhe].drop_duplicates(), use_container_width=True, hide_index=True)
+                st.dataframe(df_transf_ia[cols_detalhe_tra].drop_duplicates(), use_container_width=True, hide_index=True)
         else:
              st.info("Nenhuma agenda extra/transferência encontrada para este dia.")
 
     # ====================================================================
-    # AQUI EMBAIXO VOCÊ MANTÉM AQUELA MATRIZ DE RISCO (DEEP ANALYTICS)
-    # QUE JÁ ESTAVA FUNCIONANDO PERFEITAMENTE. NÃO PRECISA APAGAR ELA!
-    # st.markdown("---")
-    # titulo_com_ari("🔥 Visão Tática e Gestão de Risco")
-    # ... (restante do código do Risco Crítico)
 
 # ==============================================================================
 # PÁGINA 2.5: Simulador Cenário APC
