@@ -1123,7 +1123,7 @@ elif pagina == "📅 Previsão de Agendas":
         
         st.markdown(f"""
         <div style="padding: 10px; border-bottom: 2px solid #0086FF; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🛒 AGENDAS 1P ({df_1p_ia['Agendas'].nunique() if not df_1p_ia.empty else 0})</h4>
+            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🚚 AGENDAS 1P ({df_1p_ia['Agendas'].nunique() if not df_1p_ia.empty else 0})</h4>
             <span style="font-size: 13px; color: #576574;">{total_itens_1p:,.0f} Itens / {total_pecas_1p:,.0f} Peças</span>
         </div>
         """.replace(',', '.'), unsafe_allow_html=True)
