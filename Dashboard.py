@@ -1078,9 +1078,48 @@ elif pagina == "📅 Previsão de Agendas":
     total_skus_previstos = df_dia[col_sku_nome].sum() if col_sku_nome else 0
     total_pecas_previstas = df_dia['Qtd Peças'].sum() if 'Qtd Peças' in df_dia.columns else 0
 
-    # --- 🧠 PREPARAÇÃO DE DADOS PARA OS GRÁFICOS ---
-    df_1p_ia = df_dia[df_dia['Origem'] == '1P'].copy() if 'Origem' in df_dia.columns else pd.DataFrame()
-    df_seller_ia = df_dia[df_dia['Origem'] == 'SELLER'].copy() if 'Origem' in df_dia.columns else pd.DataFrame()
+    # --- 🧠 PREPARAÇÃO DE DADOS PARA OS GRÁFICOS (A.R.I. BLINDADO) ---
+    # 1. Identifica a coluna de Origem independente de letras maiúsculas ou minúsculas
+    coluna_origem = next((c for c in df_dia.columns if c.strip().upper() in ['ORIGEM', 'TIPO', 'TIPO ORIGEM', 'TIPO_ORIGEM', 'ORIGEM CARGA']), None)
+    
+    if coluna_origem:
+        # Padroniza tudo para MAIÚSCULO para não errar no filtro
+        df_dia['Origem_Padrao'] = df_dia[coluna_origem].astype(str).str.strip().str.upper()
+        df_1p_ia = df_dia[df_dia['Origem_Padrao'].isin(['1P', '1 P'])].copy()
+        df_seller_ia = df_dia[df_dia['Origem_Padrao'].isin(['SELLER', 'MARKETPLACE', '3P', 'MKTP'])].copy()
+    else:
+        # Se a planilha não tiver a coluna, joga tudo pro 1P para o dashboard não ficar vazio
+        df_1p_ia = df_dia.copy()
+        df_seller_ia = pd.DataFrame()
+        st.warning("⚠️ A.R.I. Informa: Coluna de separação 'Origem' não encontrada. Exibindo todo o volume na visão 1P.")
+
+    # 2. Identifica colunas flexíveis (evita erros se o nome da coluna mudar na planilha)
+    col_agendas = 'Agendas' if 'Agendas' in df_dia.columns else df_dia.columns[0]
+    col_item = 'ITEM' if 'ITEM' in df_dia.columns else df_dia.columns[0]
+    col_pecas = 'Qtd Peças' if 'Qtd Peças' in df_dia.columns else df_dia.columns[0]
+    col_cat = 'Categorias' if 'Categorias' in df_dia.columns else ('Linhas' if 'Linhas' in df_dia.columns else df_dia.columns[0])
+
+    # Categorias do 1P
+    if not df_1p_ia.empty:
+        df_1p_cat_ia = df_1p_ia.groupby(col_cat).agg(
+            Agendas=(col_agendas, 'nunique'), 
+            Item=(col_item, 'count'), 
+            Pecas_Real=(col_pecas, 'sum' if pd.api.types.is_numeric_dtype(df_1p_ia[col_pecas]) else 'count')
+        ).reset_index()
+        df_1p_cat_ia.rename(columns={col_cat: 'Categorias'}, inplace=True)
+    else:
+        df_1p_cat_ia = pd.DataFrame()
+
+    # Categorias do Seller
+    if not df_seller_ia.empty:
+        df_seller_cat_ia = df_seller_ia.groupby(col_cat).agg(
+            Item=(col_item, 'count'), 
+            Pecas_Real=(col_pecas, 'sum' if pd.api.types.is_numeric_dtype(df_seller_ia[col_pecas]) else 'count')
+        ).reset_index()
+        df_seller_cat_ia.rename(columns={col_cat: 'Categorias'}, inplace=True)
+    else:
+        df_seller_cat_ia = pd.DataFrame()
+    # ---------------------------------------------------------------------------------
     
     # Categorias do 1P por agendas
     df_1p_cat_ia = df_1p_ia.groupby('Categorias').agg(Agendas=('Agendas', 'nunique'), Item=('ITEM', 'count'), Pecas_Real=('Qtd Peças', 'sum')).reset_index() if not df_1p_ia.empty else pd.DataFrame()
