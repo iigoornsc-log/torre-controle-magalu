@@ -1057,254 +1057,234 @@ elif pagina == "📅 Previsão de Agendas":
     # 1. BARRA DE FILTROS SUPERIOR (ESTILO DASHBOARD)
     col_vaz_1, col_fil_data, col_vaz_2 = st.columns([2, 2, 2])
     with col_fil_data:
-        data_consulta_dashboard = st.date_input("🗓️ Selecione o Dia para Previsão", ts_inicio.date())
+        # Pega a data atual como padrão para não dar erro
+        data_padrao = ts_inicio.date() if 'ts_inicio' in locals() else pd.Timestamp.now().date()
+        data_consulta_dashboard = st.date_input("🗓️ Selecione o Dia para Previsão", data_padrao)
     st.markdown("<br>", unsafe_allow_html=True)
     
     data_consulta_ts = pd.Timestamp(data_consulta_dashboard)
-    # Se o seu dataframe principal chamar df_filtrado_op:
-    df_dia = df_filtrado_op[df_filtrado_op['Data'] == data_consulta_ts].copy() if not df_filtrado_op.empty else pd.DataFrame()
+    
+    # 🛡️ CORREÇÃO DE ESCOPO: Usando o 'df' global em vez do 'df_filtrado_op'
+    if 'Data' in df.columns:
+        df_dia = df[df['Data'] == data_consulta_ts].copy()
+    elif 'data' in df.columns:
+        df_dia = df[df['data'] == data_consulta_ts].copy()
+    else:
+        df_dia = pd.DataFrame()
 
-    # --- 🧠 PREPARAÇÃO DE DADOS PARA O A.R.I (IA) ---
-    df_1p_ia = df_dia[df_dia['Origem'] == '1P'].copy()
-    df_seller_ia = df_dia[df_dia['Origem'] == 'SELLER'].copy()
+    # 🛡️ CÁLCULO DE KPIs SEGURO PARA ESTA PÁGINA
+    total_agendas_previstas = df_dia['Agendas'].nunique() if 'Agendas' in df_dia.columns else 0
+    col_sku_nome = 'Qtd SKUs' if 'Qtd SKUs' in df_dia.columns else ('Qtd_SKUs' if 'Qtd_SKUs' in df_dia.columns else None)
+    total_skus_previstos = df_dia[col_sku_nome].sum() if col_sku_nome else 0
+    total_pecas_previstas = df_dia['Qtd Peças'].sum() if 'Qtd Peças' in df_dia.columns else 0
+
+    # --- 🧠 PREPARAÇÃO DE DADOS PARA OS GRÁFICOS ---
+    df_1p_ia = df_dia[df_dia['Origem'] == '1P'].copy() if 'Origem' in df_dia.columns else pd.DataFrame()
+    df_seller_ia = df_dia[df_dia['Origem'] == 'SELLER'].copy() if 'Origem' in df_dia.columns else pd.DataFrame()
+    
     # Categorias do 1P por agendas
-    df_1p_cat_ia = df_1p_ia.groupby('Categorias').agg(Agendas=('Agendas', 'nunique'), Item=('ITEM', 'count'), Pecas_Real=('Qtd Peças', 'sum')).reset_index() if not df_1p_ia.empty else pd.DataFrame(columns=['Categorias', 'Agendas', 'Item', 'Pecas_Real'])
-    top_1p_ia = df_1p_cat_ia.sort_values(by='Item', ascending=False).head(1)
+    df_1p_cat_ia = df_1p_ia.groupby('Categorias').agg(Agendas=('Agendas', 'nunique'), Item=('ITEM', 'count'), Pecas_Real=('Qtd Peças', 'sum')).reset_index() if not df_1p_ia.empty else pd.DataFrame()
     # Categorias do Seller por agendas
-    df_seller_cat_ia = df_seller_ia.groupby('Categorias').agg(Item=('ITEM', 'count'), Pecas_Real=('Qtd Peças', 'sum')).reset_index() if not df_seller_ia.empty else pd.DataFrame(columns=['Categorias', 'Item', 'Pecas_Real'])
-    top_seller_ia = df_seller_cat_ia.sort_values(by='Item', ascending=False).head(1)
+    df_seller_cat_ia = df_seller_ia.groupby('Categorias').agg(Item=('ITEM', 'count'), Pecas_Real=('Qtd Peças', 'sum')).reset_index() if not df_seller_ia.empty else pd.DataFrame()
 
-    # 2. CABEÇALHO KPI NEON (FUNDO GRADIENTE E CARDS)
+    # 2. CABEÇALHO KPI NEON (FUNDO GRADIENTE E CARDS HTML)
     st.markdown(f"""
-    <div style="background: linear-gradient(90deg, #FF6F61 0%, #00C6FF 100%); padding: 10px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+    <div style="background: linear-gradient(90deg, #FF6F61 0%, #00C6FF 100%); padding: 15px 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
         <div style="display: flex; justify-content: space-between; align-items: center; color: #FFFFFF; font-family: 'Nunito Sans', sans-serif;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <h3 style="margin: 0; color: #FFFFFF !important; font-weight: 800; font-size: 20px;">📅 Previsão {data_consulta_dashboard.strftime('%d/%m/%Y')}</h3>
+                <h3 style="margin: 0; color: #FFFFFF !important; font-weight: 800; font-size: 22px;">📅 Previsão {data_consulta_dashboard.strftime('%d/%m/%Y')}</h3>
                 <div class="ari-dot" style="width: 12px; height: 12px; box-shadow: 0 0 10px #64FFDA; background-color: #64FFDA;"></div>
             </div>
-            <div style="display: flex; gap: 20px;">
-                {card_kpi_dashboard("EQUIPES", total_equipes_necessarias, "#FFFFFF", "#1E272E")}
-                {card_kpi_dashboard("AGENDA", f"{total_agendas_previstas:,.0f}".replace(',', '.'), "#FFFFFF", "#1E272E")}
-                {card_kpi_dashboard("SKUS", f"{total_skus_previstos:,.0f}".replace(',', '.'), "#FFFFFF", "#1E272E")}
-                {card_kpi_dashboard("PEÇAS", f"{total_pecas_previstas:,.0f}".replace(',', '.'), "#FFFFFF", "#1E272E")}
+            <div style="display: flex; gap: 15px;">
+                <div style="background-color: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 8px; text-align: center;">
+                    <span style="font-size: 11px; font-weight: 700; opacity: 0.9;">AGENDAS</span><br>
+                    <span style="font-size: 18px; font-weight: 900;">{total_agendas_previstas:,.0f}</span>
+                </div>
+                <div style="background-color: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 8px; text-align: center;">
+                    <span style="font-size: 11px; font-weight: 700; opacity: 0.9;">SKUS</span><br>
+                    <span style="font-size: 18px; font-weight: 900;">{total_skus_previstos:,.0f}</span>
+                </div>
+                <div style="background-color: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 8px; text-align: center;">
+                    <span style="font-size: 11px; font-weight: 700; opacity: 0.9;">PEÇAS</span><br>
+                    <span style="font-size: 18px; font-weight: 900;">{total_pecas_previstas:,.0f}</span>
+                </div>
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """.replace(',', '.'), unsafe_allow_html=True)
     
-    # 3. INTERATIVIDADE SÊNIOR: A.R.I. HEADCOUNT (OPCIONAL DE DETALHES)
-    st.markdown("---")
-    col_ia_tropa_txt, col_ia_tropa_btn = st.columns([3, 1])
-    with col_ia_tropa_txt:
-        st.markdown("### 🧠 A.R.I. | Otimizador de Headcount")
-        st.caption("Deixe o A.R.I. analisar a volumetria exata deste dia e sugerir a melhor formação tática para as suas equipes operacionais.")
-    
-    with col_ia_tropa_btn:
-        st.markdown("<br>", unsafe_allow_html=True)
-        btn_ia_tropa = st.button("✨ Sugerir Formação Ideal", use_container_width=True)
-
-    if btn_ia_tropa:
-        qtd_transf_fixa = sum(1 for x in cargas_alocadas if 'Transferência Fixa' in x['Tipo Carga'])
-        qtd_mad = len(cargas_madeira_lista)
-        min_mad = sum(x[0] for x in cargas_madeira_lista)
-        qtd_outras = len(cargas_restante)
-        min_outras = sum(x[0] for x in cargas_restante)
-        capacidade_total_cd = total_equipes * 427
-        minutos_totais = sum(tempo_equipes.values()) if tempo_equipes else 0
-        prompt_tropa = f"""
-        Você é o A.R.I., Estrategista Logístico do CD2900 Magalu.
-        [CENÁRIO OPERACIONAL DO DIA {dia_simulacao}]:
-        - Headcount Total Disponível: {total_equipes} equipes.
-        - Capacidade Máxima por Equipe: 427 minutos úteis.
-        - Minutos Totais Exigidos pela Carga: {minutos_totais} min.
-        [PERFIL DA CARGA A SER DESCARREGADA]:
-        - Transferências Fixas: {qtd_transf_fixa} rotas de 240 minutos cada.
-        - Cargas de Madeira (Críticas): {qtd_mad} cargas (Totalizando {min_mad} minutos).
-        - Cargas Diversas (1P/Full): {qtd_outras} cargas (Totalizando {min_outras} minutos).
-        [SUA MISSÃO TÁTICA]:
-        Como devemos configurar nossas {total_equipes} equipes no painel (Quantas focadas em Transferência, quantas focadas em Madeira e quantas ficarão Mistas) para que a distribuição das barras no gráfico fique o mais reta (equalizada) possível, evitando que uma equipe exploda de 427 minutos enquanto outra fica à toa?
-        [REGRAS DE RESPOSTA]:
-        1. Dê a ordem direta de como o usuário deve preencher o menu lateral. Ex: "Para equalizar hoje, coloque X na Transferência, Y na Madeira."
-        2. Explique a matemática por trás da sua escolha de forma curta e genérica.
-        3. Se os minutos exigidos pela carga ({minutos_totais}) forem MAIORES que a capacidade total ({capacidade_total_cd}), emita um "🚨 ALERTA DE COLAPSO" dizendo que a melhor formação apenas ameniza os danos, mas o déficit de horas extras é inevitável. Seja curto e direto!
-        """
-        resposta_ia = consultar_ia_contextual(prompt_tropa, "🧠 Simulando milhares de combinações de equipes...")
-        st.info("💡 **Formação Tática sugerida pelo A.R.I.:**")
-        st.markdown(resposta_ia)
-    
-    # 4. DASHBOARD VISUAL (COLUNAS DE AGENDAS 1P, SELLER, TRANSF)
-    st.markdown("---")
-    st.markdown(f"**Total Geral:** {total_agendas_previstas:,.0f} Agendas / {total_skus_previstos:,.0f} SKUs / {total_pecas_previstas:,.0f} Peças".replace(',', '.'))
-    
+    # 3. DASHBOARD VISUAL (COLUNAS DE AGENDAS 1P, SELLER, TRANSF)
     col1p, colsel, coltra = st.columns(3)
     
     # --- COLUNA 1P ---
     with col1p:
-        df_1p_data = df_dia[df_dia['Origem'] == '1P'].copy()
-        total_pecas_1p = df_1p_data['Qtd Peças'].sum() if not df_1p_data.empty else 0
-        total_itens_1p = df_1p_data['ITEM'].count() if not df_1p_data.empty else 0
+        total_pecas_1p = df_1p_ia['Qtd Peças'].sum() if not df_1p_ia.empty else 0
+        total_itens_1p = df_1p_ia['ITEM'].count() if not df_1p_ia.empty else 0
         
         st.markdown(f"""
         <div style="padding: 10px; border-bottom: 2px solid #0086FF; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🛒 AGENDAS 1P ({f'{len(df_1p_ia.get('Agendas', [])):,.0f}'.replace(',', '.')})</h4>
-            <span style="font-size: 13px; color: #576574;">{f'{total_itens_1p:,.0f}'.replace(',', '.')} Itens / {f'{total_pecas_1p:,.0f}'.replace(',', '.')} Peças</span>
+            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🛒 AGENDAS 1P ({df_1p_ia['Agendas'].nunique() if not df_1p_ia.empty else 0})</h4>
+            <span style="font-size: 13px; color: #576574;">{total_itens_1p:,.0f} Itens / {total_pecas_1p:,.0f} Peças</span>
         </div>
-        """, unsafe_allow_html=True)
+        """.replace(',', '.'), unsafe_allow_html=True)
         
         # Gráfico de Barras Categoria 1P
         if not df_1p_cat_ia.empty:
             fig1p = px.bar(df_1p_cat_ia.sort_values(by='Item', ascending=True), y='Categorias', x='Item', orientation='h', title='AGENDAS 1P (CATEGORIA)', color='Item', color_continuous_scale='Blues')
             fig1p.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
             st.plotly_chart(fig1p, use_container_width=True, key="fig_1p_cat")
-        else:
-            st.warning("Sem dados 1P para o dia.")
             
-        # Tabela Detalhada 1P (Fornecedor)
-        with st.expander("🔍 Mais Detalhes 1P (Fornecedor)"):
-            if not df_1p_data.empty:
-                df_1p_f = df_1p_data.groupby(['Agendas', 'Fornecedor', 'Linhas']).agg(Item=('ITEM', 'count'), Pecas_Real=('Qtd Peças', 'sum')).reset_index()
+            with st.expander("🔍 Detalhes 1P (Fornecedor)"):
+                df_1p_f = df_1p_ia.groupby(['Agendas', 'Fornecedor', 'Linhas']).agg(Item=('ITEM', 'count'), Pecas=('Qtd Peças', 'sum')).reset_index()
                 st.dataframe(df_1p_f.sort_values(by='Item', ascending=False), use_container_width=True, hide_index=True)
-            else:
-                st.write("Sem detalhes.")
+        else:
+            st.info("Sem dados 1P para o dia.")
 
     # --- COLUNA SELLER ---
     with colsel:
-        df_seller_data = df_dia[df_dia['Origem'] == 'SELLER'].copy()
-        total_pecas_sel = df_seller_data['Qtd Peças'].sum() if not df_seller_data.empty else 0
-        total_itens_sel = df_seller_data['ITEM'].count() if not df_seller_data.empty else 0
+        total_pecas_sel = df_seller_ia['Qtd Peças'].sum() if not df_seller_ia.empty else 0
+        total_itens_sel = df_seller_ia['ITEM'].count() if not df_seller_ia.empty else 0
         
         st.markdown(f"""
         <div style="padding: 10px; border-bottom: 2px solid #00C6FF; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🚚 AGENDAS SELLER ({f'{len(df_seller_ia.get('Agendas', [])):,.0f}'.replace(',', '.')})</h4>
-            <span style="font-size: 13px; color: #576574;">{f'{total_itens_sel:,.0f}'.replace(',', '.')} Itens / {f'{total_pecas_sel:,.0f}'.replace(',', '.')} Peças</span>
+            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🚚 AGENDAS SELLER ({df_seller_ia['Agendas'].nunique() if not df_seller_ia.empty else 0})</h4>
+            <span style="font-size: 13px; color: #576574;">{total_itens_sel:,.0f} Itens / {total_pecas_sel:,.0f} Peças</span>
         </div>
-        """, unsafe_allow_html=True)
+        """.replace(',', '.'), unsafe_allow_html=True)
         
         # Gráfico de Barras Categoria Seller
         if not df_seller_cat_ia.empty:
             figsel = px.bar(df_seller_cat_ia.sort_values(by='Item', ascending=True), y='Categorias', x='Item', orientation='h', title='AGENDAS SELLER (CATEGORIA)', color='Item', color_continuous_scale='Cividis')
             figsel.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
             st.plotly_chart(figsel, use_container_width=True, key="fig_sel_cat")
-        else:
-            st.warning("Sem dados Seller para o dia.")
             
-        # Tabela Detalhada Seller (Seller)
-        with st.expander("🔍 Mais Detalhes Seller (Vendedor)"):
-            if not df_seller_data.empty:
-                st.dataframe(df_seller_data[['CodAgência', 'Fornecedor', 'Linhas', 'Desc SKU', 'Qtd_Sku', 'Qtd Peças']], use_container_width=True, hide_index=True)
-            else:
-                st.write("Sem detalhes.")
+            with st.expander("🔍 Detalhes Seller"):
+                st.dataframe(df_seller_ia[['Agendas', 'Fornecedor', 'Linhas', 'Desc SKU', 'Qtd Peças']], use_container_width=True, hide_index=True)
+        else:
+            st.info("Sem dados Seller para o dia.")
                 
-    # --- COLUNA TRANSFERÊNCIA (TBD / Placeholder) ---
+    # --- COLUNA TRANSFERÊNCIA ---
     with coltra:
+        agendas_1p_sel = (df_1p_ia['Agendas'].nunique() if not df_1p_ia.empty else 0) + (df_seller_ia['Agendas'].nunique() if not df_seller_ia.empty else 0)
+        agendas_transf = total_agendas_previstas - agendas_1p_sel
+        
         st.markdown(f"""
         <div style="padding: 10px; border-bottom: 2px solid #FF6F61; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">📦 AGENDAS TRANSFERÊNCIA ({f'{total_agendas_previstas - (len(df_1p_ia.get('Agendas', [])) + len(df_seller_ia.get('Agendas', []))):,.0f}'.replace(',', '.')})</h4>
-            <span style="font-size: 13px; color: #576574;">- Itens / - Peças</span>
+            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">📦 TRANSFERÊNCIA ({agendas_transf})</h4>
+            <span style="font-size: 13px; color: #576574;">Visualização em desenvolvimento</span>
         </div>
         """, unsafe_allow_html=True)
         
-        # Gráfico/Tabela Placeholder Transferência
         st.markdown(f"""
         <div style="background-color: #FFFFFF; padding: 20px; border-radius: 12px; border: 1px solid #E1E8ED; text-align: center; color: #A8B2D1; font-family: 'Nunito Sans', sans-serif;">
             <div class="ari-dot" style="width: 10px; height: 10px; background-color: #FF6F61; margin: 0 auto 10px auto; box-shadow: 0 0 8px #FF6F61; animation: ari-blink 1.5s infinite;"></div>
             <b>AGENDAS TRANSFERÊNCIA</b><br>
-            A.R.I. ainda não mapeou os dados detalhados para esta categoria.
+            Aguardando integração de dados.
         </div>
         """, unsafe_allow_html=True)
 
-    # 5. MATRIZ DE RISCO CRÍTICO E POSSÍVEIS GARGALOS (ESTILO DASHBOARD E INTERATIVO)
+    # 4. MATRIZ DE RISCO CRÍTICO E POSSÍVEIS GARGALOS (DEEP ANALYTICS)
     st.markdown("---")
-    st.markdown("### 🔥 Visão Tática e Gestão de Risco (Profundo A.R.I.)")
-    st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento e colapso de doca.")
-    df_risco = df_filtrado_op.copy()
-    col_sku = 'Qtd SKUs' if 'Qtd SKUs' in df_risco.columns else 'Qtd_SKUs'
+    titulo_com_ari("🔥 Visão Tática e Gestão de Risco")
+    st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento.")
+    
+    # 🛡️ Usa df_dia como base para a matriz não quebrar!
+    df_risco = df_dia.copy()
     dias_criticos_report = []
-    for dia, df_dia in df_risco.groupby('Data'):
-        cargas_altissimo = []
-        alertas_dia = []
-        cargas_detalhadas = [] 
-        agendas_vistas_altissimo = set()
-        agendas_vistas_atencao = set()
-        df_dia_unico = df_dia.drop_duplicates(subset=['Agendas']) if 'Agendas' in df_dia.columns else df_dia
-        agendas_por_cat = df_dia_unico['Categorias'].astype(str).str.upper().value_counts()
-        for cat, qtd in agendas_por_cat.items():
-            if qtd >= 8 and any(x in cat for x in ['ELETRO', 'IMAGEM']):
-                alertas_dia.append(f"📍 **Risco Trava Endereço:** {qtd} agendas de {cat} simultâneas.")
-        for _, row in df_dia.iterrows():
-            cat = str(row.get('Categorias', '')).upper()
-            linha = str(row.get('Linhas', '')).upper()
-            pecas = pd.to_numeric(row.get('Qtd Peças', 0), errors='coerce') or 0
-            skus = pd.to_numeric(row.get(col_sku, 1), errors='coerce') or 1
-            agenda_id = str(row.get('Agendas', row.get('Fornecedor', 'N/D')))
-            nome_exibicao = cat.title() if cat else linha.title()
-            is_altissimo = False
-            motivo = ""
-            alerta_secundario = ""
-            if 'MADEIRA' in cat or 'MADEIRA' in linha:
-                is_altissimo = True; motivo = "Madeira"
-            elif 'PNEU' in cat or 'PNEU' in linha:
-                is_altissimo = True; motivo = "Pneus"
-            elif 'AR CONDICIONADO' in cat or 'AR CONDICIONADO' in linha:
-                is_altissimo = True; motivo = "Ar Condicionado"
-            elif pecas >= 1000 and any(x in cat or x in linha for x in ['PORTATEIS', 'UD', 'CM', 'FERRAMENTA', 'DIVERSOS', 'AUDIO', 'AUTOMOTIVO', 'MERCADO', 'BLOCADO']):
-                is_altissimo = True; motivo = f"{nome_exibicao} (>1k peças)"
-            elif skus >= 10 and any(x in cat or x in linha for x in ['BENS DE CONSUMO', 'FREEPASS', 'ALIMENTO']):
-                is_altissimo = True; motivo = f"{nome_exibicao} (>10 SKUs)"
-            if any(x in cat or x in linha for x in ['COLCH', 'ESTOFADO', 'MO2']) and skus >= 5:
-                alerta_secundario = f"{nome_exibicao} super fragmentado"
-            if 'COFRE' in cat and pecas >= 5000:
-                alerta_secundario = f"Volume brutal de Cofres"
-            if any(x in cat for x in ['BB', 'BR', 'BKF']) and pecas >= 400:
-                alerta_secundario = f"Carga pesada de {nome_exibicao}"
-            registrou_algo = False
-            if is_altissimo:
-                chave_alt = f"{agenda_id}-{motivo}"
-                if chave_alt not in agendas_vistas_altissimo:
-                    cargas_altissimo.append(motivo)
-                    agendas_vistas_altissimo.add(chave_alt)
-                    registrou_algo = True
-            if alerta_secundario:
-                chave_at = f"{agenda_id}-{alerta_secundario}"
-                if chave_at not in agendas_vistas_atencao:
-                    alertas_dia.append(f"🟡 **Atenção:** Agenda {agenda_id} - {alerta_secundario} ({pecas:,.0f} pts / {skus} skus).".replace(',', '.'))
-                    agendas_vistas_atencao.add(chave_at)
-                    registrou_algo = True
-            if registrou_algo:
-                cargas_detalhadas.append({
-                    "Agenda / Origem": agenda_id,
-                    "Categoria": nome_exibicao,
-                    "Motivo do Risco": motivo if is_altissimo else alerta_secundario,
-                    "Qtd Peças": pecas,
-                    "Qtd SKUs": skus
-                })
-        if len(cargas_altissimo) >= 3 or alertas_dia:
-            dia_str = dia.strftime('%d/%m/%Y')
-            resumo_altissimo = pd.Series(cargas_altissimo).value_counts()
-            txt_altissimo = ", ".join([f"{qtd} {nome}" for nome, qtd in resumo_altissimo.items()])
-            if len(cargas_altissimo) >= 3:
-                titulo_alerta = f"🚨 DIA {dia_str}: COLAPSO DETECTADO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
-                cor_status = "#C0392B"
-            elif len(cargas_altissimo) > 0:
-                titulo_alerta = f"⚠️ DIA {dia_str}: AVISO DE RISCO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
-                cor_status = "#D35400"
-            else:
-                titulo_alerta = f"🟡 DIA {dia_str}: ATENÇÃO REQUERIDA (Travamento de Endereço/SKUs)"
-                cor_status = "#F39C12"
-            dias_criticos_report.append({
-                "titulo": titulo_alerta,
-                "cor": cor_status,
-                "txt_altissimo": txt_altissimo,
-                "qtd_altissimo": len(cargas_altissimo),
-                "alertas": alertas_dia,
-                "df_detalhes": pd.DataFrame(cargas_detalhadas) if cargas_detalhadas else pd.DataFrame()
+    
+    cargas_altissimo = []
+    alertas_dia = []
+    cargas_detalhadas = [] 
+    agendas_vistas_altissimo = set()
+    agendas_vistas_atencao = set()
+    
+    df_dia_unico = df_risco.drop_duplicates(subset=['Agendas']) if 'Agendas' in df_risco.columns else df_risco
+    agendas_por_cat = df_dia_unico['Categorias'].astype(str).str.upper().value_counts() if 'Categorias' in df_dia_unico.columns else pd.Series()
+    
+    for cat, qtd in agendas_por_cat.items():
+        if qtd >= 8 and any(x in cat for x in ['ELETRO', 'IMAGEM']):
+            alertas_dia.append(f"📍 **Risco Trava Endereço:** {qtd} agendas de {cat} simultâneas.")
+            
+    for _, row in df_risco.iterrows():
+        cat = str(row.get('Categorias', '')).upper()
+        linha = str(row.get('Linhas', '')).upper()
+        pecas = pd.to_numeric(row.get('Qtd Peças', 0), errors='coerce') or 0
+        skus = pd.to_numeric(row.get(col_sku_nome, 1), errors='coerce') or 1
+        agenda_id = str(row.get('Agendas', row.get('Fornecedor', 'N/D')))
+        nome_exibicao = cat.title() if cat else linha.title()
+        
+        is_altissimo = False
+        motivo = ""
+        alerta_secundario = ""
+        
+        if 'MADEIRA' in cat or 'MADEIRA' in linha:
+            is_altissimo = True; motivo = "Madeira"
+        elif 'PNEU' in cat or 'PNEU' in linha:
+            is_altissimo = True; motivo = "Pneus"
+        elif 'AR CONDICIONADO' in cat or 'AR CONDICIONADO' in linha:
+            is_altissimo = True; motivo = "Ar Condicionado"
+        elif pecas >= 1000 and any(x in cat or x in linha for x in ['PORTATEIS', 'UD', 'CM', 'FERRAMENTA', 'DIVERSOS', 'AUDIO', 'AUTOMOTIVO', 'MERCADO', 'BLOCADO']):
+            is_altissimo = True; motivo = f"{nome_exibicao} (>1k peças)"
+        elif skus >= 10 and any(x in cat or x in linha for x in ['BENS DE CONSUMO', 'FREEPASS', 'ALIMENTO']):
+            is_altissimo = True; motivo = f"{nome_exibicao} (>10 SKUs)"
+            
+        if any(x in cat or x in linha for x in ['COLCH', 'ESTOFADO', 'MO2']) and skus >= 5:
+            alerta_secundario = f"{nome_exibicao} super fragmentado"
+        if 'COFRE' in cat and pecas >= 5000:
+            alerta_secundario = f"Volume brutal de Cofres"
+        if any(x in cat for x in ['BB', 'BR', 'BKF']) and pecas >= 400:
+            alerta_secundario = f"Carga pesada de {nome_exibicao}"
+            
+        registrou_algo = False
+        if is_altissimo:
+            chave_alt = f"{agenda_id}-{motivo}"
+            if chave_alt not in agendas_vistas_altissimo:
+                cargas_altissimo.append(motivo)
+                agendas_vistas_altissimo.add(chave_alt)
+                registrou_algo = True
+        if alerta_secundario:
+            chave_at = f"{agenda_id}-{alerta_secundario}"
+            if chave_at not in agendas_vistas_atencao:
+                alertas_dia.append(f"🟡 **Atenção:** Agenda {agenda_id} - {alerta_secundario} ({pecas:,.0f} pts / {skus} skus).".replace(',', '.'))
+                agendas_vistas_atencao.add(chave_at)
+                registrou_algo = True
+        if registrou_algo:
+            cargas_detalhadas.append({
+                "Agenda / Origem": agenda_id,
+                "Categoria": nome_exibicao,
+                "Motivo do Risco": motivo if is_altissimo else alerta_secundario,
+                "Qtd Peças": pecas,
+                "Qtd SKUs": skus
             })
+            
+    if len(cargas_altissimo) >= 3 or alertas_dia:
+        dia_str = data_consulta_dashboard.strftime('%d/%m/%Y')
+        resumo_altissimo = pd.Series(cargas_altissimo).value_counts()
+        txt_altissimo = ", ".join([f"{qtd} {nome}" for nome, qtd in resumo_altissimo.items()])
+        if len(cargas_altissimo) >= 3:
+            titulo_alerta = f"🚨 DIA {dia_str}: COLAPSO DETECTADO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
+            cor_status = "#C0392B"
+        elif len(cargas_altissimo) > 0:
+            titulo_alerta = f"⚠️ DIA {dia_str}: AVISO DE RISCO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
+            cor_status = "#D35400"
+        else:
+            titulo_alerta = f"🟡 DIA {dia_str}: ATENÇÃO REQUERIDA (Travamento de Endereço/SKUs)"
+            cor_status = "#F39C12"
+            
+        dias_criticos_report.append({
+            "titulo": titulo_alerta,
+            "cor": cor_status,
+            "txt_altissimo": txt_altissimo,
+            "qtd_altissimo": len(cargas_altissimo),
+            "alertas": alertas_dia,
+            "df_detalhes": pd.DataFrame(cargas_detalhadas) if cargas_detalhadas else pd.DataFrame()
+        })
 
-    # Renderiza o relatório na tela (Os famosos Expanders Interativos e Deep Analytics)
+    # Renderiza os Expanders
     if dias_criticos_report:
-        st.error("⚠️ **O A.R.I. detectou configurações críticas de carga que exigem plano de ação imediato:**")
+        st.error("⚠️ **O A.R.I. detectou configurações críticas de carga:**")
         for rep in dias_criticos_report:
-            with st.expander(rep["titulo"]):
+            with st.expander(rep["titulo"], expanded=True):
                 if rep["qtd_altissimo"] >= 3:
                     st.markdown(f"<span style='color: {rep['cor']}; font-weight: bold;'>O A.R.I. identificou uma combinação fatal:</span> {rep['txt_altissimo']}. Isso inviabiliza a doca.", unsafe_allow_html=True)
                 elif rep["qtd_altissimo"] > 0:
@@ -1315,8 +1295,8 @@ elif pagina == "📅 Previsão de Agendas":
                 if not rep["df_detalhes"].empty:
                     st.markdown("🔍 **Raio-X das Agendas Infratoras:**")
                     st.dataframe(rep["df_detalhes"], use_container_width=True, hide_index=True)
-    else:
-        st.success("✅ **A.R.I. INFORMA:** Cenário Operacional limpo. Nenhuma mutação de risco (ex: Diversos com >1k peças ou excesso de SKUs) identificada no período.")
+    elif not df_dia.empty:
+        st.success("✅ **A.R.I. INFORMA:** Cenário Operacional limpo. Nenhuma mutação de risco identificada.")
 
 # ==============================================================================
 # PÁGINA 2.5: Simulador Cenário APC
