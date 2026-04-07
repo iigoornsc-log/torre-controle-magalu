@@ -1064,7 +1064,7 @@ elif pagina == "📅 Previsão de Agendas":
     
     data_consulta_ts = pd.Timestamp(data_consulta_dashboard)
     
-    # 🛡️ CORREÇÃO DE ESCOPO: Usando o 'df' global em vez do 'df_filtrado_op'
+    # 🛡️ CORREÇÃO DE ESCOPO: Usando o 'df' global
     if 'Data' in df.columns:
         df_dia = df[df['Data'] == data_consulta_ts].copy()
     elif 'data' in df.columns:
@@ -1072,34 +1072,29 @@ elif pagina == "📅 Previsão de Agendas":
     else:
         df_dia = pd.DataFrame()
 
-    # 🛡️ CÁLCULO DE KPIs SEGURO PARA ESTA PÁGINA
+    # 🛡️ CÁLCULO DE KPIs SEGURO
     total_agendas_previstas = df_dia['Agendas'].nunique() if 'Agendas' in df_dia.columns else 0
     col_sku_nome = 'Qtd SKUs' if 'Qtd SKUs' in df_dia.columns else ('Qtd_SKUs' if 'Qtd_SKUs' in df_dia.columns else None)
     total_skus_previstos = df_dia[col_sku_nome].sum() if col_sku_nome else 0
     total_pecas_previstas = df_dia['Qtd Peças'].sum() if 'Qtd Peças' in df_dia.columns else 0
 
     # --- 🧠 PREPARAÇÃO DE DADOS PARA OS GRÁFICOS (A.R.I. BLINDADO) ---
-    # 1. Identifica a coluna de Origem independente de letras maiúsculas ou minúsculas
     coluna_origem = next((c for c in df_dia.columns if c.strip().upper() in ['ORIGEM', 'TIPO', 'TIPO ORIGEM', 'TIPO_ORIGEM', 'ORIGEM CARGA']), None)
     
     if coluna_origem:
-        # Padroniza tudo para MAIÚSCULO para não errar no filtro
         df_dia['Origem_Padrao'] = df_dia[coluna_origem].astype(str).str.strip().str.upper()
         df_1p_ia = df_dia[df_dia['Origem_Padrao'].isin(['1P', '1 P'])].copy()
         df_seller_ia = df_dia[df_dia['Origem_Padrao'].isin(['SELLER', 'MARKETPLACE', '3P', 'MKTP'])].copy()
     else:
-        # Se a planilha não tiver a coluna, joga tudo pro 1P para o dashboard não ficar vazio
         df_1p_ia = df_dia.copy()
         df_seller_ia = pd.DataFrame()
         st.warning("⚠️ A.R.I. Informa: Coluna de separação 'Origem' não encontrada. Exibindo todo o volume na visão 1P.")
 
-    # 2. Identifica colunas flexíveis (evita erros se o nome da coluna mudar na planilha)
     col_agendas = 'Agendas' if 'Agendas' in df_dia.columns else df_dia.columns[0]
     col_item = 'ITEM' if 'ITEM' in df_dia.columns else df_dia.columns[0]
     col_pecas = 'Qtd Peças' if 'Qtd Peças' in df_dia.columns else df_dia.columns[0]
     col_cat = 'Categorias' if 'Categorias' in df_dia.columns else ('Linhas' if 'Linhas' in df_dia.columns else df_dia.columns[0])
 
-    # Categorias do 1P
     if not df_1p_ia.empty:
         df_1p_cat_ia = df_1p_ia.groupby(col_cat).agg(
             Agendas=(col_agendas, 'nunique'), 
@@ -1110,7 +1105,6 @@ elif pagina == "📅 Previsão de Agendas":
     else:
         df_1p_cat_ia = pd.DataFrame()
 
-    # Categorias do Seller
     if not df_seller_ia.empty:
         df_seller_cat_ia = df_seller_ia.groupby(col_cat).agg(
             Item=(col_item, 'count'), 
@@ -1119,12 +1113,6 @@ elif pagina == "📅 Previsão de Agendas":
         df_seller_cat_ia.rename(columns={col_cat: 'Categorias'}, inplace=True)
     else:
         df_seller_cat_ia = pd.DataFrame()
-    # ---------------------------------------------------------------------------------
-    
-    # Categorias do 1P por agendas
-    df_1p_cat_ia = df_1p_ia.groupby('Categorias').agg(Agendas=('Agendas', 'nunique'), Item=('ITEM', 'count'), Pecas_Real=('Qtd Peças', 'sum')).reset_index() if not df_1p_ia.empty else pd.DataFrame()
-    # Categorias do Seller por agendas
-    df_seller_cat_ia = df_seller_ia.groupby('Categorias').agg(Item=('ITEM', 'count'), Pecas_Real=('Qtd Peças', 'sum')).reset_index() if not df_seller_ia.empty else pd.DataFrame()
 
     # 2. CABEÇALHO KPI NEON (FUNDO GRADIENTE E CARDS HTML)
     st.markdown(f"""
@@ -1157,54 +1145,59 @@ elif pagina == "📅 Previsão de Agendas":
     
     # --- COLUNA 1P ---
     with col1p:
-        total_pecas_1p = df_1p_ia['Qtd Peças'].sum() if not df_1p_ia.empty else 0
-        total_itens_1p = df_1p_ia['ITEM'].count() if not df_1p_ia.empty else 0
+        total_pecas_1p = df_1p_ia['Qtd Peças'].sum() if not df_1p_ia.empty and 'Qtd Peças' in df_1p_ia.columns else 0
+        total_itens_1p = df_1p_ia.shape[0] if not df_1p_ia.empty else 0
         
         st.markdown(f"""
         <div style="padding: 10px; border-bottom: 2px solid #0086FF; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🚚 AGENDAS 1P ({df_1p_ia['Agendas'].nunique() if not df_1p_ia.empty else 0})</h4>
+            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🛒 AGENDAS 1P ({df_1p_ia['Agendas'].nunique() if not df_1p_ia.empty and 'Agendas' in df_1p_ia.columns else 0})</h4>
             <span style="font-size: 13px; color: #576574;">{total_itens_1p:,.0f} Itens / {total_pecas_1p:,.0f} Peças</span>
         </div>
         """.replace(',', '.'), unsafe_allow_html=True)
         
-        # Gráfico de Barras Categoria 1P
         if not df_1p_cat_ia.empty:
             fig1p = px.bar(df_1p_cat_ia.sort_values(by='Item', ascending=True), y='Categorias', x='Item', orientation='h', title='AGENDAS 1P (CATEGORIA)', color='Item', color_continuous_scale='Blues')
             fig1p.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
             st.plotly_chart(fig1p, use_container_width=True, key="fig_1p_cat")
             
             with st.expander("🔍 Detalhes 1P (Fornecedor)"):
-                df_1p_f = df_1p_ia.groupby(['Agendas', 'Fornecedor', 'Linhas']).agg(Item=('ITEM', 'count'), Pecas=('Qtd Peças', 'sum')).reset_index()
-                st.dataframe(df_1p_f.sort_values(by='Item', ascending=False), use_container_width=True, hide_index=True)
+                if 'Agendas' in df_1p_ia.columns and 'Fornecedor' in df_1p_ia.columns:
+                    colunas_agrup = ['Agendas', 'Fornecedor']
+                    if 'Linhas' in df_1p_ia.columns: colunas_agrup.append('Linhas')
+                    
+                    df_1p_f = df_1p_ia.groupby(colunas_agrup).agg(Item=('ITEM' if 'ITEM' in df_1p_ia.columns else df_1p_ia.columns[0], 'count'), Pecas=('Qtd Peças' if 'Qtd Peças' in df_1p_ia.columns else df_1p_ia.columns[0], 'sum')).reset_index()
+                    st.dataframe(df_1p_f.sort_values(by='Item', ascending=False), use_container_width=True, hide_index=True)
+                else:
+                    st.dataframe(df_1p_ia, use_container_width=True, hide_index=True)
         else:
             st.info("Sem dados 1P para o dia.")
 
     # --- COLUNA SELLER ---
     with colsel:
-        total_pecas_sel = df_seller_ia['Qtd Peças'].sum() if not df_seller_ia.empty else 0
-        total_itens_sel = df_seller_ia['ITEM'].count() if not df_seller_ia.empty else 0
+        total_pecas_sel = df_seller_ia['Qtd Peças'].sum() if not df_seller_ia.empty and 'Qtd Peças' in df_seller_ia.columns else 0
+        total_itens_sel = df_seller_ia.shape[0] if not df_seller_ia.empty else 0
         
         st.markdown(f"""
         <div style="padding: 10px; border-bottom: 2px solid #00C6FF; margin-bottom: 10px;">
-            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🚚 AGENDAS SELLER ({df_seller_ia['Agendas'].nunique() if not df_seller_ia.empty else 0})</h4>
+            <h4 style="margin: 0; color: #1E272E !important; font-weight: 700;">🚚 AGENDAS SELLER ({df_seller_ia['Agendas'].nunique() if not df_seller_ia.empty and 'Agendas' in df_seller_ia.columns else 0})</h4>
             <span style="font-size: 13px; color: #576574;">{total_itens_sel:,.0f} Itens / {total_pecas_sel:,.0f} Peças</span>
         </div>
         """.replace(',', '.'), unsafe_allow_html=True)
         
-        # Gráfico de Barras Categoria Seller
         if not df_seller_cat_ia.empty:
             figsel = px.bar(df_seller_cat_ia.sort_values(by='Item', ascending=True), y='Categorias', x='Item', orientation='h', title='AGENDAS SELLER (CATEGORIA)', color='Item', color_continuous_scale='Cividis')
             figsel.update_layout(height=300, margin=dict(l=20, r=20, t=50, b=20), xaxis_title='', yaxis_title='')
             st.plotly_chart(figsel, use_container_width=True, key="fig_sel_cat")
             
             with st.expander("🔍 Detalhes Seller"):
-                st.dataframe(df_seller_ia[['Agendas', 'Fornecedor', 'Linhas', 'Desc SKU', 'Qtd Peças']], use_container_width=True, hide_index=True)
+                cols_to_show = [c for c in ['Agendas', 'Fornecedor', 'Linhas', 'Desc SKU', 'Qtd Peças'] if c in df_seller_ia.columns]
+                st.dataframe(df_seller_ia[cols_to_show], use_container_width=True, hide_index=True)
         else:
             st.info("Sem dados Seller para o dia.")
                 
     # --- COLUNA TRANSFERÊNCIA ---
     with coltra:
-        agendas_1p_sel = (df_1p_ia['Agendas'].nunique() if not df_1p_ia.empty else 0) + (df_seller_ia['Agendas'].nunique() if not df_seller_ia.empty else 0)
+        agendas_1p_sel = (df_1p_ia['Agendas'].nunique() if not df_1p_ia.empty and 'Agendas' in df_1p_ia.columns else 0) + (df_seller_ia['Agendas'].nunique() if not df_seller_ia.empty and 'Agendas' in df_seller_ia.columns else 0)
         agendas_transf = total_agendas_previstas - agendas_1p_sel
         
         st.markdown(f"""
@@ -1227,7 +1220,6 @@ elif pagina == "📅 Previsão de Agendas":
     titulo_com_ari("🔥 Visão Tática e Gestão de Risco")
     st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento.")
     
-    # 🛡️ Usa df_dia como base para a matriz não quebrar!
     df_risco = df_dia.copy()
     dias_criticos_report = []
     
