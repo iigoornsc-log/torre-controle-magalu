@@ -246,7 +246,7 @@ def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
 def conectar_google():
     try:
         cred_dict = json.loads(st.secrets["google_json"])
-        creds = Credentials.from_service_account_info(cred_dict, scopes=["https://www.googles.com/auth/spreadsheets"])
+        creds = Credentials.from_service_account_info(cred_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
     except:
         caminho_local = 'C:/Users/ign_oliveira/Documents/Analises Agendas/credential_key.json'
         creds = Credentials.from_service_account_file(caminho_local, scopes=["https://www.googleapis.com/auth/spreadsheets"])
