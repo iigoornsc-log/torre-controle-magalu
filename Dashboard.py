@@ -422,6 +422,8 @@ with tab2:
     if not df_hist_conf.empty and not df_hoje_conf.empty:
         st.caption("Cálculo preditivo inteligente: O algoritmo localiza cargas irmãs no histórico para gerar a meta mais justa possível.")
         
+        taxa_global_cd = df_hist_conf['TMP APC'].sum() / df_hist_conf['PEÇAS'].sum() if df_hist_conf['PEÇAS'].sum() > 0 else 1.0
+
         def calcular_meta_inteligente(row, df_historico):
             forn = str(row.get('ORIGEM', '')).strip().upper()
             linha = str(row.get('CATEGORIA', '')).strip().upper()
@@ -433,37 +435,29 @@ with tab2:
             min_pecas, max_pecas = pecas * 0.7, pecas * 1.3
             min_sku, max_sku = min(sku * 0.7, sku - 2), max(sku * 1.3, sku + 2)
 
-            # FILTRO ANTI-THE FLASH E ANTI-FANTASMA
-            df_hist_limpo = df_historico[(df_historico['TMP APC'] > 5) & (df_historico['PEÇAS'] > 0)].copy()
-            df_hist_limpo['VELOCIDADE'] = df_hist_limpo['TMP APC'] / df_hist_limpo['PEÇAS']
-            df_hist_limpo = df_hist_limpo[df_hist_limpo['VELOCIDADE'] >= 0.05] 
+            df_historico_limpo = df_historico[df_historico['TMP APC'] > 0]
 
-            taxa_global_mediana = df_hist_limpo['VELOCIDADE'].median()
-            if pd.isna(taxa_global_mediana): taxa_global_mediana = 0.5 
-
-            df_base_exata = df_hist_limpo[(df_hist_limpo['FORNECEDOR'].str.upper() == forn) & (df_hist_limpo['LINHA'].str.upper() == linha)]
+            df_base_exata = df_historico_limpo[(df_historico_limpo['FORNECEDOR'].str.upper() == forn) & (df_historico_limpo['LINHA'].str.upper() == linha)]
             if not df_base_exata.empty:
                 df_gemeas = df_base_exata[(df_base_exata['PEÇAS'] >= min_pecas) & (df_base_exata['PEÇAS'] <= max_pecas) & (df_base_exata['SKU'] >= min_sku) & (df_base_exata['SKU'] <= max_sku)]
-                if not df_gemeas.empty: return df_gemeas['TMP APC'].median() 
-                
+                if not df_gemeas.empty: return df_gemeas['TMP APC'].mean()
                 df_primas = df_base_exata[(df_base_exata['PEÇAS'] >= min_pecas) & (df_base_exata['PEÇAS'] <= max_pecas)]
-                if not df_primas.empty: return df_primas['TMP APC'].median()
-                
-                vel_mediana = df_base_exata['VELOCIDADE'].median()
-                return TEMPO_SETUP + (pecas * vel_mediana)
+                if not df_primas.empty: return df_primas['TMP APC'].mean()
+                if df_base_exata['PEÇAS'].sum() > 0: 
+                    vel = df_base_exata['TMP APC'].sum() / df_base_exata['PEÇAS'].sum()
+                    return TEMPO_SETUP + (pecas * vel)
 
-            df_base_categoria = df_hist_limpo[df_hist_limpo['LINHA'].str.upper() == linha]
+            df_base_categoria = df_historico_limpo[df_historico_limpo['LINHA'].str.upper() == linha]
             if not df_base_categoria.empty:
                 df_gemeas_cat = df_base_categoria[(df_base_categoria['PEÇAS'] >= min_pecas) & (df_base_categoria['PEÇAS'] <= max_pecas) & (df_base_categoria['SKU'] >= min_sku) & (df_base_categoria['SKU'] <= max_sku)]
-                if not df_gemeas_cat.empty: return df_gemeas_cat['TMP APC'].median()
-                
+                if not df_gemeas_cat.empty: return df_gemeas_cat['TMP APC'].mean()
                 df_primas_cat = df_base_categoria[(df_base_categoria['PEÇAS'] >= min_pecas) & (df_base_categoria['PEÇAS'] <= max_pecas)]
-                if not df_primas_cat.empty: return df_primas_cat['TMP APC'].median()
-                
-                vel_mediana_cat = df_base_categoria['VELOCIDADE'].median()
-                return TEMPO_SETUP + (pecas * vel_mediana_cat)
+                if not df_primas_cat.empty: return df_primas_cat['TMP APC'].mean()
+                if df_base_categoria['PEÇAS'].sum() > 0: 
+                    vel = df_base_categoria['TMP APC'].sum() / df_base_categoria['PEÇAS'].sum()
+                    return TEMPO_SETUP + (pecas * vel)
 
-            return TEMPO_SETUP + (pecas * taxa_global_mediana)
+            return TEMPO_SETUP + (pecas * taxa_global_cd)
 
         df_hoje_conf['DURAÇÃO_REAL_MIN'] = df_hoje_conf['DURAÇÃO CARGA'].apply(time_to_mins)
         df_hoje_conf['STATUS_FISICO'] = df_hoje_conf['STATUS_FISICO'].str.strip().str.upper()
@@ -509,32 +503,13 @@ with tab2:
         df_tabela['SKU'] = df_tabela['SKU'].apply(lambda x: f"{int(x)}")
         df_tabela = df_tabela[['AGENDA', 'CONFERENTE', 'CATEGORIA', 'STATUS_FISICO', 'PEÇAS', 'SKU', 'META (Tempo)', 'GASTO (Tempo)', 'PREVISÃO FIM', 'SITUAÇÃO META']]
         
-        # --- FUNÇÃO ROBUSTA DE ESTILIZAÇÃO (Funciona em qualquer versão do Pandas) ---
-        def estilizar_tabela(df):
-            # Cria um DataFrame vazio com as mesmas colunas e índices
-            estilos = pd.DataFrame('', index=df.index, columns=df.columns)
-            
-            # Aplica as cores na coluna SITUACAO META
-            cond_verde_meta = df['SITUAÇÃO META'].astype(str).str.contains('✅')
-            cond_verm_meta = df['SITUAÇÃO META'].astype(str).str.contains('🔴|⚠️')
-            cond_amar_meta = df['SITUAÇÃO META'].astype(str).str.contains('⏳')
-            
-            estilos.loc[cond_verde_meta, 'SITUAÇÃO META'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
-            estilos.loc[cond_verm_meta, 'SITUAÇÃO META'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
-            estilos.loc[cond_amar_meta, 'SITUAÇÃO META'] = 'color: #92400E; background-color: #FEF3C7; font-weight: 600;'
-            
-            # Aplica as cores na coluna PREVISAO FIM
-            cond_verde_prev = df['PREVISÃO FIM'].astype(str).str.contains('✅')
-            cond_verm_prev = df['PREVISÃO FIM'].astype(str).str.contains('🔴|⚠️')
-            cond_amar_prev = df['PREVISÃO FIM'].astype(str).str.contains('⏳')
-            
-            estilos.loc[cond_verde_prev, 'PREVISÃO FIM'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
-            estilos.loc[cond_verm_prev, 'PREVISÃO FIM'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
-            estilos.loc[cond_amar_prev, 'PREVISÃO FIM'] = 'color: #92400E; background-color: #FEF3C7; font-weight: 600;'
-            
-            return estilos
+        def cor_status(val):
+            if '✅' in str(val): return 'color: #065F46; background-color: #D1FAE5; font-weight: 600; border-radius: 4px;'
+            if '🔴' in str(val) or '⚠️' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600; border-radius: 4px;'
+            if '⏳' in str(val): return 'color: #92400E; background-color: #FEF3C7; font-weight: 600; border-radius: 4px;'
+            return ''
 
-        st.dataframe(df_tabela.style.apply(estilizar_tabela, axis=None), use_container_width=True, hide_index=True)
+        st.dataframe(df_tabela.style.applymap(cor_status, subset=['SITUAÇÃO META', 'PREVISÃO FIM']), use_container_width=True, hide_index=True)
 
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("<div style='background-color: #FFFFFF; padding: 20px; border-radius: 12px; border-left: 4px solid #10B981; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
@@ -662,19 +637,12 @@ with tab3:
                 
                 df_detalhe = df_detalhe[['DATA', 'AGENDA', 'CATEGORIA', 'PEÇAS', 'META (Tempo)', 'REAL (Tempo)', 'Desvio (Minutos)', 'STATUS_REAL']]
                 
-                # --- FUNÇÃO ROBUSTA DE ESTILIZAÇÃO (Aba 3) ---
-                def estilizar_tabela_indiv(df):
-                    estilos = pd.DataFrame('', index=df.index, columns=df.columns)
-                    
-                    cond_verde = df['STATUS_REAL'].astype(str).str.contains('NO PRAZO')
-                    cond_verm = df['STATUS_REAL'].astype(str).str.contains('ATRASADO')
-                    
-                    estilos.loc[cond_verde, 'STATUS_REAL'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
-                    estilos.loc[cond_verm, 'STATUS_REAL'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
-                    
-                    return estilos
+                def cor_status_indiv(val):
+                    if 'NO PRAZO' in str(val): return 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
+                    if 'ATRASADO' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
+                    return ''
 
-                st.dataframe(df_detalhe.style.apply(estilizar_tabela_indiv, axis=None), use_container_width=True, hide_index=True)
+                st.dataframe(df_detalhe.style.applymap(cor_status_indiv, subset=['STATUS_REAL']), use_container_width=True, hide_index=True)
                 
         else:
             st.info("Nenhuma data selecionada.")
