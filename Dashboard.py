@@ -621,7 +621,7 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simular Cenários", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🧩 Slotting (Vagas Extras)"])
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simular Cenários", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🧩 Slotting (Vagas Extras)","📊 GD (Gestão Diária)"])
 st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
@@ -2060,3 +2060,186 @@ elif pagina == "🧩 Slotting (Vagas Extras)":
                             csv_buffer.write(linha_csv + "\n")
                         st.download_button(label="📥 Baixar Retorno CD (Excel)", data=csv_buffer.getvalue().encode('utf-8-sig'), file_name="Slotting_ARI.csv", mime="text/csv")
                 except: pass
+
+# ==============================================================================
+# 📊 NOVA PÁGINA: GD (GESTÃO DIÁRIA) - STATUS DA DOCA E PRODUTIVIDADE
+# ==============================================================================
+elif pagina == "📊 GD (Gestão Diária)":
+    titulo_com_ari("📊 Gestão Diária (Raio-X Operacional)")
+    st.markdown("Acompanhamento em tempo real do status das agendas e performance tática das equipes.")
+
+    # 1. FILTROS DA GD
+    col_f1, col_f2, col_f3 = st.columns([2, 3, 1])
+    with col_f1:
+        data_gd = st.date_input("🗓️ Data da Gestão Diária", pd.Timestamp.now().date())
+    
+    st.markdown("---")
+
+    # 2. CONEXÃO COM AS BASES DE DADOS (CACHED PARA VELOCIDADE)
+    @st.cache_data(ttl=300) # Atualiza a cada 5 minutos
+    def puxar_base_gd():
+        # Planilha de Produtividade (Fechamento)
+        url_prod = "https://docs.google.com/spreadsheets/d/1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks/gviz/tq?tqx=out:csv&sheet=FECHAMENTO"
+        # Planilha de Painel de Controle (Status)
+        url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel de Controle"
+        
+        try:
+            df_p = pd.read_csv(url_prod)
+        except:
+            df_p = pd.DataFrame()
+            
+        try:
+            df_s = pd.read_csv(url_status)
+        except:
+            df_s = pd.DataFrame()
+            
+        return df_p, df_s
+
+    with st.spinner("Sincronizando radares com a doca..."):
+        df_prod, df_status = puxar_base_gd()
+
+    # --- 🧠 LÓGICA DE PRODUTIVIDADE (O CÁLCULO DE GANHO) ---
+    meta_total = 0
+    realizado_total = 0
+    ganho_pct = 0.0
+    equipes_efetivas = total_equipes # Variável global da barra lateral
+    
+    if not df_prod.empty:
+        col_dt_p = next((c for c in df_prod.columns if 'DATA' in c.upper()), None)
+        if col_dt_p:
+            df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], errors='coerce').dt.date
+            df_prod_dia = df_prod[df_prod[col_dt_p] == data_gd].copy()
+            
+            # Puxa colunas de tempo
+            col_meta = next((c for c in df_prod_dia.columns if 'META' in c.upper()), None)
+            col_real = next((c for c in df_prod_dia.columns if 'REALIZADO' in c.upper()), None)
+            
+            if col_meta and col_real:
+                meta_total = pd.to_numeric(df_prod_dia[col_meta], errors='coerce').sum()
+                realizado_total = pd.to_numeric(df_prod_dia[col_real], errors='coerce').sum()
+                
+                if realizado_total > 0:
+                    fator_produtividade = meta_total / realizado_total
+                    ganho_pct = (fator_produtividade - 1) * 100
+                    equipes_efetivas = total_equipes * fator_produtividade
+
+    # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
+    cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
+    sinal_ganho = "+" if ganho_pct >= 0 else ""
+
+    # Simulação do APC DIA (Equipes necessárias baseadas na previsão global, se existir)
+    apc_dia = 0
+    if 'df' in globals() and 'Data' in globals()['df'].columns:
+        df_global_dia = df[pd.to_datetime(df['Data']).dt.date == data_gd]
+        minutos_exigidos = df_global_dia['Qtd Peças'].sum() * 0.15 if 'Qtd Peças' in df_global_dia.columns else 0 # Exemplo genérico
+        apc_dia = round(minutos_exigidos / 427, 1)
+
+    # 3. CABEÇALHO DE PRODUTIVIDADE (ESTILO SÊNIOR)
+    st.markdown(f"""
+    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #8395A7; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
+            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">APC - DIA (Equipes Necessárias)</div>
+            <div style="font-size: 26px; font-weight: 900; color: #1E272E;">{apc_dia}</div>
+        </div>
+        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #00C6FF; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
+            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Equipes Disponíveis (Físico)</div>
+            <div style="font-size: 26px; font-weight: 900; color: #0086FF;">{total_equipes}</div>
+        </div>
+        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid {cor_ganho}; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
+            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Ganho Produtivo (Equipes Reais)</div>
+            <div style="font-size: 26px; font-weight: 900; color: {cor_ganho};">
+                {equipes_efetivas:.1f} <span style="font-size: 14px; vertical-align: middle;">({sinal_ganho}{ganho_pct:.1f}%)</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- 🧠 LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
+    df_status_dia = pd.DataFrame()
+    if not df_status.empty:
+        # Tenta achar a coluna de data da agenda (Pelo seu exemplo é DATA AGENDA)
+        col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in str(c).upper()), None)
+        if col_dt_s:
+            df_status[col_dt_s] = pd.to_datetime(df_status[col_dt_s], format='%d/%m/%Y', errors='coerce').dt.date
+            df_status_dia = df_status[df_status[col_dt_s] == data_gd].copy()
+
+    # Define os status e suas cores (Igualzinho ao seu print)
+    # Formato: Chave de busca na tabela : (Nome Bonito, Cor)
+    mapa_status = {
+        'AUSENTE': ('AUSENTE', '#2C3E50'),
+        'LANÇAMENTO': ('AG LANÇAMENTO', '#E67E22'),
+        'COMERCIAL': ('COMERCIAL', '#C0392B'),
+        'P-EXTERNO': ('P-EXTERNO', '#16A085'),
+        'DOCA': ('EM DOCA', '#F39C12'),
+        'PROCESSO': ('EM PROCESSO', '#2980B9'),
+        'OK': ('FINALIZADA', '#27AE60'),
+        'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD')
+    }
+
+    # Calcula os KPIs por Status
+    cards_html = ""
+    col_st = next((c for c in df_status_dia.columns if 'STATUS' in str(c).upper()), None)
+    col_ag_s = next((c for c in df_status_dia.columns if 'AGENDA' in str(c).upper() and 'WMS' not in str(c).upper()), df_status_dia.columns[0] if not df_status_dia.empty else None)
+    col_pc_s = next((c for c in df_status_dia.columns if 'PEÇA' in str(c).upper()), None)
+
+    tot_agendas_status = 0
+    tot_pecas_status = 0
+
+    if not df_status_dia.empty and col_st:
+        for chave, (nome_exibicao, cor) in mapa_status.items():
+            # Filtra linhas que contenham a palavra chave no status
+            df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
+            
+            qtd_ag = df_filtro.shape[0] # Conta as linhas
+            qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').sum() if col_pc_s else 0
+            
+            tot_agendas_status += qtd_ag
+            tot_pecas_status += qtd_pc
+
+            cards_html += f"""
+            <div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;">
+                <div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
+                <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
+                    <div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
+                        <div style="font-size: 10px; color: #8395A7;">AG.</div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_ag}</div>
+                    </div>
+                    <div style="flex: 1; padding: 8px 0;">
+                        <div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
+                        <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_pc:,.0f}</div>
+                    </div>
+                </div>
+            </div>
+            """
+    
+    # Adiciona o card TOTAL no final
+    cards_html += f"""
+    <div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;">
+        <div style="background: linear-gradient(90deg, #FF6F61 0%, #00C6FF 100%); color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
+        <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
+            <div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
+                <div style="font-size: 10px; color: #8395A7;">AG.</div>
+                <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_agendas_status}</div>
+            </div>
+            <div style="flex: 1; padding: 8px 0;">
+                <div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
+                <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_pecas_status:,.0f}</div>
+            </div>
+        </div>
+    </div>
+    """
+
+    st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
+
+    # 4. TABELA DETALHADA E FILTRO DE STATUS
+    st.markdown("### 🔍 Detalhamento das Agendas")
+    if not df_status_dia.empty and col_st:
+        # Pega todos os status únicos que existem no dia para o filtro
+        status_unicos = df_status_dia[col_st].dropna().unique().tolist()
+        status_selecionados = st.multiselect("Filtrar por Status:", options=status_unicos, default=status_unicos)
+        
+        df_exibicao = df_status_dia[df_status_dia[col_st].isin(status_selecionados)]
+        
+        st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
