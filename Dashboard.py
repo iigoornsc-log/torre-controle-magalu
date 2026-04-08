@@ -422,8 +422,6 @@ with tab2:
     if not df_hist_conf.empty and not df_hoje_conf.empty:
         st.caption("Cálculo preditivo inteligente: O algoritmo localiza cargas irmãs no histórico para gerar a meta mais justa possível.")
         
-        taxa_global_cd = df_hist_conf['TMP APC'].sum() / df_hist_conf['PEÇAS'].sum() if df_hist_conf['PEÇAS'].sum() > 0 else 1.0
-
         def calcular_meta_inteligente(row, df_historico):
             forn = str(row.get('ORIGEM', '')).strip().upper()
             linha = str(row.get('CATEGORIA', '')).strip().upper()
@@ -435,29 +433,37 @@ with tab2:
             min_pecas, max_pecas = pecas * 0.7, pecas * 1.3
             min_sku, max_sku = min(sku * 0.7, sku - 2), max(sku * 1.3, sku + 2)
 
-            df_historico_limpo = df_historico[df_historico['TMP APC'] > 0]
+            # FILTRO ANTI-THE FLASH E ANTI-FANTASMA
+            df_hist_limpo = df_historico[(df_historico['TMP APC'] > 5) & (df_historico['PEÇAS'] > 0)].copy()
+            df_hist_limpo['VELOCIDADE'] = df_hist_limpo['TMP APC'] / df_hist_limpo['PEÇAS']
+            df_hist_limpo = df_hist_limpo[df_hist_limpo['VELOCIDADE'] >= 0.05] 
 
-            df_base_exata = df_historico_limpo[(df_historico_limpo['FORNECEDOR'].str.upper() == forn) & (df_historico_limpo['LINHA'].str.upper() == linha)]
+            taxa_global_mediana = df_hist_limpo['VELOCIDADE'].median()
+            if pd.isna(taxa_global_mediana): taxa_global_mediana = 0.5 
+
+            df_base_exata = df_hist_limpo[(df_hist_limpo['FORNECEDOR'].str.upper() == forn) & (df_hist_limpo['LINHA'].str.upper() == linha)]
             if not df_base_exata.empty:
                 df_gemeas = df_base_exata[(df_base_exata['PEÇAS'] >= min_pecas) & (df_base_exata['PEÇAS'] <= max_pecas) & (df_base_exata['SKU'] >= min_sku) & (df_base_exata['SKU'] <= max_sku)]
-                if not df_gemeas.empty: return df_gemeas['TMP APC'].mean()
+                if not df_gemeas.empty: return df_gemeas['TMP APC'].median() 
+                
                 df_primas = df_base_exata[(df_base_exata['PEÇAS'] >= min_pecas) & (df_base_exata['PEÇAS'] <= max_pecas)]
-                if not df_primas.empty: return df_primas['TMP APC'].mean()
-                if df_base_exata['PEÇAS'].sum() > 0: 
-                    vel = df_base_exata['TMP APC'].sum() / df_base_exata['PEÇAS'].sum()
-                    return TEMPO_SETUP + (pecas * vel)
+                if not df_primas.empty: return df_primas['TMP APC'].median()
+                
+                vel_mediana = df_base_exata['VELOCIDADE'].median()
+                return TEMPO_SETUP + (pecas * vel_mediana)
 
-            df_base_categoria = df_historico_limpo[df_historico_limpo['LINHA'].str.upper() == linha]
+            df_base_categoria = df_hist_limpo[df_hist_limpo['LINHA'].str.upper() == linha]
             if not df_base_categoria.empty:
                 df_gemeas_cat = df_base_categoria[(df_base_categoria['PEÇAS'] >= min_pecas) & (df_base_categoria['PEÇAS'] <= max_pecas) & (df_base_categoria['SKU'] >= min_sku) & (df_base_categoria['SKU'] <= max_sku)]
-                if not df_gemeas_cat.empty: return df_gemeas_cat['TMP APC'].mean()
+                if not df_gemeas_cat.empty: return df_gemeas_cat['TMP APC'].median()
+                
                 df_primas_cat = df_base_categoria[(df_base_categoria['PEÇAS'] >= min_pecas) & (df_base_categoria['PEÇAS'] <= max_pecas)]
-                if not df_primas_cat.empty: return df_primas_cat['TMP APC'].mean()
-                if df_base_categoria['PEÇAS'].sum() > 0: 
-                    vel = df_base_categoria['TMP APC'].sum() / df_base_categoria['PEÇAS'].sum()
-                    return TEMPO_SETUP + (pecas * vel)
+                if not df_primas_cat.empty: return df_primas_cat['TMP APC'].median()
+                
+                vel_mediana_cat = df_base_categoria['VELOCIDADE'].median()
+                return TEMPO_SETUP + (pecas * vel_mediana_cat)
 
-            return TEMPO_SETUP + (pecas * taxa_global_cd)
+            return TEMPO_SETUP + (pecas * taxa_global_mediana)
 
         df_hoje_conf['DURAÇÃO_REAL_MIN'] = df_hoje_conf['DURAÇÃO CARGA'].apply(time_to_mins)
         df_hoje_conf['STATUS_FISICO'] = df_hoje_conf['STATUS_FISICO'].str.strip().str.upper()
@@ -509,7 +515,7 @@ with tab2:
             if '⏳' in str(val): return 'color: #92400E; background-color: #FEF3C7; font-weight: 600; border-radius: 4px;'
             return ''
 
-        st.dataframe(df_tabela.style.applymap(cor_status, subset=['SITUAÇÃO META', 'PREVISÃO FIM']), use_container_width=True, hide_index=True)
+        st.dataframe(df_tabela.style.map(cor_status, subset=['SITUAÇÃO META', 'PREVISÃO FIM']), use_container_width=True, hide_index=True)
 
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("<div style='background-color: #FFFFFF; padding: 20px; border-radius: 12px; border-left: 4px solid #10B981; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
@@ -642,7 +648,7 @@ with tab3:
                     if 'ATRASADO' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
                     return ''
 
-                st.dataframe(df_detalhe.style.applymap(cor_status_indiv, subset=['STATUS_REAL']), use_container_width=True, hide_index=True)
+                st.dataframe(df_detalhe.style.map(cor_status_indiv, subset=['STATUS_REAL']), use_container_width=True, hide_index=True)
                 
         else:
             st.info("Nenhuma data selecionada.")
