@@ -509,13 +509,32 @@ with tab2:
         df_tabela['SKU'] = df_tabela['SKU'].apply(lambda x: f"{int(x)}")
         df_tabela = df_tabela[['AGENDA', 'CONFERENTE', 'CATEGORIA', 'STATUS_FISICO', 'PEÇAS', 'SKU', 'META (Tempo)', 'GASTO (Tempo)', 'PREVISÃO FIM', 'SITUAÇÃO META']]
         
-        def cor_status(val):
-            if '✅' in str(val): return 'color: #065F46; background-color: #D1FAE5; font-weight: 600; border-radius: 4px;'
-            if '🔴' in str(val) or '⚠️' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600; border-radius: 4px;'
-            if '⏳' in str(val): return 'color: #92400E; background-color: #FEF3C7; font-weight: 600; border-radius: 4px;'
-            return ''
+        # --- FUNÇÃO ROBUSTA DE ESTILIZAÇÃO (Funciona em qualquer versão do Pandas) ---
+        def estilizar_tabela(df):
+            # Cria um DataFrame vazio com as mesmas colunas e índices
+            estilos = pd.DataFrame('', index=df.index, columns=df.columns)
+            
+            # Aplica as cores na coluna SITUACAO META
+            cond_verde_meta = df['SITUAÇÃO META'].astype(str).str.contains('✅')
+            cond_verm_meta = df['SITUAÇÃO META'].astype(str).str.contains('🔴|⚠️')
+            cond_amar_meta = df['SITUAÇÃO META'].astype(str).str.contains('⏳')
+            
+            estilos.loc[cond_verde_meta, 'SITUAÇÃO META'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
+            estilos.loc[cond_verm_meta, 'SITUAÇÃO META'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
+            estilos.loc[cond_amar_meta, 'SITUAÇÃO META'] = 'color: #92400E; background-color: #FEF3C7; font-weight: 600;'
+            
+            # Aplica as cores na coluna PREVISAO FIM
+            cond_verde_prev = df['PREVISÃO FIM'].astype(str).str.contains('✅')
+            cond_verm_prev = df['PREVISÃO FIM'].astype(str).str.contains('🔴|⚠️')
+            cond_amar_prev = df['PREVISÃO FIM'].astype(str).str.contains('⏳')
+            
+            estilos.loc[cond_verde_prev, 'PREVISÃO FIM'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
+            estilos.loc[cond_verm_prev, 'PREVISÃO FIM'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
+            estilos.loc[cond_amar_prev, 'PREVISÃO FIM'] = 'color: #92400E; background-color: #FEF3C7; font-weight: 600;'
+            
+            return estilos
 
-        st.dataframe(df_tabela.style.map(cor_status, subset=['SITUAÇÃO META', 'PREVISÃO FIM']), use_container_width=True, hide_index=True)
+        st.dataframe(df_tabela.style.apply(estilizar_tabela, axis=None), use_container_width=True, hide_index=True)
 
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("<div style='background-color: #FFFFFF; padding: 20px; border-radius: 12px; border-left: 4px solid #10B981; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
