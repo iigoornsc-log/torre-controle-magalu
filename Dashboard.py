@@ -2165,7 +2165,7 @@ elif pagina == "📊 GD (Gestão Diária)":
         </div>
         <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #00C6FF; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
             <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Equipes Disponíveis (Físico)</div>
-            <div style="font-size: 26px; font-weight: 900; color: #0086FF;">{total_equipes}</div>
+            <div style="font-size: 26px; font-weight: 900; color: #0086FF;">{total_equipes_gd}</div>
         </div>
         <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid {cor_ganho}; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
             <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Ganho Produtivo (Equipes Reais)</div>
