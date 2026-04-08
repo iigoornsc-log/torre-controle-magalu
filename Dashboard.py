@@ -161,7 +161,6 @@ def salvar_historico_fechamento(df_para_salvar):
 # 2. MOTOR DE DADOS MULTI-PLANILHAS
 # =========================================================================
 
-# LER O COFRE AO VIVO (Isolado e Anti-Loop)
 @st.cache_data(ttl=3) 
 def ler_cofre_vivo():
     try:
@@ -226,7 +225,6 @@ def carregar_dados_conferencia():
         sh2 = client.open_by_key('1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks')
         todas_abas = sh2.worksheets()
         
-        # 1. BASE HISTÓRICA
         aba_hist = next((aba for aba in todas_abas if "BASE DE DADOS" in aba.title.upper()), None)
         if aba_hist:
             data_hist = aba_hist.get("Q:W")
@@ -237,7 +235,6 @@ def carregar_dados_conferencia():
             if 'SKU' in df_hist.columns: df_hist['SKU'] = df_hist['SKU'].apply(limpa_numero_br)
         else: df_hist = pd.DataFrame()
             
-        # 2. DIA ATUAL
         aba_hoje = next((aba for aba in todas_abas if "DIA ATUAL" in aba.title.upper()), None)
         if aba_hoje:
             data_hoje = aba_hoje.get("A:I")
@@ -433,7 +430,6 @@ with tab2:
             min_pecas, max_pecas = pecas * 0.7, pecas * 1.3
             min_sku, max_sku = min(sku * 0.7, sku - 2), max(sku * 1.3, sku + 2)
 
-            # FILTRO ANTI-THE FLASH E ANTI-FANTASMA
             df_hist_limpo = df_historico[(df_historico['TMP APC'] > 5) & (df_historico['PEÇAS'] > 0)].copy()
             df_hist_limpo['VELOCIDADE'] = df_hist_limpo['TMP APC'] / df_hist_limpo['PEÇAS']
             df_hist_limpo = df_hist_limpo[df_hist_limpo['VELOCIDADE'] >= 0.05] 
@@ -509,6 +505,7 @@ with tab2:
         df_tabela['SKU'] = df_tabela['SKU'].apply(lambda x: f"{int(x)}")
         df_tabela = df_tabela[['AGENDA', 'CONFERENTE', 'CATEGORIA', 'STATUS_FISICO', 'PEÇAS', 'SKU', 'META (Tempo)', 'GASTO (Tempo)', 'PREVISÃO FIM', 'SITUAÇÃO META']]
         
+        # AQUI FOI CORRIGIDO O ERRO APPLYMAP PARA MAP
         def cor_status(val):
             if '✅' in str(val): return 'color: #065F46; background-color: #D1FAE5; font-weight: 600; border-radius: 4px;'
             if '🔴' in str(val) or '⚠️' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600; border-radius: 4px;'
@@ -643,6 +640,7 @@ with tab3:
                 
                 df_detalhe = df_detalhe[['DATA', 'AGENDA', 'CATEGORIA', 'PEÇAS', 'META (Tempo)', 'REAL (Tempo)', 'Desvio (Minutos)', 'STATUS_REAL']]
                 
+                # AQUI FOI CORRIGIDO O ERRO APPLYMAP PARA MAP
                 def cor_status_indiv(val):
                     if 'NO PRAZO' in str(val): return 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
                     if 'ATRASADO' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
