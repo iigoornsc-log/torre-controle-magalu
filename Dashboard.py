@@ -662,12 +662,19 @@ with tab3:
                 
                 df_detalhe = df_detalhe[['DATA', 'AGENDA', 'CATEGORIA', 'PEÇAS', 'META (Tempo)', 'REAL (Tempo)', 'Desvio (Minutos)', 'STATUS_REAL']]
                 
-                def cor_status_indiv(val):
-                    if 'NO PRAZO' in str(val): return 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
-                    if 'ATRASADO' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
-                    return ''
+                # --- FUNÇÃO ROBUSTA DE ESTILIZAÇÃO (Aba 3) ---
+                def estilizar_tabela_indiv(df):
+                    estilos = pd.DataFrame('', index=df.index, columns=df.columns)
+                    
+                    cond_verde = df['STATUS_REAL'].astype(str).str.contains('NO PRAZO')
+                    cond_verm = df['STATUS_REAL'].astype(str).str.contains('ATRASADO')
+                    
+                    estilos.loc[cond_verde, 'STATUS_REAL'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
+                    estilos.loc[cond_verm, 'STATUS_REAL'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
+                    
+                    return estilos
 
-                st.dataframe(df_detalhe.style.map(cor_status_indiv, subset=['STATUS_REAL']), use_container_width=True, hide_index=True)
+                st.dataframe(df_detalhe.style.apply(estilizar_tabela_indiv, axis=None), use_container_width=True, hide_index=True)
                 
         else:
             st.info("Nenhuma data selecionada.")
