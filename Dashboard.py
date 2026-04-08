@@ -2648,7 +2648,7 @@ if df.empty and df_transf.empty:
 # --- BARRA LATERAL E NAVEGAÇÃO ---
 
 # 1. BOTÃO DO FAQ A.R.I. (Clean e Minimalista)
-if st.sidebar.button("❓ FAQ A.R.I", use_container_width=True):
+if st.sidebar.button("❓ FAQ A.R.I", key="botao_faq_ari_unico", use_container_width=True):
     st.session_state["mostrar_faq_ari"] = not st.session_state.get("mostrar_faq_ari", False)
 
 # Subtítulo "grudado" embaixo do botão para compor o bloco visual
