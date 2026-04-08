@@ -2150,12 +2150,34 @@ elif pagina == "📊 GD (Gestão Diária)":
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
     sinal_ganho = "+" if ganho_pct >= 0 else ""
 
-    # Simulação do APC DIA (Equipes necessárias baseadas na previsão global, se existir)
+    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (BATER COM A VISÃO APC) ---
     apc_dia = 0
-    if 'df' in globals() and 'Data' in globals()['df'].columns:
-        df_global_dia = df[pd.to_datetime(df['Data']).dt.date == data_gd]
-        minutos_exigidos = df_global_dia['Qtd Peças'].sum() * 0.15 if 'Qtd Peças' in df_global_dia.columns else 0 # Exemplo genérico
-        apc_dia = round(minutos_exigidos / 427, 1)
+    if 'df' in globals() and not df.empty:
+        # Filtra a base do dia
+        df_base_dia = df[pd.to_datetime(df['Data']).dt.date == data_gd].copy()
+        
+        if not df_base_dia.empty:
+            # 1. Identifica Transferências (240 min cada)
+            col_cn_apc = next((c for c in df_base_dia.columns if str(c).upper() in ['CANAL', 'ORIGEM']), None)
+            df_t = df_base_dia[df_base_dia[col_cn_apc].astype(str).str.upper().str.contains('TRANSF|TRANSFERENCIA', na=False)] if col_cn_apc else pd.DataFrame()
+            agendas_transf = df_t['Agendas'].nunique() if 'Agendas' in df_t.columns else 0
+            minutos_transf = agendas_transf * 240
+            
+            # 2. Identifica Madeira (240 min cada - Ajuste se o seu tempo for outro)
+            col_ct_apc = 'Categorias' if 'Categorias' in df_base_dia.columns else 'Linhas'
+            df_m = df_base_dia[df_base_dia[col_ct_apc].astype(str).str.upper().str.contains('MADEIRA', na=False)]
+            agendas_mad = df_m['Agendas'].nunique() if 'Agendas' in df_m.columns else 0
+            minutos_mad = agendas_mad * 240
+            
+            # 3. Restante das Cargas (Média de 180 min por agenda ou 0.15 por peça)
+            # Vamos usar 180 min por agenda para as demais para ser conservador
+            df_resto = df_base_dia[~df_base_dia.index.isin(df_t.index) & ~df_base_dia.index.isin(df_m.index)]
+            agendas_resto = df_resto['Agendas'].nunique() if 'Agendas' in df_resto.columns else 0
+            minutos_resto = agendas_resto * 180
+            
+            # Soma total e divide pela capacidade da equipe (427 min)
+            total_minutos_dia = minutos_transf + minutos_mad + minutos_resto
+            apc_dia = round(total_minutos_dia / 427, 1)
 
     # 3. CABEÇALHO DE PRODUTIVIDADE (ESTILO SÊNIOR)
     st.markdown(f"""
