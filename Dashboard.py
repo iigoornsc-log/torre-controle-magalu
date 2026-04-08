@@ -2684,7 +2684,11 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simular Cenários", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🧩 Slotting (Vagas Extras)","📊 GD (Gestão Diária)"])
+pagina = st.sidebar.radio(
+    "Ir para:", 
+    ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simular Cenários", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🧩 Slotting (Vagas Extras)","📊 GD (Gestão Diária)"],
+    key="menu_principal_unico"
+)
 st.sidebar.markdown("---")
 
 if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
