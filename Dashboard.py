@@ -2102,7 +2102,29 @@ elif pagina == "📊 GD (Gestão Diária)":
     meta_total = 0
     realizado_total = 0
     ganho_pct = 0.0
-    equipes_efetivas = total_equipes # Variável global da barra lateral
+    
+    # 🛡️ Salva-vidas de Variável: Tenta puxar as equipes, se não achar, usa 5 como padrão.
+    total_equipes_gd = globals().get('total_equipes', 5)
+    equipes_efetivas = total_equipes_gd
+    
+    if not df_prod.empty:
+        col_dt_p = next((c for c in df_prod.columns if 'DATA' in c.upper()), None)
+        if col_dt_p:
+            df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], errors='coerce').dt.date
+            df_prod_dia = df_prod[df_prod[col_dt_p] == data_gd].copy()
+            
+            # Puxa colunas de tempo
+            col_meta = next((c for c in df_prod_dia.columns if 'META' in c.upper()), None)
+            col_real = next((c for c in df_prod_dia.columns if 'REALIZADO' in c.upper()), None)
+            
+            if col_meta and col_real:
+                meta_total = pd.to_numeric(df_prod_dia[col_meta], errors='coerce').sum()
+                realizado_total = pd.to_numeric(df_prod_dia[col_real], errors='coerce').sum()
+                
+                if realizado_total > 0:
+                    fator_produtividade = meta_total / realizado_total
+                    ganho_pct = (fator_produtividade - 1) * 100
+                    equipes_efetivas = total_equipes_gd * fator_produtividade
     
     if not df_prod.empty:
         col_dt_p = next((c for c in df_prod.columns if 'DATA' in c.upper()), None)
