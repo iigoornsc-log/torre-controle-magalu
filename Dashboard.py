@@ -2679,44 +2679,6 @@ Analiso seu cenário operacional de forma complexa, listo os dias com riscos e d
         unsafe_allow_html=True
     )
 
-# 3. A LOGO DO MAGALOG (Agora abaixo de tudo)
-st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
-
-st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio(
-    "Ir para:", 
-    ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simular Cenários", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🧩 Slotting (Vagas Extras)","📊 GD (Gestão Diária)"],
-    key="menu_principal_unico"
-)
-st.sidebar.markdown("---")
-
-if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
-    st.cache_data.clear()
-    st.rerun()
-
-st.sidebar.header("📅 Período de Análise")
-
-hoje = pd.Timestamp.now(tz='America/Sao_Paulo').date()
-primeiro_dia_mes = hoje.replace(day=1)
-
-if hoje.month == 12:
-    ultimo_dia_mes = hoje.replace(day=31)
-else:
-    ultimo_dia_mes = (hoje.replace(month=hoje.month+1, day=1) - pd.Timedelta(days=1))
-
-datas_selecionadas = st.sidebar.date_input(
-    "Selecione o Início e o Fim:", 
-    value=(primeiro_dia_mes, ultimo_dia_mes), 
-    format="DD/MM/YYYY"
-)
-
-if len(datas_selecionadas) == 2: data_inicio, data_fim = datas_selecionadas
-else: data_inicio = data_fim = datas_selecionadas[0]
-
-ts_inicio = pd.to_datetime(data_inicio)
-ts_fim = pd.to_datetime(data_fim)
-
 # ==============================================================================
 # PÁGINA 1: PAINEL OPERACIONAL
 # ==============================================================================
