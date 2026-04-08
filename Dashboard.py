@@ -387,9 +387,6 @@ with tab1:
             elif isinstance(ev, dict) and "selection" in ev and ev["selection"].get("points"):
                 popup_detalhe_hora(ev["selection"]["points"][0].get("x"), df_base_armz, data_sel)
 
-        # =========================================================================
-        # BLOCO 3 (ABA 1): PRODUTIVIDADE DOS OPERADORES DE ARMAZENAGEM
-        # =========================================================================
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("<div class='bloco-header'>🏆 Ranking de Produtividade: Operadores</div>", unsafe_allow_html=True)
         
@@ -505,14 +502,29 @@ with tab2:
         df_tabela['SKU'] = df_tabela['SKU'].apply(lambda x: f"{int(x)}")
         df_tabela = df_tabela[['AGENDA', 'CONFERENTE', 'CATEGORIA', 'STATUS_FISICO', 'PEÇAS', 'SKU', 'META (Tempo)', 'GASTO (Tempo)', 'PREVISÃO FIM', 'SITUAÇÃO META']]
         
-        # AQUI FOI CORRIGIDO O ERRO APPLYMAP PARA MAP
-        def cor_status(val):
-            if '✅' in str(val): return 'color: #065F46; background-color: #D1FAE5; font-weight: 600; border-radius: 4px;'
-            if '🔴' in str(val) or '⚠️' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600; border-radius: 4px;'
-            if '⏳' in str(val): return 'color: #92400E; background-color: #FEF3C7; font-weight: 600; border-radius: 4px;'
-            return ''
+        # --- FUNÇÃO ROBUSTA DE ESTILIZAÇÃO PARA QUALQUER PANDAS ---
+        def estilizar_tabela(df):
+            estilos = pd.DataFrame('', index=df.index, columns=df.columns)
+            
+            cond_verde_meta = df['SITUAÇÃO META'].astype(str).str.contains('✅')
+            cond_verm_meta = df['SITUAÇÃO META'].astype(str).str.contains('🔴|⚠️')
+            cond_amar_meta = df['SITUAÇÃO META'].astype(str).str.contains('⏳')
+            
+            estilos.loc[cond_verde_meta, 'SITUAÇÃO META'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600; border-radius: 4px;'
+            estilos.loc[cond_verm_meta, 'SITUAÇÃO META'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600; border-radius: 4px;'
+            estilos.loc[cond_amar_meta, 'SITUAÇÃO META'] = 'color: #92400E; background-color: #FEF3C7; font-weight: 600; border-radius: 4px;'
+            
+            cond_verde_prev = df['PREVISÃO FIM'].astype(str).str.contains('✅')
+            cond_verm_prev = df['PREVISÃO FIM'].astype(str).str.contains('🔴|⚠️')
+            cond_amar_prev = df['PREVISÃO FIM'].astype(str).str.contains('⏳')
+            
+            estilos.loc[cond_verde_prev, 'PREVISÃO FIM'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600; border-radius: 4px;'
+            estilos.loc[cond_verm_prev, 'PREVISÃO FIM'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600; border-radius: 4px;'
+            estilos.loc[cond_amar_prev, 'PREVISÃO FIM'] = 'color: #92400E; background-color: #FEF3C7; font-weight: 600; border-radius: 4px;'
+            
+            return estilos
 
-        st.dataframe(df_tabela.style.map(cor_status, subset=['SITUAÇÃO META', 'PREVISÃO FIM']), use_container_width=True, hide_index=True)
+        st.dataframe(df_tabela.style.apply(estilizar_tabela, axis=None), use_container_width=True, hide_index=True)
 
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("<div style='background-color: #FFFFFF; padding: 20px; border-radius: 12px; border-left: 4px solid #10B981; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
@@ -640,13 +652,19 @@ with tab3:
                 
                 df_detalhe = df_detalhe[['DATA', 'AGENDA', 'CATEGORIA', 'PEÇAS', 'META (Tempo)', 'REAL (Tempo)', 'Desvio (Minutos)', 'STATUS_REAL']]
                 
-                # AQUI FOI CORRIGIDO O ERRO APPLYMAP PARA MAP
-                def cor_status_indiv(val):
-                    if 'NO PRAZO' in str(val): return 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
-                    if 'ATRASADO' in str(val): return 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
-                    return ''
+                # --- FUNÇÃO ROBUSTA DE ESTILIZAÇÃO (Aba 3) ---
+                def estilizar_tabela_indiv(df):
+                    estilos = pd.DataFrame('', index=df.index, columns=df.columns)
+                    
+                    cond_verde = df['STATUS_REAL'].astype(str).str.contains('NO PRAZO')
+                    cond_verm = df['STATUS_REAL'].astype(str).str.contains('ATRASADO')
+                    
+                    estilos.loc[cond_verde, 'STATUS_REAL'] = 'color: #065F46; background-color: #D1FAE5; font-weight: 600;'
+                    estilos.loc[cond_verm, 'STATUS_REAL'] = 'color: #991B1B; background-color: #FEE2E2; font-weight: 600;'
+                    
+                    return estilos
 
-                st.dataframe(df_detalhe.style.map(cor_status_indiv, subset=['STATUS_REAL']), use_container_width=True, hide_index=True)
+                st.dataframe(df_detalhe.style.apply(estilizar_tabela_indiv, axis=None), use_container_width=True, hide_index=True)
                 
         else:
             st.info("Nenhuma data selecionada.")
