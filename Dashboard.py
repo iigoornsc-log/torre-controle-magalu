@@ -2143,7 +2143,8 @@ elif pagina == "📊 GD (Gestão Diária)":
                 if realizado_total > 0:
                     fator_produtividade = meta_total / realizado_total
                     ganho_pct = (fator_produtividade - 1) * 100
-                    equipes_efetivas = total_equipes * fator_produtividade
+                    # 👇 AQUI ESTAVA O INFILTRADO! Agora está com o _gd
+                    equipes_efetivas = total_equipes_gd * fator_produtividade
 
     # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
