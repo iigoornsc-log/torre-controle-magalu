@@ -1964,3 +1964,125 @@ elif pagina == "📦 Registro de Backlog":
             st.info("Ainda não há backlogs registrados no sistema.")
     except:
         st.info("A planilha de BACKLOG será criada automaticamente assim que você registrar a primeira sobra acima.")
+
+# ==============================================================================
+# 🧩 NOVA PÁGINA: SLOTTING INTELIGENTE (VAGAS EXTRAS DO COMERCIAL)
+# ==============================================================================
+elif pagina == "🧩 Slotting (Vagas Extras)":
+    titulo_com_ari("🧩 Slotting Inteligente (S&OP)")
+    st.markdown("""
+    Deixe o A.R.I. ler os pedidos desestruturados do Comercial (e-mail, planilhas copiadas, WhatsApp) 
+    e cruzar com a malha dos próximos 15 dias para encontrar o **Encaixe Perfeito** sem colapsar a doca.
+    """)
+
+    # 1. ENTRADA DE DADOS: O TEXTO BAGUNÇADO
+    texto_comercial = st.text_area(
+        "📥 Cole o pedido do Comercial aqui (pode ser texto livre, e-mail ou dados copiados do Excel):", 
+        height=150, 
+        placeholder="Ex: Preciso encaixar 2 carretas da Artely de madeira (2500 peças) na quinta dia 16. E uma de utilidades domésticas da Tramontina (3000 pçs) pra semana que vem..."
+    )
+
+    if st.button("✨ A.R.I. - Analisar e Sugerir Slotting", type="primary", use_container_width=True):
+        if not texto_comercial.strip():
+            st.warning("⚠️ Cole o texto do comercial antes de rodar o A.R.I.")
+        else:
+            with st.spinner("🧠 A.R.I. analisando a malha e lendo o pedido comercial..."):
+                
+                # --- PASSO A: CRIAR O MAPA DE CAPACIDADE DOS PRÓXIMOS 15 DIAS ---
+                # Pega a data de hoje para frente
+                hoje = pd.Timestamp.now().date()
+                dias_futuros = [hoje + pd.Timedelta(days=i) for i in range(15)]
+                
+                mapa_capacidade = []
+                for d in dias_futuros:
+                    df_dia = df[pd.to_datetime(df['Data']).dt.date == d] if 'Data' in df.columns else pd.DataFrame()
+                    
+                    # Se não tiver dados para o dia, assume que está vazio
+                    if df_dia.empty:
+                        mapa_capacidade.append(f"- {d.strftime('%d/%m/%Y')}: VAZIO (0 Agendas, 0 Peças). Livre para uso.")
+                        continue
+                        
+                    # Cálculos do Dia
+                    col_ag = 'Agendas' if 'Agendas' in df_dia.columns else (df_dia.columns[0] if not df_dia.empty else None)
+                    tot_agendas = df_dia[col_ag].nunique() if col_ag else 0
+                    
+                    # Calcula volume de UD/Diversos
+                    col_cat = 'Categorias' if 'Categorias' in df_dia.columns else ('Linhas' if 'Linhas' in df_dia.columns else None)
+                    col_pc = 'Qtd Peças' if 'Qtd Peças' in df_dia.columns else None
+                    
+                    pecas_ud_div = 0
+                    if col_cat and col_pc:
+                        filtro_ud = df_dia[col_cat].astype(str).str.upper().str.contains('DIVERSOS|UD|UTILIDADES')
+                        pecas_ud_div = pd.to_numeric(df_dia.loc[filtro_ud, col_pc], errors='coerce').sum()
+
+                    # Calcula Agendas Fulfillment (para saber se dá pra roubar vaga)
+                    col_canal = next((c for c in df_dia.columns if str(c).upper() in ['CANAL', 'ORIGEM']), None)
+                    agendas_full = 0
+                    if col_canal and col_ag:
+                        filtro_full = df_dia[col_canal].astype(str).str.upper().str.contains('FULFILLMENT|SELLER')
+                        agendas_full = df_dia.loc[filtro_full, col_ag].nunique()
+
+                    mapa_capacidade.append(
+                        f"- {d.strftime('%d/%m/%Y')}: {tot_agendas} Agendas Totais (Sendo {agendas_full} de Fulfillment). Peças de Diversos/UD: {pecas_ud_div:,.0f}."
+                    )
+
+                mapa_texto = "\n".join(mapa_capacidade)
+
+                # --- PASSO B: O PROMPT SÊNIOR (A MENTE DO A.R.I.) ---
+                prompt_slotting = f"""
+                Você é o A.R.I. (Analista de Recebimento Inteligente), um Sênior de S&OP do CD2900 Magalu.
+                
+                Sua missão é ler o pedido desestruturado do time Comercial, estruturar os dados e encontrar em qual dia encaixar cada carga.
+
+                [PEDIDO DO COMERCIAL]:
+                {texto_comercial}
+
+                [MAPA DE CAPACIDADE DO CD (PRÓXIMOS 15 DIAS)]:
+                {mapa_texto}
+
+                [REGRAS DE SLOTTING - ESTRITAMENTE OBRIGATÓRIAS]:
+                1. O limite da doca é de 30 agendas no total por dia.
+                2. EXCEÇÃO DO FULFILLMENT: Se o dia tiver agendas de Fulfillment muito baixas (ex: menos de 5), podemos "roubar" essa capacidade e aceitar até 35 agendas.
+                3. LIMITE DE VOLUME UD/DIVERSOS: Um dia não pode ter mais de 4.000 peças acumuladas nas categorias "Diversos", "UD", etc. Se o dia já tem 3.000 peças de UD, você só pode encaixar no máximo mais 1.000 de UD nesse dia.
+                4. REGRAS DE DATA: Procure encaixar na data solicitada ou DEPOIS. Só antecipe (volte no tempo) se for impossível achar vaga em um raio de 5 dias para frente.
+                
+                [COMO RESPONDER]:
+                1. Faça um texto curto, analítico e direto (estilo relatório executivo) explicando o porquê escolheu essas datas. Ex: "Fornecedor X alocado para dia 15/04 pois o dia 14 ultrapassaria o teto de 4.000 peças de Diversos".
+                2. DEPOIS DO TEXTO, gere EXATAMENTE E APENAS uma tabela no formato Markdown separada por | com as colunas: Fornecedor | Categoria | Qtd Peças | Data Pedida | Retorno CD (Sua Sugestão) | Justificativa S&OP.
+                NÃO escreva código, não invente informações.
+                """
+
+                # Chama a sua IA Contextual
+                resposta_ia = consultar_ia_contextual(prompt_slotting, "🧠 Cruzando Pedido Comercial com Malha Operacional...")
+
+                # --- PASSO C: APRESENTAÇÃO NA TELA E EXTRAÇÃO PARA EXCEL ---
+                st.markdown("---")
+                st.markdown("### 📋 Análise e Veredito do A.R.I.")
+                
+                # Exibe a resposta na tela (vai renderizar o texto e a tabela Markdown)
+                st.markdown(resposta_ia)
+                
+                # (Opcional Avançado) Se você quiser o botão de Baixar:
+                # O código extrai a tabela Markdown que o LLM gerou e converte em CSV
+                try:
+                    linhas_tabela = [linha for linha in resposta_ia.split('\n') if '|' in linha and '---' not in linha]
+                    if len(linhas_tabela) > 1:
+                        import io
+                        csv_buffer = io.StringIO()
+                        for linha in linhas_tabela:
+                            # Limpa os espaços e troca o | por ,
+                            linha_csv = ",".join([c.strip() for c in linha.split('|') if c.strip()])
+                            csv_buffer.write(linha_csv + "\n")
+                        
+                        csv_data = csv_buffer.getvalue()
+                        
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        st.download_button(
+                            label="📥 Baixar Resposta para o Comercial (CSV/Excel)",
+                            data=csv_data.encode('utf-8-sig'),
+                            file_name="Retorno_Slotting_Comercial.csv",
+                            mime="text/csv",
+                            type="primary"
+                        )
+                except Exception as e:
+                    pass # Se o LLM não gerar uma tabela perfeita, o botão de CSV não aparece, mas a tela não quebra.
