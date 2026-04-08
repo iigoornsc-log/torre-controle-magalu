@@ -2152,30 +2152,48 @@ elif pagina == "📊 GD (Gestão Diária)":
 
     # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (BATER COM A VISÃO APC) ---
     apc_dia = 0
+    data_gd_ts = pd.Timestamp(data_gd) # Converte para o mesmo formato que funciona no resto do app
+
     if 'df' in globals() and not df.empty:
-        # Filtra a base do dia
-        df_base_dia = df[pd.to_datetime(df['Data']).dt.date == data_gd].copy()
+        # Filtro de data idêntico ao da página de Previsão
+        if 'Data' in df.columns:
+            df_base_dia = df[df['Data'] == data_gd_ts].copy()
+        elif 'data' in df.columns:
+            df_base_dia = df[df['data'] == data_gd_ts].copy()
+        else:
+            df_base_dia = pd.DataFrame()
         
         if not df_base_dia.empty:
+            # Captura o nome exato das colunas
+            col_cn_apc = next((c for c in df_base_dia.columns if str(c).upper() in ['CANAL', 'ORIGEM', 'TIPO ORIGEM']), None)
+            col_ct_apc = 'Categorias' if 'Categorias' in df_base_dia.columns else ('Linhas' if 'Linhas' in df_base_dia.columns else df_base_dia.columns[0])
+            col_ag_apc = 'Agendas' if 'Agendas' in df_base_dia.columns else ('Agenda' if 'Agenda' in df_base_dia.columns else df_base_dia.columns[0])
+
             # 1. Identifica Transferências (240 min cada)
-            col_cn_apc = next((c for c in df_base_dia.columns if str(c).upper() in ['CANAL', 'ORIGEM']), None)
-            df_t = df_base_dia[df_base_dia[col_cn_apc].astype(str).str.upper().str.contains('TRANSF|TRANSFERENCIA', na=False)] if col_cn_apc else pd.DataFrame()
-            agendas_transf = df_t['Agendas'].nunique() if 'Agendas' in df_t.columns else 0
+            if col_cn_apc:
+                df_t = df_base_dia[df_base_dia[col_cn_apc].astype(str).str.upper().str.contains('TRANSF|TRANSFERENCIA', na=False)]
+            else:
+                df_t = pd.DataFrame()
+            
+            agendas_transf = df_t[col_ag_apc].nunique() if not df_t.empty else 0
             minutos_transf = agendas_transf * 240
             
-            # 2. Identifica Madeira (240 min cada - Ajuste se o seu tempo for outro)
-            col_ct_apc = 'Categorias' if 'Categorias' in df_base_dia.columns else 'Linhas'
+            # 2. Identifica Madeira (240 min cada)
             df_m = df_base_dia[df_base_dia[col_ct_apc].astype(str).str.upper().str.contains('MADEIRA', na=False)]
-            agendas_mad = df_m['Agendas'].nunique() if 'Agendas' in df_m.columns else 0
+            agendas_mad = df_m[col_ag_apc].nunique() if not df_m.empty else 0
             minutos_mad = agendas_mad * 240
             
-            # 3. Restante das Cargas (Média de 180 min por agenda ou 0.15 por peça)
-            # Vamos usar 180 min por agenda para as demais para ser conservador
-            df_resto = df_base_dia[~df_base_dia.index.isin(df_t.index) & ~df_base_dia.index.isin(df_m.index)]
-            agendas_resto = df_resto['Agendas'].nunique() if 'Agendas' in df_resto.columns else 0
+            # 3. Restante das Cargas (180 min por agenda média)
+            # Isola as agendas que já foram contadas para não duplicar o tempo
+            agendas_ja_contadas = []
+            if not df_t.empty: agendas_ja_contadas.extend(df_t[col_ag_apc].tolist())
+            if not df_m.empty: agendas_ja_contadas.extend(df_m[col_ag_apc].tolist())
+            
+            df_resto = df_base_dia[~df_base_dia[col_ag_apc].isin(agendas_ja_contadas)]
+            agendas_resto = df_resto[col_ag_apc].nunique() if not df_resto.empty else 0
             minutos_resto = agendas_resto * 180
             
-            # Soma total e divide pela capacidade da equipe (427 min)
+            # Matemática final: Soma tudo e divide pela meta do turno (427 min)
             total_minutos_dia = minutos_transf + minutos_mad + minutos_resto
             apc_dia = round(total_minutos_dia / 427, 1)
 
