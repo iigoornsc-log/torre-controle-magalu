@@ -2150,52 +2150,29 @@ elif pagina == "📊 GD (Gestão Diária)":
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
     sinal_ganho = "+" if ganho_pct >= 0 else ""
 
-    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (BATER COM A VISÃO APC) ---
+    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC) ---
+    import math
     apc_dia = 0
-    data_gd_ts = pd.Timestamp(data_gd) # Converte para o mesmo formato que funciona no resto do app
-
-    if 'df' in globals() and not df.empty:
-        # Filtro de data idêntico ao da página de Previsão
-        if 'Data' in df.columns:
-            df_base_dia = df[df['Data'] == data_gd_ts].copy()
-        elif 'data' in df.columns:
-            df_base_dia = df[df['data'] == data_gd_ts].copy()
-        else:
-            df_base_dia = pd.DataFrame()
+    
+    # Garante que vai usar a mesma base de dados filtrada que a sua Visão APC usa
+    base_apc = df_filtrado_op if 'df_filtrado_op' in globals() else (df if 'df' in globals() else pd.DataFrame())
+    
+    if not base_apc.empty and 'Data' in base_apc.columns:
+        # Filtra para o dia exato selecionado na GD
+        df_base_dia = base_apc[pd.to_datetime(base_apc['Data']).dt.date == data_gd].copy()
         
-        if not df_base_dia.empty:
-            # Captura o nome exato das colunas
-            col_cn_apc = next((c for c in df_base_dia.columns if str(c).upper() in ['CANAL', 'ORIGEM', 'TIPO ORIGEM']), None)
-            col_ct_apc = 'Categorias' if 'Categorias' in df_base_dia.columns else ('Linhas' if 'Linhas' in df_base_dia.columns else df_base_dia.columns[0])
-            col_ag_apc = 'Agendas' if 'Agendas' in df_base_dia.columns else ('Agenda' if 'Agenda' in df_base_dia.columns else df_base_dia.columns[0])
-
-            # 1. Identifica Transferências (240 min cada)
-            if col_cn_apc:
-                df_t = df_base_dia[df_base_dia[col_cn_apc].astype(str).str.upper().str.contains('TRANSF|TRANSFERENCIA', na=False)]
-            else:
-                df_t = pd.DataFrame()
+        if not df_base_dia.empty and 'Tempo_APC_Minutos' in df_base_dia.columns:
+            # 1. Soma os minutos reais calculados na sua base
+            soma_minutos_cargas = df_base_dia['Tempo_APC_Minutos'].sum()
             
-            agendas_transf = df_t[col_ag_apc].nunique() if not df_t.empty else 0
-            minutos_transf = agendas_transf * 240
+            # 2. Regra Magalu: 1.200 minutos de Transferência Fixa nos dias úteis
+            min_transf_fixa = 1200 if data_gd.weekday() < 5 else 0
             
-            # 2. Identifica Madeira (240 min cada)
-            df_m = df_base_dia[df_base_dia[col_ct_apc].astype(str).str.upper().str.contains('MADEIRA', na=False)]
-            agendas_mad = df_m[col_ag_apc].nunique() if not df_m.empty else 0
-            minutos_mad = agendas_mad * 240
+            # 3. Soma Total
+            minutos_totais = soma_minutos_cargas + min_transf_fixa
             
-            # 3. Restante das Cargas (180 min por agenda média)
-            # Isola as agendas que já foram contadas para não duplicar o tempo
-            agendas_ja_contadas = []
-            if not df_t.empty: agendas_ja_contadas.extend(df_t[col_ag_apc].tolist())
-            if not df_m.empty: agendas_ja_contadas.extend(df_m[col_ag_apc].tolist())
-            
-            df_resto = df_base_dia[~df_base_dia[col_ag_apc].isin(agendas_ja_contadas)]
-            agendas_resto = df_resto[col_ag_apc].nunique() if not df_resto.empty else 0
-            minutos_resto = agendas_resto * 180
-            
-            # Matemática final: Soma tudo e divide pela meta do turno (427 min)
-            total_minutos_dia = minutos_transf + minutos_mad + minutos_resto
-            apc_dia = round(total_minutos_dia / 427, 1)
+            # 4. Cálculo final idêntico ao seu: Teto da divisão por 427
+            apc_dia = math.ceil(minutos_totais / 427)
 
     # 3. CABEÇALHO DE PRODUTIVIDADE (ESTILO SÊNIOR)
     st.markdown(f"""
