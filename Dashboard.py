@@ -4110,32 +4110,24 @@ elif pagina == "📊 GD (Gestão Diária)":
 
     # 2. CONEXÃO COM AS BASES DE DADOS
     # 2. CONEXÃO COM AS BASES DE DADOS (USANDO CREDENCIAIS PARA PLANILHAS PRIVADAS)
-    @st.cache_data(ttl=300)
+   @st.cache_data(ttl=300)
     def puxar_bases_completas_gd():
-        from streamlit_gsheets import GSheetsConnection
+        # URL da Armazenagem (Ajustada para baixar o CSV da aba específica)
+        url_pend = "https://docs.google.com/spreadsheets/d/1Yptk_tfdkuhZCK_saApWQMNynjlaQQeEQjqn4lNcgZk/gviz/tq?tqx=out:csv&sheet=BaseDadosPendArm"
         
-        # Cria a conexão usando os segredos (secrets) que você já configurou para o ROUT
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        
-        # 1. Planilha de Produtividade (CSV público ou via conn)
         url_prod = "https://docs.google.com/spreadsheets/d/1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks/gviz/tq?tqx=out:csv&sheet=FECHAMENTO"
+        url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel%20de%20Controle"
+        
         try: df_p = pd.read_csv(url_prod)
         except: df_p = pd.DataFrame()
-
-        # 2. Planilha de Painel de Controle (CSV público ou via conn)
-        url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel%20de%20Controle"
+            
         try: df_s = pd.read_csv(url_status)
         except: df_s = pd.DataFrame()
-
-        # 3. Planilha de Pendência de Armazenagem (PRIVADA - Usando a Credencial ROUT)
-        try:
-            # Aqui ele usa o e-mail do ROUT para abrir a planilha privada
-            df_pe = conn.read(
-                spreadsheet="https://docs.google.com/spreadsheets/d/1Yptk_tfdkuhZCK_saApWQMNynjlaQQeEQjqn4lNcgZk/edit",
-                worksheet="BaseDadosPendArm"
-            )
-        except Exception as e:
-            st.error(f"Erro ao acessar Armazenagem: {e}")
+            
+        try: 
+            # Se você deixar pública, essa linha aqui vai voar!
+            df_pe = pd.read_csv(url_pend)
+        except: 
             df_pe = pd.DataFrame()
             
         return df_p, df_s, df_pe
