@@ -4255,60 +4255,51 @@ elif pagina == "📊 GD (Gestão Diária)":
     """, unsafe_allow_html=True)
 
     # ==========================================================================
-    # --- 🚀 IMPACTO NA TRANSFERÊNCIA (LIMPEZA ULTRA-FORTE) ---
+    # --- 🚀 IMPACTO NA TRANSFERÊNCIA (VIA COLUNA MODALIDADE DIRETO NA BASE) ---
     # ==========================================================================
     st.markdown("### 🚀 Impacto na Transferência (Liberação de Pedidos)")
     
-    if not df_pend.empty and not df_transf_base.empty:
-        # Função para remover qualquer coisa que não seja número e tirar o .0
-        def limpeza_final_agenda(val):
-            s = str(val).strip().split('.')[0] # Tira o .0
-            import re
-            return re.sub(r'\D', '', s) # Mantém só os números
-
-        df_pend['KEY_AGENDA'] = df_pend['CD_AGENDA'].apply(limpeza_final_agenda)
-        df_transf_base['KEY_AGENDA'] = df_transf_base['AGENDA'].apply(limpeza_final_agenda)
-
-        # Agrupa pedidos na transferência
-        df_transf_resumo = df_transf_base.groupby('KEY_AGENDA').agg({
-            'NU_PED_ORIGEM': 'nunique',
-            'QTDE': 'sum'
-        }).reset_index().rename(columns={'NU_PED_ORIGEM': 'Qtd_Pedidos', 'QTDE': 'Peças_Pedido'})
+    if not df_pend.empty and 'MODALIDADE' in df_pend.columns:
+        # Filtra apenas o que tem pedido atrelado (RTY ou ABA)
+        df_pedidos = df_pend[df_pend['MODALIDADE'].astype(str).str.strip().str.upper().isin(['RTY', 'ABA'])].copy()
         
-        # Agrupa o que está na armazenagem
-        df_impacto = df_pend.groupby('KEY_AGENDA').agg({
-            'QT_CONFERIDO': 'sum',
-            'FORNECEDOR': 'first'
-        }).reset_index()
-        
-        # Merge (Cruzamento)
-        df_final = pd.merge(df_impacto, df_transf_resumo, on='KEY_AGENDA', how='inner')
-        
-        if not df_final.empty:
-            df_final = df_final.sort_values(by='Qtd_Pedidos', ascending=False)
+        if not df_pedidos.empty:
+            # Agrupa os dados para saber o impacto por Agenda e Fornecedor
+            df_final = df_pedidos.groupby(['CD_AGENDA', 'FORNECEDOR']).agg({
+                'NU_ETIQUETA': 'nunique', # Conta quantas etiquetas (paletes) têm pedido
+                'QT_CONFERIDO': 'sum'     # Soma a quantidade de peças reais
+            }).reset_index().rename(columns={
+                'NU_ETIQUETA': 'Etiquetas_com_Pedido',
+                'QT_CONFERIDO': 'Peças_Liberadas'
+            })
+            
+            # Ordena pelas agendas que seguram mais peças
+            df_final = df_final.sort_values(by='Peças_Liberadas', ascending=False)
+            
             col_im1, col_im2 = st.columns([1, 2])
             with col_im1:
-                st.metric("Pedidos Bloqueados", df_final['Qtd_Pedidos'].sum())
-                st.metric("Peças p/ Salto", f"{df_final['Peças_Pedido'].sum():,.0f}")
+                st.metric("Agendas c/ Pedido Travado", df_final['CD_AGENDA'].nunique())
+                st.metric("Peças C/ Pedido (RTY/ABA)", f"{df_final['Peças_Liberadas'].sum():,.0f}")
             with col_im2:
+                st.write("**Prioridade de Salto (Agendas com Pedido):**")
                 st.dataframe(
-                    df_final[['KEY_AGENDA', 'FORNECEDOR', 'QT_CONFERIDO', 'Qtd_Pedidos', 'Peças_Pedido']],
+                    df_final[['CD_AGENDA', 'FORNECEDOR', 'Etiquetas_com_Pedido', 'Peças_Liberadas']],
                     column_config={
-                        "KEY_AGENDA": "Agenda",
-                        "QT_CONFERIDO": "Peças p/ Guardar",
-                        "Qtd_Pedidos": "Pedidos Atendidos",
-                        "Peças_Pedido": "Peças Liberadas"
+                        "CD_AGENDA": "Agenda",
+                        "FORNECEDOR": "Fornecedor",
+                        "Etiquetas_com_Pedido": "Qtd Etiquetas (RTY/ABA)",
+                        "Peças_Liberadas": "Peças a Liberar"
                     },
                     hide_index=True, use_container_width=True
                 )
         else:
-            # 🛠️ DEBUGGER DE CHAVES (Se mesmo assim não puxar)
-            with st.expander("🛠️ Debug de Cruzamento (Chaves de Agenda)"):
-                st.write("Exemplo Chave Armazenagem:", df_pend['KEY_AGENDA'].unique()[:5])
-                st.write("Exemplo Chave Transferência:", df_transf_base['KEY_AGENDA'].unique()[:5])
-                st.warning("Se as listas acima têm números iguais (ex: 50010 nos dois), o merge deveria funcionar.")
+            st.success("✅ Nenhuma pendência retroativa possui a modalidade RTY ou ABA (Nenhum pedido travado no momento).")
+            
+            # Debugger rápido só para garantir que a coluna está sendo lida certa
+            with st.expander("🛠️ Verificador de Modalidade"):
+                st.write("Modalidades encontradas na base:", df_pend['MODALIDADE'].unique())
     else:
-        st.info("Nenhuma pendência anterior à data selecionada foi encontrada.")
+        st.info("⚠️ A coluna MODALIDADE ainda não foi encontrada na base de dados de Pendência.")
 
     # ==========================================================================
     # --- 🧠 LÓGICA DE CRUZAMENTO: ARMAZENAGEM VS TRANSFERÊNCIA (BLINDADO) ---
