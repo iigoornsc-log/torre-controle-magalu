@@ -4211,6 +4211,51 @@ elif pagina == "📊 GD (Gestão Diária)":
         </div>
     </div>
     """, unsafe_allow_html=True)
+    
+    # ==========================================================================
+    # --- 🚀 IMPACTO NA TRANSFERÊNCIA (VIA COLUNA MODALIDADE DIRETO NA BASE) ---
+    # ==========================================================================
+    st.markdown("### 🚀 Impacto na Transferência (Liberação de Pedidos)")
+    
+    if not df_pend.empty:
+        if 'MODALIDADE' in df_pend.columns:
+            # Filtra de forma inteligente: Pega se contiver RTY ou ABA em qualquer lugar do texto
+            filtro_modalidade = df_pend['MODALIDADE'].astype(str).str.upper().str.contains('RTY|ABA', na=False, regex=True)
+            df_pedidos = df_pend[filtro_modalidade].copy()
+            
+            if not df_pedidos.empty:
+                df_final = df_pedidos.groupby(['CD_AGENDA', 'FORNECEDOR']).agg({
+                    'NU_ETIQUETA': 'nunique', 
+                    'QT_CONFERIDO': 'sum'     
+                }).reset_index().rename(columns={
+                    'NU_ETIQUETA': 'Etiquetas_com_Pedido',
+                    'QT_CONFERIDO': 'Peças_Liberadas'
+                })
+                
+                df_final = df_final.sort_values(by='Peças_Liberadas', ascending=False)
+                
+                col_im1, col_im2 = st.columns([1, 2])
+                with col_im1:
+                    st.metric("Agendas c/ Pedido Travado", df_final['CD_AGENDA'].nunique())
+                    st.metric("Peças C/ Pedido (RTY/ABA)", f"{df_final['Peças_Liberadas'].sum():,.0f}")
+                with col_im2:
+                    st.write("**Prioridade de Salto (Agendas com Pedido):**")
+                    st.dataframe(
+                        df_final[['CD_AGENDA', 'FORNECEDOR', 'Etiquetas_com_Pedido', 'Peças_Liberadas']],
+                        column_config={
+                            "CD_AGENDA": "Agenda",
+                            "FORNECEDOR": "Fornecedor",
+                            "Etiquetas_com_Pedido": "Qtd Etiquetas (RTY/ABA)",
+                            "Peças_Liberadas": "Peças a Liberar"
+                        },
+                        hide_index=True, use_container_width=True
+                    )
+            else:
+                st.success("✅ Nenhuma pendência atrasada possui a modalidade RTY ou ABA.")
+        else:
+            st.info("⚠️ A coluna MODALIDADE não foi encontrada. Verifique se o nome do cabeçalho na planilha está exatamente assim.")
+    else:
+        st.info("Nenhuma pendência anterior à data selecionada foi encontrada.")
 
     # ==========================================================================
     # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM (FILTRO RETROATIVO OU GERAL) ---
