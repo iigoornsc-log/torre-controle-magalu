@@ -2404,7 +2404,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     # 🔍 NOVA VISÃO: PRODUTOS COM RESLOG
     # ==========================================================================
     st.markdown("---")
-    titulo_com_ari("📦 Produtos com RESLOG (Restrição Logística)")
+    titulo_com_ari("📦 Produtos com RESLOG")
 
     if not df_itens.empty:
         # Criamos uma cópia para não afetar outras visões e padronizamos colunas
