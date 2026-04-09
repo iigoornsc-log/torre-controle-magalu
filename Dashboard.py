@@ -686,8 +686,8 @@ if pagina == "🏠 Painel Operacional":
     qtd_descarga = len(df_filtrado_op[df_filtrado_op['Status'] == 'Em Descarga'])
     qtd_recebido = len(df_filtrado_op[df_filtrado_op['Status'] == 'Recebido'])
     qtd_noshow = len(df_filtrado_op[df_filtrado_op['Status'] == 'No-Show'])
-    total_agendas = len(df_filtrado_op)
-    taxa_noshow = (qtd_noshow / total_agendas * 100) if total_agendas > 0 else 0
+    _agendas = len(df_filtrado_op)
+    taxa_noshow = (qtd_noshow / _agendas * 100) if total_agendas > 0 else 0
 
     with col_kpi1: exibir_kpi("📅 Agendado", qtd_agendado, "Total de agendas", "#3498DB")
     with col_kpi2: exibir_kpi("🚛 Em Trânsito", qtd_transito, "A caminho do CD", "#9B59B6")
@@ -4279,8 +4279,7 @@ elif pagina == "📊 GD (Gestão Diária)":
         'DOCA': ('EM DOCA', '#F39C12'),
         'PROCESSO': ('EM PROCESSO', '#2980B9'),
         'OK': ('FINALIZADA', '#27AE60'),
-        'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD'),
-        'TOTAL': ('TOTAL', '#8E44AD')
+        'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD')
     }
 
     # Calcula os KPIs por Status
