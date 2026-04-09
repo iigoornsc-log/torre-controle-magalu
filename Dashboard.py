@@ -2066,7 +2066,7 @@ elif pagina == "🧩 Slotting (Vagas Extras)":
 # 📊 NOVA PÁGINA: GD (GESTÃO DIÁRIA) - STATUS, PRODUTIVIDADE E ARMAZENAGEM
 # ==============================================================================
 elif pagina == "📊 GD (Gestão Diária)":
-    titulo_com_ari("📊 Gestão Diária (Raio-X Operacional)")
+    titulo_com_ari("📊 GD - Gestão Diária ")
     st.markdown("Acompanhamento em tempo real do status das agendas, performance tática e pendências de armazenagem.")
 
     # 1. FILTROS DA GD (COM AJUSTE DINÂMICO E VISÃO GERAL)
@@ -2210,11 +2210,11 @@ elif pagina == "📊 GD (Gestão Diária)":
                 qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].astype(str).str.contains('AGRUPADA', na=False, case=False)].shape[0]
                 pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
 
-    st.markdown("### 📦 Status de Armazenagem (Pendência Real)")
+    st.markdown("### 📦 Status de Armazenagem")
     
     # 💡 Aviso dinâmico na tela para o usuário saber o que está olhando
     if visao_geral:
-        st.info("🌍 **Visão Geral ATIVADA:** Exibindo o volume TOTAL do pátio (incluindo as cargas conferidas hoje).")
+        st.info("🌍 **Visão Geral ATIVADA:** Exibindo o volume TOTAL (incluindo as cargas conferidas hoje).")
     else:
         st.info(f"⏳ **Visão Retroativa:** Exibindo APENAS o que foi conferido até o dia { (data_gd - pd.Timedelta(days=1)).strftime('%d/%m/%Y') }.")
 
@@ -2275,7 +2275,7 @@ elif pagina == "📊 GD (Gestão Diária)":
                         hide_index=True, use_container_width=True
                     )
             else:
-                st.success("✅ Nenhuma pendência na visão atual possui pedidos (RTY/ABA).")
+                st.success("✅ Nenhuma pendência na visão atual possui pedidos (RTY).")
         else:
             st.info("⚠️ Coluna MODALIDADE não encontrada na base.")
 
