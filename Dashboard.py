@@ -4113,8 +4113,8 @@ elif pagina == "📊 GD (Gestão Diária)":
     def puxar_base_gd():
         # Planilha de Produtividade (Fechamento)
         url_prod = "https://docs.google.com/spreadsheets/d/1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks/gviz/tq?tqx=out:csv&sheet=FECHAMENTO"
-        # Planilha de Painel de Controle (Status)
-        url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel de Controle"
+        # Planilha de Painel de Controle (Status) - Agora com os espaços codificados e link blindado
+        url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel%20de%20Controle"
         
         try:
             df_p = pd.read_csv(url_prod)
