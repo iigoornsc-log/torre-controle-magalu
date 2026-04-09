@@ -4091,13 +4091,13 @@ elif pagina == "🧩 Slotting (Vagas Extras)":
                 except: pass
 
 # ==============================================================================
-# 📊 NOVA PÁGINA: GD (GESTÃO DIÁRIA) - STATUS DA DOCA E PRODUTIVIDADE
+# 📊 NOVA PÁGINA: GD (GESTÃO DIÁRIA) - STATUS, PRODUTIVIDADE E ARMAZENAGEM
 # ==============================================================================
 elif pagina == "📊 GD (Gestão Diária)":
     titulo_com_ari("📊 Gestão Diária (Raio-X Operacional)")
-    st.markdown("Acompanhamento em tempo real do status das agendas e performance tática das equipes.")
+    st.markdown("Acompanhamento em tempo real do status das agendas, performance tática e pendências de armazenagem.")
 
-    # 1. FILTROS DA GD (AGORA COM AJUSTE DINÂMICO DE CAPACIDADE)
+    # 1. FILTROS DA GD (COM AJUSTE DINÂMICO DE CAPACIDADE)
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
         data_gd = st.date_input("🗓️ Data da Gestão Diária", pd.Timestamp.now().date())
@@ -4105,100 +4105,84 @@ elif pagina == "📊 GD (Gestão Diária)":
         qtd_transf_gd = st.number_input("📦 Qtd Transferências (Hoje)", min_value=0, max_value=20, value=5, help="Cada transferência adiciona 240 min no APC.")
     with col_f3:
         equipes_fisicas_gd = st.number_input("👷 Equipes Físicas no Turno", min_value=1, max_value=30, value=5, help="Quantas equipes realmente vieram trabalhar hoje?")
-
+    
     st.markdown("---")
 
-    # 2. CONEXÃO COM AS BASES DE DADOS (CACHED PARA VELOCIDADE)
-    @st.cache_data(ttl=300) # Atualiza a cada 5 minutos
-    def puxar_base_gd():
-        # Planilha de Produtividade (Fechamento)
+    # 2. CONEXÃO COM AS BASES DE DADOS
+    @st.cache_data(ttl=300)
+    def puxar_bases_completas_gd():
         url_prod = "https://docs.google.com/spreadsheets/d/1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks/gviz/tq?tqx=out:csv&sheet=FECHAMENTO"
-        # Planilha de Painel de Controle (Status) - Agora com os espaços codificados e link blindado
         url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel%20de%20Controle"
+        url_pend = "https://docs.google.com/spreadsheets/d/1Yptk_tfdkuhZCK_saApWQMNynjlaQQeEQjqn4lNcgZk/gviz/tq?tqx=out:csv&sheet=BaseDadosPendArm"
+        
+        try: df_p = pd.read_csv(url_prod)
+        except: df_p = pd.DataFrame()
+            
+        try: df_s = pd.read_csv(url_status)
+        except: df_s = pd.DataFrame()
+            
+        try: df_pe = pd.read_csv(url_pend)
+        except: df_pe = pd.DataFrame()
+            
+        return df_p, df_s, df_pe
 
-        try:
-            df_p = pd.read_csv(url_prod)
-        except:
-            df_p = pd.DataFrame()
-
-        try:
-            df_s = pd.read_csv(url_status)
-        except:
-            df_s = pd.DataFrame()
-
-        return df_p, df_s
-
-    with st.spinner("Sincronizando radares com a doca..."):
-        df_prod, df_status = puxar_base_gd()
+    with st.spinner("Sincronizando radares com a doca e armazenagem..."):
+        df_prod, df_status, df_pend = puxar_bases_completas_gd()
+        # Usa a base global de transferência que você já tem no app
+        df_transf_base = df.copy() if 'df' in globals() else pd.DataFrame()
 
     # --- 🧠 LÓGICA DE PRODUTIVIDADE (ÚLTIMOS 30 DIAS + REMOÇÃO DE OUTLIERS) ---
     meta_total = 0
     realizado_total = 0
     ganho_pct = 0.0
-
-    # 🛡️ Puxa o input dinâmico
+    
     total_equipes_gd = equipes_fisicas_gd
     equipes_efetivas = total_equipes_gd
-
+    
     if not df_prod.empty:
         col_dt_p = next((c for c in df_prod.columns if 'DATA' in c.upper()), None)
         if col_dt_p:
-            # Força o Python a ler a data no formato BR mantendo como DateTime
             df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], dayfirst=True, errors='coerce')
-
-            # 💡 Filtro 1: Pega exatamente os últimos 30 dias (janela móvel)
             data_fim = pd.Timestamp(data_gd)
             data_inicio = data_fim - pd.Timedelta(days=30)
-
-            df_prod_periodo = df_prod[(df_prod[col_dt_p] >= data_inicio) & 
-                                      (df_prod[col_dt_p] <= data_fim)].copy()
-
-            # Puxa colunas de tempo
+            
+            df_prod_periodo = df_prod[(df_prod[col_dt_p] >= data_inicio) & (df_prod[col_dt_p] <= data_fim)].copy()
+            
             col_meta = next((c for c in df_prod_periodo.columns if 'META' in c.upper()), None)
             col_real = next((c for c in df_prod_periodo.columns if 'REALIZADO' in c.upper()), None)
-
+            
             if col_meta and col_real and not df_prod_periodo.empty:
-                # 🛠️ Troca vírgula por ponto e já converte para número
                 df_prod_periodo[col_meta] = pd.to_numeric(df_prod_periodo[col_meta].astype(str).str.replace(',', '.'), errors='coerce')
                 df_prod_periodo[col_real] = pd.to_numeric(df_prod_periodo[col_real].astype(str).str.replace(',', '.'), errors='coerce')
-
-                # 💡 Filtro 2 e 3: Remove as cargas multi-dias (>427) E erros de digitação/micro-cargas (<10)
+                
                 df_prod_limpo = df_prod_periodo[(df_prod_periodo[col_real] <= 427) & (df_prod_periodo[col_real] >= 10)].copy()
-
-                # Soma a base já limpa
+                
                 meta_total = df_prod_limpo[col_meta].sum()
                 realizado_total = df_prod_limpo[col_real].sum()
-
+                
                 if realizado_total > 0:
                     fator_produtividade = meta_total / realizado_total
                     ganho_pct = (fator_produtividade - 1) * 100
-
-                    # Aplica a produtividade real nas equipes que vieram HOJE
                     equipes_efetivas = total_equipes_gd * fator_produtividade
 
-    # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
     sinal_ganho = "+" if ganho_pct >= 0 else ""
+    texto_saldo = f"📅 Histórico 30 dias (cargas entre 10 e 427 min)"
 
-    # Texto de subtítulo atualizado para refletir a nova regra
-    texto_saldo = f"📅 Histórico 30 dias de agendas"
-
-    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC E DINÂMICO) ---
+    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC ---
     import math
     apc_dia = 0
-
-    base_apc = df_filtrado_op if 'df_filtrado_op' in globals() else (df if 'df' in globals() else pd.DataFrame())
-
+    base_apc = df_filtrado_op if 'df_filtrado_op' in globals() else (df_transf_base if not df_transf_base.empty else pd.DataFrame())
+    
     if not base_apc.empty and 'Data' in base_apc.columns:
         df_base_dia = base_apc[pd.to_datetime(base_apc['Data']).dt.date == data_gd].copy()
-
         if not df_base_dia.empty and 'Tempo_APC_Minutos' in df_base_dia.columns:
             soma_minutos_cargas = df_base_dia['Tempo_APC_Minutos'].sum()
             min_transf_fixa = (qtd_transf_gd * 240) if data_gd.weekday() < 5 else 0
             minutos_totais = soma_minutos_cargas + min_transf_fixa
             apc_dia = math.ceil(minutos_totais / 427)
 
-    # 3. CABEÇALHO DE PRODUTIVIDADE (ESTILO SÊNIOR)
+    # CABEÇALHO DE PRODUTIVIDADE
     st.markdown(f"""
     <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
         <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #8395A7; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
@@ -4206,71 +4190,111 @@ elif pagina == "📊 GD (Gestão Diária)":
             <div style="font-size: 26px; font-weight: 900; color: #1E272E;">{apc_dia}</div>
         </div>
         <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #00C6FF; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
-            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Equipes Disponíveis</div>
+            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Equipes Disponíveis (Físico)</div>
             <div style="font-size: 26px; font-weight: 900; color: #0086FF;">{total_equipes_gd}</div>
         </div>
-        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid {cor_ganho}; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px; position: relative;">
-            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Ganho Produtivo</div>
+        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid {cor_ganho}; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
+            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Ganho Produtivo (Equipes Reais)</div>
             <div style="font-size: 26px; font-weight: 900; color: {cor_ganho};">
                 {equipes_efetivas:.1f} <span style="font-size: 14px; vertical-align: middle;">({sinal_ganho}{ganho_pct:.1f}%)</span>
             </div>
-            <div style="font-size: 11px; font-weight: 700; color: {cor_ganho}; margin-top: 5px;">
-                {texto_saldo}
-            </div>
+            <div style="font-size: 11px; font-weight: 700; color: {cor_ganho}; margin-top: 5px;">{texto_saldo}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
-    cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
-    sinal_ganho = "+" if ganho_pct >= 0 else ""
+    # ==========================================================================
+    # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM ---
+    # ==========================================================================
+    tot_etq_pend, tot_agendas_pend, tot_pecas_pend, pct_agrupada = 0, 0, 0, 0
 
-    # Texto de subtítulo atualizado para mostrar que é uma visão mensal
-    texto_saldo = f"📅 Média Histórica: {data_gd.strftime('%m/%Y')}"
+    if not df_pend.empty:
+        df_pend.columns = df_pend.columns.str.strip().str.upper()
+        tot_etq_pend = df_pend['NU_ETIQUETA'].nunique() if 'NU_ETIQUETA' in df_pend.columns else 0
+        tot_agendas_pend = df_pend['CD_AGENDA'].nunique() if 'CD_AGENDA' in df_pend.columns else 0
+        tot_pecas_pend = pd.to_numeric(df_pend['QT_CONFERIDO'], errors='coerce').sum() if 'QT_CONFERIDO' in df_pend.columns else 0
+        
+        if tot_etq_pend > 0 and 'TP_RECEBIMENTO' in df_pend.columns:
+            qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].astype(str).str.contains('AGRUPADA', na=False, case=False)].shape[0]
+            pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
 
+    st.markdown("### 📦 Status de Armazenagem (Pendência Real)")
+    st.markdown(f"""
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #F39C12; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Etiquetas Pendentes</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_etq_pend}</div>
+            <div style="font-size: 11px; color: #8395A7;">{pct_agrupada:.1f}% Agrupadas / {100-pct_agrupada:.1f}% Normal</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #E67E22; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas no Pátio</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_agendas_pend}</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #D35400; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Peças Pendentes (WMS)</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_pecas_pend:,.0f}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 🚀 Impacto na Transferência (Liberação de Pedidos)")
+    if not df_pend.empty and not df_transf_base.empty:
+        if 'CD_AGENDA' in df_pend.columns and 'AGENDA' in df_transf_base.columns:
+            df_pend['CD_AGENDA'] = df_pend['CD_AGENDA'].astype(str).str.strip()
+            df_transf_base['AGENDA'] = df_transf_base['AGENDA'].astype(str).str.strip().str.replace('.0', '', regex=False)
+            
+            df_transf_resumo = df_transf_base.groupby('AGENDA').agg({
+                'NU_PED_ORIGEM': 'nunique',
+                'QTDE': 'sum'
+            }).reset_index().rename(columns={'NU_PED_ORIGEM': 'Qtd_Pedidos', 'QTDE': 'Peças_Pedido'})
+            
+            df_impacto = df_pend.groupby('CD_AGENDA').agg({
+                'QT_CONFERIDO': 'sum',
+                'FORNECEDOR': 'first'
+            }).reset_index()
+            
+            df_final = pd.merge(df_impacto, df_transf_resumo, left_on='CD_AGENDA', right_on='AGENDA', how='inner')
+            
+            if not df_final.empty:
+                df_final = df_final.sort_values(by='Qtd_Pedidos', ascending=False)
+                col_im1, col_im2 = st.columns([1, 2])
+                with col_im1:
+                    st.metric("Pedidos Bloqueados por Armazenagem", df_final['Qtd_Pedidos'].sum())
+                    st.metric("Peças C/ Pedido Aguardando Salto", f"{df_final['Peças_Pedido'].sum():,.0f}")
+                with col_im2:
+                    st.dataframe(
+                        df_final[['CD_AGENDA', 'FORNECEDOR', 'QT_CONFERIDO', 'Qtd_Pedidos', 'Peças_Pedido']],
+                        column_config={"CD_AGENDA": "Agenda", "QT_CONFERIDO": "Peças p/ Guardar", "Qtd_Pedidos": "Pedidos Atendidos", "Peças_Pedido": "Peças Liberadas"},
+                        hide_index=True, use_container_width=True
+                    )
+            else:
+                st.success("✅ Nenhuma agenda pendente possui pedidos na base de transferência.")
+    else:
+        st.info("Aguardando carregamento das bases para calcular impacto.")
+
+    # ==========================================================================
     # --- 🧠 LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
+    # ==========================================================================
+    st.markdown("---")
+    st.markdown("### 🚚 Status das Agendas na Doca")
+    
     df_status_dia = pd.DataFrame()
     col_dt_s = None
-
+    
     if not df_status.empty:
-        # Padroniza os nomes das colunas: tudo maiúsculo e sem espaços sobrando
         df_status.columns = df_status.columns.astype(str).str.strip().str.upper()
-
-        # Procura coluna de data com força bruta
         col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in c), None)
-        if not col_dt_s:
-            col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None) # Plano B
-
+        if not col_dt_s: col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
+            
         if col_dt_s:
-            # Isola só a parte da data (corta fora se tiver " 08:00:00" do lado)
             df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
-
-            # Tenta converter forçando o formato exato dd/mm/yyyy
             df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
-
-            # Se falhou e ficou tudo vazio, tenta o método genérico
             if df_status['Data_Filtro'].isna().all():
                 df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], dayfirst=True, errors='coerce')
-
-            # Transforma em objeto Date puro e filtra
+            
             df_status['Data_Filtro'] = df_status['Data_Filtro'].dt.date
             df_status_dia = df_status[df_status['Data_Filtro'] == data_gd].copy()
 
-    # 🚨 CAIXA PRETA DO A.R.I. (DEBUGGER) 🚨
-    # Deixei isso aqui para você ver o que está rolando por trás das cortinas
-    with st.expander("🛠️ DEBUG: Raio-X da Tabela de Status (Abra se não puxar)"):
-        if df_status.empty:
-            st.error("A tabela veio VAZIA do Google Sheets. Verifique o link ou se a aba se chama exatamente 'Painel de Controle'.")
-        else:
-            st.write(f"**Data selecionada no Painel:** {data_gd}")
-            st.write(f"**Coluna de data encontrada:** `{col_dt_s}`")
-            st.write("**5 Primeiras linhas cruas (como o Python vê):**")
-            st.dataframe(df_status.head(5))
-            if 'Data_Filtro' in df_status.columns:
-                st.write("**Como a Data ficou após a conversão:**")
-                st.dataframe(df_status[['Data_Extraida', 'Data_Filtro']].head(5))
-
-    # Define os status e suas cores (Igualzinho ao seu print)
     mapa_status = {
         'AUSENTE': ('AUSENTE', '#2C3E50'),
         'LANÇAMENTO': ('AG LANÇAMENTO', '#E67E22'),
@@ -4282,26 +4306,22 @@ elif pagina == "📊 GD (Gestão Diária)":
         'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD')
     }
 
-    # Calcula os KPIs por Status
     cards_html = ""
     col_st = next((c for c in df_status_dia.columns if 'STATUS' in str(c).upper()), None)
     col_ag_s = next((c for c in df_status_dia.columns if 'AGENDA' in str(c).upper() and 'WMS' not in str(c).upper()), df_status_dia.columns[0] if not df_status_dia.empty else None)
     col_pc_s = next((c for c in df_status_dia.columns if 'PEÇA' in str(c).upper() or 'PECA' in str(c).upper()), None)
 
-    tot_agendas_status = 0
-    tot_pecas_status = 0
+    tot_agendas_status, tot_pecas_status = 0, 0
 
     if not df_status_dia.empty and col_st:
         for chave, (nome_exibicao, cor) in mapa_status.items():
             df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
-
             qtd_ag = df_filtro.shape[0] 
             qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').sum() if col_pc_s else 0
-
+            
             tot_agendas_status += qtd_ag
             tot_pecas_status += qtd_pc
 
-            # 🛠️ HTML colado no canto esquerdo para não bugar o Markdown!
             cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
 <div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
 <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
@@ -4316,7 +4336,6 @@ elif pagina == "📊 GD (Gestão Diária)":
 </div>
 </div>"""
 
-    # Card TOTAL no final (AGORA COM COR SÓLIDA PARA NÃO BUGAR)
     cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
 <div style="background-color: #1E272E; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
 <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
@@ -4331,18 +4350,14 @@ elif pagina == "📊 GD (Gestão Diária)":
 </div>
 </div>"""
 
-    # Renderiza o painel
     st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
 
-    # 4. TABELA DETALHADA E FILTRO DE STATUS
-    st.markdown("### 🔍 Detalhamento das Agendas")
+    # TABELA DETALHADA E FILTRO DE STATUS
+    st.markdown("### 🔍 Detalhamento das Agendas na Doca")
     if not df_status_dia.empty and col_st:
-        # Pega todos os status únicos que existem no dia para o filtro
         status_unicos = df_status_dia[col_st].dropna().unique().tolist()
         status_selecionados = st.multiselect("Filtrar por Status:", options=status_unicos, default=status_unicos)
-
         df_exibicao = df_status_dia[df_status_dia[col_st].isin(status_selecionados)]
-
         st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
