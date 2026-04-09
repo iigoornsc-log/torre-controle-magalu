@@ -2399,3 +2399,59 @@ elif pagina == "📊 GD (Gestão Diária)":
         st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
+
+# ==========================================================================
+    # 🔍 NOVA VISÃO: PRODUTOS COM RESLOG
+    # ==========================================================================
+    st.markdown("---")
+    titulo_com_ari("📦 Produtos com RESLOG (Restrição Logística)")
+
+    if not df_itens.empty:
+        # Criamos uma cópia para não afetar outras visões e padronizamos colunas
+        df_reslog = df_itens.copy()
+        df_reslog.columns = df_reslog.columns.str.strip().str.upper()
+
+        # 1. Tratamento da Data e Filtros
+        if 'DTAGENDA' in df_reslog.columns:
+            # Converte a data da planilha para o formato de comparação do Streamlit
+            df_reslog['DATA_FORMATADA'] = pd.to_datetime(df_reslog['DTAGENDA'], dayfirst=True, errors='coerce').dt.date
+            
+            # Filtro: Data selecionada na tela AND RESLOG >= 1
+            df_reslog_filtrado = df_reslog[
+                (df_reslog['DATA_FORMATADA'] == data_gd) & 
+                (pd.to_numeric(df_reslog['RESLOG'], errors='coerce').fillna(0) >= 1)
+            ].copy()
+
+            if not df_reslog_filtrado.empty:
+                # 2. Cálculos dos KPIs
+                qtd_agendas_reslog = df_reslog_filtrado['CODAGENDA'].nunique()
+                qtd_skus_reslog = df_reslog_filtrado['COMPITEM'].nunique()
+                qtd_pecas_reslog = pd.to_numeric(df_reslog_filtrado['QTAGENDA'], errors='coerce').sum()
+
+                # 3. Renderização dos KPIs
+                col_res1, col_res2, col_res3 = st.columns(3)
+                with col_res1:
+                    exibir_kpi("Agendas c/ RESLOG", qtd_agendas_reslog, "Cargas impactadas", "#E67E22")
+                with col_res2:
+                    exibir_kpi("SKUs c/ RESLOG", qtd_skus_reslog, "Itens específicos", "#3498DB")
+                with col_res3:
+                    exibir_kpi("Total Peças", f"{qtd_pecas_reslog:,.0f}".replace(",", "."), "Volume em restrição", "#9B59B6")
+
+                # 4. Tabela Detalhada
+                st.write("**Lista de Itens com Restrição:**")
+                # Selecionamos apenas colunas essenciais para a visão
+                colunas_view = ['CODAGENDA', 'FORNE_PRINC', 'COMPITEM', 'DESCRICAO', 'LINHA', 'QTAGENDA', 'RESLOG']
+                # Filtramos apenas as colunas que realmente existem (segurança)
+                colunas_existentes = [c for c in colunas_view if c in df_reslog_filtrado.columns]
+                
+                st.dataframe(
+                    df_reslog_filtrado[colunas_existentes].sort_values(by='RESLOG', ascending=False),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.success(f"✅ Nenhum produto com RESLOG identificado para o dia {data_gd.strftime('%d/%m/%Y')}.")
+        else:
+            st.error("⚠️ Coluna 'DTAGENDA' não encontrada na aba Item Agenda.")
+    else:
+        st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
