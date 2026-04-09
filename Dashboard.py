@@ -4210,31 +4210,32 @@ elif pagina == "📊 GD (Gestão Diária)":
     """, unsafe_allow_html=True)
 
     # ==========================================================================
-    # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM ---
+    # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM (FILTRO RETROATIVO) ---
     # ==========================================================================
     tot_etq_pend, tot_agendas_pend, tot_pecas_pend, pct_agrupada = 0, 0, 0, 0
 
     if not df_pend.empty:
         df_pend.columns = df_pend.columns.str.strip().str.upper()
-        tot_etq_pend = df_pend['NU_ETIQUETA'].nunique() if 'NU_ETIQUETA' in df_pend.columns else 0
-        tot_agendas_pend = df_pend['CD_AGENDA'].nunique() if 'CD_AGENDA' in df_pend.columns else 0
-        tot_pecas_pend = pd.to_numeric(df_pend['QT_CONFERIDO'], errors='coerce').sum() if 'QT_CONFERIDO' in df_pend.columns else 0
         
-        if tot_etq_pend > 0 and 'TP_RECEBIMENTO' in df_pend.columns:
-            qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].astype(str).str.contains('AGRUPADA', na=False, case=False)].shape[0]
-            pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
+        # 🛠️ AJUSTE 1: Converter DT_CONFERENCIA para data e filtrar apenas o que é ANTERIOR a hoje
+        if 'DT_CONFERENCIA' in df_pend.columns:
+            df_pend['DT_CONF_DT'] = pd.to_datetime(df_pend['DT_CONFERENCIA'], errors='coerce').dt.date
+            # Só aceita o que foi conferido ANTES da data da GD (Pendência Real)
+            df_pend = df_pend[df_pend['DT_CONF_DT'] < data_gd].copy()
 
-    st.markdown("### Pendências armazenagem - RECEBIMENTO")
-    
-    # 🚨 CAIXA PRETA DO A.R.I. (DEBUGGER DE ARMAZENAGEM) 🚨
-    with st.expander("🛠️ DEBUG: Raio-X da Base de Armazenagem (Abra se não puxar)"):
-        if df_pend.empty:
-            st.error("❌ A tabela veio VAZIA! Verifique se a planilha de Armazenagem está compartilhada para 'Qualquer pessoa com o link' e se o nome da aba é 'BaseDadosPendArm' exato.")
-        else:
-            st.success("✅ Tabela lida com sucesso!")
-            st.write(f"**Total de linhas lidas:** {df_pend.shape[0]}")
-            st.write("**5 Primeiras linhas:**")
-            st.dataframe(df_pend.head())
+        # KPIs após o filtro de data
+        if not df_pend.empty:
+            tot_etq_pend = df_pend['NU_ETIQUETA'].nunique() if 'NU_ETIQUETA' in df_pend.columns else 0
+            tot_agendas_pend = df_pend['CD_AGENDA'].nunique() if 'CD_AGENDA' in df_pend.columns else 0
+            tot_pecas_pend = pd.to_numeric(df_pend['QT_CONFERIDO'], errors='coerce').sum() if 'QT_CONFERIDO' in df_pend.columns else 0
+            
+            if tot_etq_pend > 0 and 'TP_RECEBIMENTO' in df_pend.columns:
+                qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].astype(str).str.contains('AGRUPADA', na=False, case=False)].shape[0]
+                pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
+
+    st.markdown("### 📦 Status de Armazenagem (Pendência Real)")
+    st.info(f"💡 Exibindo apenas o que foi conferido até o dia { (data_gd - pd.Timedelta(days=1)).strftime('%d/%m/%Y') }.")
+
     st.markdown(f"""
     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
         <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #F39C12; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -4243,7 +4244,7 @@ elif pagina == "📊 GD (Gestão Diária)":
             <div style="font-size: 11px; color: #8395A7;">{pct_agrupada:.1f}% Agrupadas / {100-pct_agrupada:.1f}% Normal</div>
         </div>
         <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #E67E22; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas</div>
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas no Pátio</div>
             <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_agendas_pend}</div>
         </div>
         <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #D35400; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -4252,6 +4253,62 @@ elif pagina == "📊 GD (Gestão Diária)":
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ==========================================================================
+    # --- 🚀 IMPACTO NA TRANSFERÊNCIA (LIMPEZA ULTRA-FORTE) ---
+    # ==========================================================================
+    st.markdown("### 🚀 Impacto na Transferência (Liberação de Pedidos)")
+    
+    if not df_pend.empty and not df_transf_base.empty:
+        # Função para remover qualquer coisa que não seja número e tirar o .0
+        def limpeza_final_agenda(val):
+            s = str(val).strip().split('.')[0] # Tira o .0
+            import re
+            return re.sub(r'\D', '', s) # Mantém só os números
+
+        df_pend['KEY_AGENDA'] = df_pend['CD_AGENDA'].apply(limpeza_final_agenda)
+        df_transf_base['KEY_AGENDA'] = df_transf_base['AGENDA'].apply(limpeza_final_agenda)
+
+        # Agrupa pedidos na transferência
+        df_transf_resumo = df_transf_base.groupby('KEY_AGENDA').agg({
+            'NU_PED_ORIGEM': 'nunique',
+            'QTDE': 'sum'
+        }).reset_index().rename(columns={'NU_PED_ORIGEM': 'Qtd_Pedidos', 'QTDE': 'Peças_Pedido'})
+        
+        # Agrupa o que está na armazenagem
+        df_impacto = df_pend.groupby('KEY_AGENDA').agg({
+            'QT_CONFERIDO': 'sum',
+            'FORNECEDOR': 'first'
+        }).reset_index()
+        
+        # Merge (Cruzamento)
+        df_final = pd.merge(df_impacto, df_transf_resumo, on='KEY_AGENDA', how='inner')
+        
+        if not df_final.empty:
+            df_final = df_final.sort_values(by='Qtd_Pedidos', ascending=False)
+            col_im1, col_im2 = st.columns([1, 2])
+            with col_im1:
+                st.metric("Pedidos Bloqueados", df_final['Qtd_Pedidos'].sum())
+                st.metric("Peças p/ Salto", f"{df_final['Peças_Pedido'].sum():,.0f}")
+            with col_im2:
+                st.dataframe(
+                    df_final[['KEY_AGENDA', 'FORNECEDOR', 'QT_CONFERIDO', 'Qtd_Pedidos', 'Peças_Pedido']],
+                    column_config={
+                        "KEY_AGENDA": "Agenda",
+                        "QT_CONFERIDO": "Peças p/ Guardar",
+                        "Qtd_Pedidos": "Pedidos Atendidos",
+                        "Peças_Pedido": "Peças Liberadas"
+                    },
+                    hide_index=True, use_container_width=True
+                )
+        else:
+            # 🛠️ DEBUGGER DE CHAVES (Se mesmo assim não puxar)
+            with st.expander("🛠️ Debug de Cruzamento (Chaves de Agenda)"):
+                st.write("Exemplo Chave Armazenagem:", df_pend['KEY_AGENDA'].unique()[:5])
+                st.write("Exemplo Chave Transferência:", df_transf_base['KEY_AGENDA'].unique()[:5])
+                st.warning("Se as listas acima têm números iguais (ex: 50010 nos dois), o merge deveria funcionar.")
+    else:
+        st.info("Nenhuma pendência anterior à data selecionada foi encontrada.")
 
     # ==========================================================================
     # --- 🧠 LÓGICA DE CRUZAMENTO: ARMAZENAGEM VS TRANSFERÊNCIA (BLINDADO) ---
