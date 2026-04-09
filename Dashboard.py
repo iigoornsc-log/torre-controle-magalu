@@ -4231,10 +4231,17 @@ elif pagina == "📊 GD (Gestão Diária)":
     # --- 🧠 LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
     df_status_dia = pd.DataFrame()
     if not df_status.empty:
-        # Tenta achar a coluna de data da agenda (Pelo seu exemplo é DATA AGENDA)
+        # Limpa os nomes das colunas para evitar erros de espaços no cabeçalho
+        df_status.columns = df_status.columns.str.strip()
+        
+        # Tenta achar a coluna de data da agenda
         col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in str(c).upper()), None)
+        
         if col_dt_s:
-            df_status[col_dt_s] = pd.to_datetime(df_status[col_dt_s], format='%d/%m/%Y', errors='coerce').dt.date
+            # 🛠️ FAXINEIRO DE DADOS: Força texto, tira espaços ocultos e converte para data BR
+            df_status[col_dt_s] = pd.to_datetime(df_status[col_dt_s].astype(str).str.strip(), dayfirst=True, errors='coerce').dt.date
+            
+            # Filtra o dia exato
             df_status_dia = df_status[df_status[col_dt_s] == data_gd].copy()
 
     # Define os status e suas cores (Igualzinho ao seu print)
