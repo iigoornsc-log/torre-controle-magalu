@@ -2362,4 +2362,40 @@ elif pagina == "📊 GD (Gestão Diária)":
 
             cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
 <div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
-<div style="display: flex; border-bottom: 1px solid #E1E8
+<div style="display: flex; border-bottom: 1px solid #E1E8ED;">
+<div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
+<div style="font-size: 10px; color: #8395A7;">AG.</div>
+<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_ag}</div>
+</div>
+<div style="flex: 1; padding: 8px 0;">
+<div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
+<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_pc:,.0f}</div>
+</div>
+</div>
+</div>"""
+
+    cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
+<div style="background-color: #1E272E; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
+<div style="display: flex; border-bottom: 1px solid #E1E8ED;">
+<div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
+<div style="font-size: 10px; color: #8395A7;">AG.</div>
+<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_agendas_status}</div>
+</div>
+<div style="flex: 1; padding: 8px 0;">
+<div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
+<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_pecas_status:,.0f}</div>
+</div>
+</div>
+</div>"""
+
+    st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
+
+    # TABELA DETALHADA E FILTRO DE STATUS
+    st.markdown("### 🔍 Detalhamento das Agendas na Doca")
+    if not df_status_dia.empty and col_st:
+        status_unicos = df_status_dia[col_st].dropna().unique().tolist()
+        status_selecionados = st.multiselect("Filtrar por Status:", options=status_unicos, default=status_unicos)
+        df_exibicao = df_status_dia[df_status_dia[col_st].isin(status_selecionados)]
+        st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
