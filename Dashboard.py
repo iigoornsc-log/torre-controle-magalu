@@ -4131,7 +4131,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     with st.spinner("Sincronizando radares com a doca..."):
         df_prod, df_status = puxar_base_gd()
 
-    # --- 🧠 LÓGICA DE PRODUTIVIDADE (MÉDIA ACUMULADA DO MÊS) ---
+    # --- 🧠 LÓGICA DE PRODUTIVIDADE (ÚLTIMOS 30 DIAS + REMOÇÃO DE OUTLIERS) ---
     meta_total = 0
     realizado_total = 0
     ganho_pct = 0.0
@@ -4146,36 +4146,42 @@ elif pagina == "📊 GD (Gestão Diária)":
             # Força o Python a ler a data no formato BR mantendo como DateTime
             df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], dayfirst=True, errors='coerce')
             
-            # 💡 A MÁGICA AQUI: Filtra todos os dias do MÊS selecionado, e não apenas o dia isolado!
-            df_prod_mes = df_prod[(df_prod[col_dt_p].dt.month == data_gd.month) & 
-                                  (df_prod[col_dt_p].dt.year == data_gd.year)].copy()
+            # 💡 Filtro 1: Pega exatamente os últimos 30 dias (janela móvel)
+            data_fim = pd.Timestamp(data_gd)
+            data_inicio = data_fim - pd.Timedelta(days=30)
+            
+            df_prod_periodo = df_prod[(df_prod[col_dt_p] >= data_inicio) & 
+                                      (df_prod[col_dt_p] <= data_fim)].copy()
             
             # Puxa colunas de tempo
-            col_meta = next((c for c in df_prod_mes.columns if 'META' in c.upper()), None)
-            col_real = next((c for c in df_prod_mes.columns if 'REALIZADO' in c.upper()), None)
+            col_meta = next((c for c in df_prod_periodo.columns if 'META' in c.upper()), None)
+            col_real = next((c for c in df_prod_periodo.columns if 'REALIZADO' in c.upper()), None)
             
-            if col_meta and col_real and not df_prod_mes.empty:
-                # 🛠️ Troca vírgula por ponto para o Python calcular certo
-                df_prod_mes[col_meta] = df_prod_mes[col_meta].astype(str).str.replace(',', '.')
-                df_prod_mes[col_real] = df_prod_mes[col_real].astype(str).str.replace(',', '.')
+            if col_meta and col_real and not df_prod_periodo.empty:
+                # 🛠️ Troca vírgula por ponto e já converte para número
+                df_prod_periodo[col_meta] = pd.to_numeric(df_prod_periodo[col_meta].astype(str).str.replace(',', '.'), errors='coerce')
+                df_prod_periodo[col_real] = pd.to_numeric(df_prod_periodo[col_real].astype(str).str.replace(',', '.'), errors='coerce')
                 
-                # Soma absolutamente TUDO do Mês inteiro
-                meta_total = pd.to_numeric(df_prod_mes[col_meta], errors='coerce').sum()
-                realizado_total = pd.to_numeric(df_prod_mes[col_real], errors='coerce').sum()
+                # 💡 Filtro 2: Remove as cargas multi-dias (expulsa o que passou de 427 minutos)
+                df_prod_limpo = df_prod_periodo[df_prod_periodo[col_real] <= 427].copy()
+                
+                # Soma a base já limpa (30 dias sem os pontos fora da curva)
+                meta_total = df_prod_limpo[col_meta].sum()
+                realizado_total = df_prod_limpo[col_real].sum()
                 
                 if realizado_total > 0:
                     fator_produtividade = meta_total / realizado_total
                     ganho_pct = (fator_produtividade - 1) * 100
                     
-                    # Aplica a produtividade média do mês nas equipes que vieram HOJE
+                    # Aplica a produtividade real nas equipes que vieram HOJE
                     equipes_efetivas = total_equipes_gd * fator_produtividade
 
     # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
     sinal_ganho = "+" if ganho_pct >= 0 else ""
     
-    # Texto de subtítulo atualizado para mostrar que é uma visão mensal
-    texto_saldo = f"📅 Média Histórica: {data_gd.strftime('%m/%Y')}"
+    # Texto de subtítulo atualizado para refletir a nova regra
+    texto_saldo = f"📅 Histórico: Últimos 30 dias (s/ multi-dias)"
 
     # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC E DINÂMICO) ---
     import math
