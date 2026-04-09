@@ -4286,55 +4286,52 @@ elif pagina == "📊 GD (Gestão Diária)":
     cards_html = ""
     col_st = next((c for c in df_status_dia.columns if 'STATUS' in str(c).upper()), None)
     col_ag_s = next((c for c in df_status_dia.columns if 'AGENDA' in str(c).upper() and 'WMS' not in str(c).upper()), df_status_dia.columns[0] if not df_status_dia.empty else None)
-    col_pc_s = next((c for c in df_status_dia.columns if 'PEÇA' in str(c).upper()), None)
+    col_pc_s = next((c for c in df_status_dia.columns if 'PEÇA' in str(c).upper() or 'PECA' in str(c).upper()), None)
 
     tot_agendas_status = 0
     tot_pecas_status = 0
 
     if not df_status_dia.empty and col_st:
         for chave, (nome_exibicao, cor) in mapa_status.items():
-            # Filtra linhas que contenham a palavra chave no status
             df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
             
-            qtd_ag = df_filtro.shape[0] # Conta as linhas
+            qtd_ag = df_filtro.shape[0] 
             qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').sum() if col_pc_s else 0
             
             tot_agendas_status += qtd_ag
             tot_pecas_status += qtd_pc
 
-            cards_html += f"""
-            <div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;">
-                <div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
-                <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
-                    <div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
-                        <div style="font-size: 10px; color: #8395A7;">AG.</div>
-                        <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_ag}</div>
-                    </div>
-                    <div style="flex: 1; padding: 8px 0;">
-                        <div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
-                        <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_pc:,.0f}</div>
-                    </div>
-                </div>
-            </div>
-            """
-    
-    # Adiciona o card TOTAL no final
-    cards_html += f"""
-    <div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;">
-        <div style="background: linear-gradient(90deg, #FF6F61 0%, #00C6FF 100%); color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
-        <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
-            <div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
-                <div style="font-size: 10px; color: #8395A7;">AG.</div>
-                <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_agendas_status}</div>
-            </div>
-            <div style="flex: 1; padding: 8px 0;">
-                <div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
-                <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_pecas_status:,.0f}</div>
-            </div>
-        </div>
-    </div>
-    """
+            # 🛠️ HTML colado no canto esquerdo para não bugar o Markdown!
+            cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
+<div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
+<div style="display: flex; border-bottom: 1px solid #E1E8ED;">
+<div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
+<div style="font-size: 10px; color: #8395A7;">AG.</div>
+<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_ag}</div>
+</div>
+<div style="flex: 1; padding: 8px 0;">
+<div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
+<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_pc:,.0f}</div>
+</div>
+</div>
+</div>"""
 
+    # Card TOTAL no final
+    cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
+<div style="background: linear-gradient(90deg, #FF6F61 0%, #00C6FF 100%); color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
+<div style="display: flex; border-bottom: 1px solid #E1E8ED;">
+<div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
+<div style="font-size: 10px; color: #8395A7;">AG.</div>
+<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_agendas_status}</div>
+</div>
+<div style="flex: 1; padding: 8px 0;">
+<div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
+<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_pecas_status:,.0f}</div>
+</div>
+</div>
+</div>"""
+
+    # Renderiza o painel
     st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
 
     # 4. TABELA DETALHADA E FILTRO DE STATUS
