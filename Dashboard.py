@@ -4113,7 +4113,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     st.markdown("---")
 
     # 2. CONEXÃO COM AS BASES DE DADOS (USANDO CREDENCIAIS PARA PLANILHAS PRIVADAS)
-   @st.cache_data(ttl=300)
+    @st.cache_data(ttl=300)
     def puxar_bases_completas_gd():
         # URL da Armazenagem (Ajustada para baixar o CSV da aba específica)
         url_pend = "https://docs.google.com/spreadsheets/d/1Yptk_tfdkuhZCK_saApWQMNynjlaQQeEQjqn4lNcgZk/gviz/tq?tqx=out:csv&sheet=BaseDadosPendArm"
