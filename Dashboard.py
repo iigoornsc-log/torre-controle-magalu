@@ -4279,7 +4279,7 @@ elif pagina == "📊 GD (Gestão Diária)":
         'DOCA': ('EM DOCA', '#F39C12'),
         'PROCESSO': ('EM PROCESSO', '#2980B9'),
         'OK': ('FINALIZADA', '#27AE60'),
-        'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD')
+        'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD'),
         'TOTAL': ('TOTAL', '#8E44AD')
     }
 
