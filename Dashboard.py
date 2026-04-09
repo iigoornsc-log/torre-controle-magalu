@@ -4339,48 +4339,6 @@ elif pagina == "📊 GD (Gestão Diária)":
         st.info("Nenhuma pendência para exibir nesta visão.")
     
     # ==========================================================================
-    # VISÃO 1: 🚀 IMPACTO NA TRANSFERÊNCIA (PRIORIDADES COM PEDIDO)
-    # ==========================================================================
-    st.markdown("### 🚀 Prioridade de Armazenagem (Pedidos Travados)")
-    
-    if not df_pend.empty:
-        if 'MODALIDADE' in df_pend.columns:
-            # Filtra apenas o que tem pedido (RTY ou ABA)
-            filtro_modalidade = df_pend['MODALIDADE'].astype(str).str.upper().str.contains('RTY|ABA', na=False, regex=True)
-            df_pedidos = df_pend[filtro_modalidade].copy()
-            
-            if not df_pedidos.empty:
-                df_prioridade = df_pedidos.groupby(['CD_AGENDA', 'FORNECEDOR']).agg({
-                    'NU_ETIQUETA': 'nunique', 
-                    'QT_CONFERIDO': 'sum'     
-                }).reset_index().rename(columns={
-                    'NU_ETIQUETA': 'Etiquetas_com_Pedido',
-                    'QT_CONFERIDO': 'Peças_Liberadas'
-                })
-                
-                df_prioridade = df_prioridade.sort_values(by='Peças_Liberadas', ascending=False)
-                
-                col_im1, col_im2 = st.columns([1, 2])
-                with col_im1:
-                    st.metric("Agendas c/ Pedido Travado", df_prioridade['CD_AGENDA'].nunique())
-                    st.metric("Peças C/ Pedido (RTY/ABA)", f"{df_prioridade['Peças_Liberadas'].sum():,.0f}")
-                with col_im2:
-                    st.dataframe(
-                        df_prioridade[['CD_AGENDA', 'FORNECEDOR', 'Etiquetas_com_Pedido', 'Peças_Liberadas']],
-                        column_config={
-                            "CD_AGENDA": "Agenda",
-                            "FORNECEDOR": "Fornecedor",
-                            "Etiquetas_com_Pedido": "Qtd Etiquetas (RTY/ABA)",
-                            "Peças_Liberadas": "Peças a Liberar"
-                        },
-                        hide_index=True, use_container_width=True
-                    )
-            else:
-                st.success("✅ Nenhuma pendência na visão atual possui pedidos (RTY/ABA).")
-        else:
-            st.info("⚠️ Coluna MODALIDADE não encontrada na base.")
-
-    # ==========================================================================
     # VISÃO 2: 📋 LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM
     # ==========================================================================
     st.markdown("### 📋 Mapa Geral de Pendências de Armazenagem")
