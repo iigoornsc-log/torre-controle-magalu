@@ -4230,19 +4230,45 @@ elif pagina == "📊 GD (Gestão Diária)":
 
     # --- 🧠 LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
     df_status_dia = pd.DataFrame()
+    col_dt_s = None
+    
     if not df_status.empty:
-        # Limpa os nomes das colunas para evitar erros de espaços no cabeçalho
-        df_status.columns = df_status.columns.str.strip()
+        # Padroniza os nomes das colunas: tudo maiúsculo e sem espaços sobrando
+        df_status.columns = df_status.columns.astype(str).str.strip().str.upper()
         
-        # Tenta achar a coluna de data da agenda
-        col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in str(c).upper()), None)
-        
-        if col_dt_s:
-            # 🛠️ FAXINEIRO DE DADOS: Força texto, tira espaços ocultos e converte para data BR
-            df_status[col_dt_s] = pd.to_datetime(df_status[col_dt_s].astype(str).str.strip(), dayfirst=True, errors='coerce').dt.date
+        # Procura coluna de data com força bruta
+        col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in c), None)
+        if not col_dt_s:
+            col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None) # Plano B
             
-            # Filtra o dia exato
-            df_status_dia = df_status[df_status[col_dt_s] == data_gd].copy()
+        if col_dt_s:
+            # Isola só a parte da data (corta fora se tiver " 08:00:00" do lado)
+            df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
+            
+            # Tenta converter forçando o formato exato dd/mm/yyyy
+            df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
+            
+            # Se falhou e ficou tudo vazio, tenta o método genérico
+            if df_status['Data_Filtro'].isna().all():
+                df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], dayfirst=True, errors='coerce')
+            
+            # Transforma em objeto Date puro e filtra
+            df_status['Data_Filtro'] = df_status['Data_Filtro'].dt.date
+            df_status_dia = df_status[df_status['Data_Filtro'] == data_gd].copy()
+
+    # 🚨 CAIXA PRETA DO A.R.I. (DEBUGGER) 🚨
+    # Deixei isso aqui para você ver o que está rolando por trás das cortinas
+    with st.expander("🛠️ DEBUG: Raio-X da Tabela de Status (Abra se não puxar)"):
+        if df_status.empty:
+            st.error("A tabela veio VAZIA do Google Sheets. Verifique o link ou se a aba se chama exatamente 'Painel de Controle'.")
+        else:
+            st.write(f"**Data selecionada no Painel:** {data_gd}")
+            st.write(f"**Coluna de data encontrada:** `{col_dt_s}`")
+            st.write("**5 Primeiras linhas cruas (como o Python vê):**")
+            st.dataframe(df_status.head(5))
+            if 'Data_Filtro' in df_status.columns:
+                st.write("**Como a Data ficou após a conversão:**")
+                st.dataframe(df_status[['Data_Extraida', 'Data_Filtro']].head(5))
 
     # Define os status e suas cores (Igualzinho ao seu print)
     mapa_status = {
