@@ -4316,9 +4316,9 @@ elif pagina == "📊 GD (Gestão Diária)":
 </div>
 </div>"""
 
-    # Card TOTAL no final
+    # Card TOTAL no final (AGORA COM COR SÓLIDA PARA NÃO BUGAR)
     cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
-<div style="background: linear-gradient(90deg, #FF6F61 0%, #00C6FF 100%); color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
+<div style="background-color: #1E272E; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
 <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
 <div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
 <div style="font-size: 10px; color: #8395A7;">AG.</div>
