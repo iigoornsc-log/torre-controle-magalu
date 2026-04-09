@@ -4131,11 +4131,10 @@ elif pagina == "📊 GD (Gestão Diária)":
     with st.spinner("Sincronizando radares com a doca..."):
         df_prod, df_status = puxar_base_gd()
 
-    # --- 🧠 LÓGICA DE PRODUTIVIDADE (O CÁLCULO DE GANHO) ---
+    # --- 🧠 LÓGICA DE PRODUTIVIDADE (MÉDIA ACUMULADA DO MÊS) ---
     meta_total = 0
     realizado_total = 0
     ganho_pct = 0.0
-    saldo_minutos = 0 # 👈 Variável para guardar o tempo salvo/perdido
     
     # 🛡️ Puxa o input dinâmico
     total_equipes_gd = equipes_fisicas_gd
@@ -4144,78 +4143,39 @@ elif pagina == "📊 GD (Gestão Diária)":
     if not df_prod.empty:
         col_dt_p = next((c for c in df_prod.columns if 'DATA' in c.upper()), None)
         if col_dt_p:
-            # Força o Python a ler a data no formato BR
-            df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], dayfirst=True, errors='coerce').dt.date
-            df_prod_dia = df_prod[df_prod[col_dt_p] == data_gd].copy()
+            # Força o Python a ler a data no formato BR mantendo como DateTime
+            df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], dayfirst=True, errors='coerce')
+            
+            # 💡 A MÁGICA AQUI: Filtra todos os dias do MÊS selecionado, e não apenas o dia isolado!
+            df_prod_mes = df_prod[(df_prod[col_dt_p].dt.month == data_gd.month) & 
+                                  (df_prod[col_dt_p].dt.year == data_gd.year)].copy()
             
             # Puxa colunas de tempo
-            col_meta = next((c for c in df_prod_dia.columns if 'META' in c.upper()), None)
-            col_real = next((c for c in df_prod_dia.columns if 'REALIZADO' in c.upper()), None)
+            col_meta = next((c for c in df_prod_mes.columns if 'META' in c.upper()), None)
+            col_real = next((c for c in df_prod_mes.columns if 'REALIZADO' in c.upper()), None)
             
-            if col_meta and col_real and not df_prod_dia.empty:
-                # 🛠️ Troca vírgula por ponto
-                df_prod_dia[col_meta] = df_prod_dia[col_meta].astype(str).str.replace(',', '.')
-                df_prod_dia[col_real] = df_prod_dia[col_real].astype(str).str.replace(',', '.')
+            if col_meta and col_real and not df_prod_mes.empty:
+                # 🛠️ Troca vírgula por ponto para o Python calcular certo
+                df_prod_mes[col_meta] = df_prod_mes[col_meta].astype(str).str.replace(',', '.')
+                df_prod_mes[col_real] = df_prod_mes[col_real].astype(str).str.replace(',', '.')
                 
-                meta_total = pd.to_numeric(df_prod_dia[col_meta], errors='coerce').sum()
-                realizado_total = pd.to_numeric(df_prod_dia[col_real], errors='coerce').sum()
+                # Soma absolutamente TUDO do Mês inteiro
+                meta_total = pd.to_numeric(df_prod_mes[col_meta], errors='coerce').sum()
+                realizado_total = pd.to_numeric(df_prod_mes[col_real], errors='coerce').sum()
                 
                 if realizado_total > 0:
                     fator_produtividade = meta_total / realizado_total
                     ganho_pct = (fator_produtividade - 1) * 100
+                    
+                    # Aplica a produtividade média do mês nas equipes que vieram HOJE
                     equipes_efetivas = total_equipes_gd * fator_produtividade
-                    # Calcula a diferença de tempo
-                    saldo_minutos = meta_total - realizado_total 
 
     # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
     sinal_ganho = "+" if ganho_pct >= 0 else ""
     
-    # Transformando o saldo de minutos em Horas e Minutos para a tela
-    horas_saldo = int(abs(saldo_minutos) // 60)
-    mins_saldo = int(abs(saldo_minutos) % 60)
-    if saldo_minutos >= 0:
-        texto_saldo = f"⏱️ Saldo: + {horas_saldo}h {mins_saldo}m"
-    else:
-        texto_saldo = f"⏳ Saldo: - {horas_saldo}h {mins_saldo}m"
-
-    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC E DINÂMICO) ---
-    import math
-    apc_dia = 0
-    
-    base_apc = df_filtrado_op if 'df_filtrado_op' in globals() else (df if 'df' in globals() else pd.DataFrame())
-    
-    if not base_apc.empty and 'Data' in base_apc.columns:
-        df_base_dia = base_apc[pd.to_datetime(base_apc['Data']).dt.date == data_gd].copy()
-        
-        if not df_base_dia.empty and 'Tempo_APC_Minutos' in df_base_dia.columns:
-            soma_minutos_cargas = df_base_dia['Tempo_APC_Minutos'].sum()
-            min_transf_fixa = (qtd_transf_gd * 240) if data_gd.weekday() < 5 else 0
-            minutos_totais = soma_minutos_cargas + min_transf_fixa
-            apc_dia = math.ceil(minutos_totais / 427)
-
-    # 3. CABEÇALHO DE PRODUTIVIDADE (ESTILO SÊNIOR)
-    st.markdown(f"""
-    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #8395A7; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
-            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">APC - DIA (Equipes Necessárias)</div>
-            <div style="font-size: 26px; font-weight: 900; color: #1E272E;">{apc_dia}</div>
-        </div>
-        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #00C6FF; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
-            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Equipes Disponíveis (Físico)</div>
-            <div style="font-size: 26px; font-weight: 900; color: #0086FF;">{total_equipes_gd}</div>
-        </div>
-        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid {cor_ganho}; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px; position: relative;">
-            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Ganho Produtivo (Equipes Reais)</div>
-            <div style="font-size: 26px; font-weight: 900; color: {cor_ganho};">
-                {equipes_efetivas:.1f} <span style="font-size: 14px; vertical-align: middle;">({sinal_ganho}{ganho_pct:.1f}%)</span>
-            </div>
-            <div style="font-size: 11px; font-weight: 700; color: {cor_ganho}; margin-top: 5px;">
-                {texto_saldo}
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Texto de subtítulo atualizado para mostrar que é uma visão mensal
+    texto_saldo = f"📅 Média Histórica: {data_gd.strftime('%m/%Y')}"
 
     # --- 🧠 LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
     df_status_dia = pd.DataFrame()
