@@ -4135,22 +4135,28 @@ elif pagina == "📊 GD (Gestão Diária)":
     meta_total = 0
     realizado_total = 0
     ganho_pct = 0.0
+    saldo_minutos = 0 # 👈 Variável para guardar o tempo salvo/perdido
     
-    # 🛡️ Agora ele usa o input dinâmico que você digitou na tela!
+    # 🛡️ Puxa o input dinâmico
     total_equipes_gd = equipes_fisicas_gd
     equipes_efetivas = total_equipes_gd
     
     if not df_prod.empty:
         col_dt_p = next((c for c in df_prod.columns if 'DATA' in c.upper()), None)
         if col_dt_p:
-            df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], errors='coerce').dt.date
+            # Força o Python a ler a data no formato BR
+            df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], dayfirst=True, errors='coerce').dt.date
             df_prod_dia = df_prod[df_prod[col_dt_p] == data_gd].copy()
             
             # Puxa colunas de tempo
             col_meta = next((c for c in df_prod_dia.columns if 'META' in c.upper()), None)
             col_real = next((c for c in df_prod_dia.columns if 'REALIZADO' in c.upper()), None)
             
-            if col_meta and col_real:
+            if col_meta and col_real and not df_prod_dia.empty:
+                # 🛠️ Troca vírgula por ponto
+                df_prod_dia[col_meta] = df_prod_dia[col_meta].astype(str).str.replace(',', '.')
+                df_prod_dia[col_real] = df_prod_dia[col_real].astype(str).str.replace(',', '.')
+                
                 meta_total = pd.to_numeric(df_prod_dia[col_meta], errors='coerce').sum()
                 realizado_total = pd.to_numeric(df_prod_dia[col_real], errors='coerce').sum()
                 
@@ -4158,33 +4164,34 @@ elif pagina == "📊 GD (Gestão Diária)":
                     fator_produtividade = meta_total / realizado_total
                     ganho_pct = (fator_produtividade - 1) * 100
                     equipes_efetivas = total_equipes_gd * fator_produtividade
+                    # Calcula a diferença de tempo
+                    saldo_minutos = meta_total - realizado_total 
 
     # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
     sinal_ganho = "+" if ganho_pct >= 0 else ""
+    
+    # Transformando o saldo de minutos em Horas e Minutos para a tela
+    horas_saldo = int(abs(saldo_minutos) // 60)
+    mins_saldo = int(abs(saldo_minutos) % 60)
+    if saldo_minutos >= 0:
+        texto_saldo = f"⏱️ Saldo: + {horas_saldo}h {mins_saldo}m"
+    else:
+        texto_saldo = f"⏳ Saldo: - {horas_saldo}h {mins_saldo}m"
 
     # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC E DINÂMICO) ---
     import math
     apc_dia = 0
     
-    # Garante que vai usar a mesma base de dados filtrada que a sua Visão APC usa
     base_apc = df_filtrado_op if 'df_filtrado_op' in globals() else (df if 'df' in globals() else pd.DataFrame())
     
     if not base_apc.empty and 'Data' in base_apc.columns:
-        # Filtra para o dia exato selecionado na GD
         df_base_dia = base_apc[pd.to_datetime(base_apc['Data']).dt.date == data_gd].copy()
         
         if not df_base_dia.empty and 'Tempo_APC_Minutos' in df_base_dia.columns:
-            # 1. Soma os minutos reais calculados na sua base
             soma_minutos_cargas = df_base_dia['Tempo_APC_Minutos'].sum()
-            
-            # 2. Regra Magalu: Multiplica as transferências informadas por 240 (Só em dias úteis)
             min_transf_fixa = (qtd_transf_gd * 240) if data_gd.weekday() < 5 else 0
-            
-            # 3. Soma Total
             minutos_totais = soma_minutos_cargas + min_transf_fixa
-            
-            # 4. Cálculo final idêntico ao seu: Teto da divisão por 427
             apc_dia = math.ceil(minutos_totais / 427)
 
     # 3. CABEÇALHO DE PRODUTIVIDADE (ESTILO SÊNIOR)
@@ -4198,10 +4205,13 @@ elif pagina == "📊 GD (Gestão Diária)":
             <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Equipes Disponíveis (Físico)</div>
             <div style="font-size: 26px; font-weight: 900; color: #0086FF;">{total_equipes_gd}</div>
         </div>
-        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid {cor_ganho}; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
+        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid {cor_ganho}; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px; position: relative;">
             <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Ganho Produtivo (Equipes Reais)</div>
             <div style="font-size: 26px; font-weight: 900; color: {cor_ganho};">
                 {equipes_efetivas:.1f} <span style="font-size: 14px; vertical-align: middle;">({sinal_ganho}{ganho_pct:.1f}%)</span>
+            </div>
+            <div style="font-size: 11px; font-weight: 700; color: {cor_ganho}; margin-top: 5px;">
+                {texto_saldo}
             </div>
         </div>
     </div>
