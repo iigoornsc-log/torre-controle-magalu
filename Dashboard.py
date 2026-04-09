@@ -616,6 +616,40 @@ Analiso seu cenário operacional de forma complexa, listo os dias com riscos e d
         unsafe_allow_html=True
     )
 
+# 3. A LOGO DO MAGALOG (Agora abaixo de tudo)
+st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+
+st.sidebar.header("📍 Menu de Navegação")
+pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simular Cenários", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🧩 Slotting (Vagas Extras)","📊 GD (Gestão Diária)"])
+st.sidebar.markdown("---")
+
+if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
+    st.cache_data.clear()
+    st.rerun()
+
+st.sidebar.header("📅 Período de Análise")
+
+hoje = pd.Timestamp.now(tz='America/Sao_Paulo').date()
+primeiro_dia_mes = hoje.replace(day=1)
+
+if hoje.month == 12:
+    ultimo_dia_mes = hoje.replace(day=31)
+else:
+    ultimo_dia_mes = (hoje.replace(month=hoje.month+1, day=1) - pd.Timedelta(days=1))
+
+datas_selecionadas = st.sidebar.date_input(
+    "Selecione o Início e o Fim:", 
+    value=(primeiro_dia_mes, ultimo_dia_mes), 
+    format="DD/MM/YYYY"
+)
+
+if len(datas_selecionadas) == 2: data_inicio, data_fim = datas_selecionadas
+else: data_inicio = data_fim = datas_selecionadas[0]
+
+ts_inicio = pd.to_datetime(data_inicio)
+ts_fim = pd.to_datetime(data_fim)
+
 # ==============================================================================
 # PÁGINA 1: PAINEL OPERACIONAL
 # ==============================================================================
@@ -1138,6 +1172,7 @@ elif pagina == "📅 Previsão de Agendas":
             st.warning("⚠️ Sem transferências nesta data.")
             if st.checkbox("Debug: Ver base bruta Transf"):
                 st.write(base_transf.head(5) if not base_transf.empty else "Tabela Vazia")
+
 # ==============================================================================
 # PÁGINA 2.5: Simulador Cenário APC
 # ==============================================================================
@@ -2244,7 +2279,6 @@ elif pagina == "📊 GD (Gestão Diária)":
         else:
             st.info("⚠️ Coluna MODALIDADE não encontrada na base.")
 
-    
     # ==========================================================================
     # VISÃO 2: 📋 LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM
     # ==========================================================================
@@ -2328,40 +2362,4 @@ elif pagina == "📊 GD (Gestão Diária)":
 
             cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
 <div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
-<div style="display: flex; border-bottom: 1px solid #E1E8ED;">
-<div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
-<div style="font-size: 10px; color: #8395A7;">AG.</div>
-<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_ag}</div>
-</div>
-<div style="flex: 1; padding: 8px 0;">
-<div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
-<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_pc:,.0f}</div>
-</div>
-</div>
-</div>"""
-
-    cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
-<div style="background-color: #1E272E; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
-<div style="display: flex; border-bottom: 1px solid #E1E8ED;">
-<div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
-<div style="font-size: 10px; color: #8395A7;">AG.</div>
-<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_agendas_status}</div>
-</div>
-<div style="flex: 1; padding: 8px 0;">
-<div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
-<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_pecas_status:,.0f}</div>
-</div>
-</div>
-</div>"""
-
-    st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
-
-    # TABELA DETALHADA E FILTRO DE STATUS
-    st.markdown("### 🔍 Detalhamento das Agendas na Doca")
-    if not df_status_dia.empty and col_st:
-        status_unicos = df_status_dia[col_st].dropna().unique().tolist()
-        status_selecionados = st.multiselect("Filtrar por Status:", options=status_unicos, default=status_unicos)
-        df_exibicao = df_status_dia[df_status_dia[col_st].isin(status_selecionados)]
-        st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
-    else:
-        st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
+<div style="display: flex; border-bottom: 1px solid #E1E8
