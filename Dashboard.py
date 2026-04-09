@@ -2414,10 +2414,10 @@ elif pagina == "📊 GD (Gestão Diária)":
         # 🛡️ O ANTÍDOTO RAIZ: Remove colunas duplicadas da base LOGO DE CARA!
         df_reslog = df_reslog.loc[:, ~df_reslog.columns.duplicated()]
 
-        # 🛡️ BUSCADOR INTELIGENTE DE COLUNAS
+        # 🛡️ BUSCADOR INTELIGENTE DE COLUNAS (Agora aprendendo que ITEM = SKU)
         col_agenda = next((c for c in df_reslog.columns if c in ['AGENDA', 'CODAGENDA']), None)
-        col_sku = next((c for c in df_reslog.columns if c in ['SKU', 'COMPITEM']), None)
-        col_pecas = next((c for c in df_reslog.columns if c in ['QTD PEÇAS', 'QTAGENDA', 'QTCOMP']), None)
+        col_sku = next((c for c in df_reslog.columns if c in ['SKU', 'COMPITEM', 'ITEM', 'CÓDIGO', 'CODIGO']), None)
+        col_pecas = next((c for c in df_reslog.columns if c in ['QTD PEÇAS', 'QTAGENDA', 'QTCOMP', 'QTDE']), None)
         col_dt = next((c for c in df_reslog.columns if c in ['DTAGENDA', 'DATA AGENDA', 'DATA']), None)
 
         if col_dt and 'RESLOG' in df_reslog.columns:
