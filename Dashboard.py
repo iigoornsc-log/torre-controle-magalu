@@ -4224,7 +4224,7 @@ elif pagina == "📊 GD (Gestão Diária)":
             qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].astype(str).str.contains('AGRUPADA', na=False, case=False)].shape[0]
             pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
 
-    st.markdown("### 📦 Status de Armazenagem (Pendência Real)")
+    st.markdown("### Pendências armazenagem - RECEBIMENTO")
     
     # 🚨 CAIXA PRETA DO A.R.I. (DEBUGGER DE ARMAZENAGEM) 🚨
     with st.expander("🛠️ DEBUG: Raio-X da Base de Armazenagem (Abra se não puxar)"):
@@ -4243,7 +4243,7 @@ elif pagina == "📊 GD (Gestão Diária)":
             <div style="font-size: 11px; color: #8395A7;">{pct_agrupada:.1f}% Agrupadas / {100-pct_agrupada:.1f}% Normal</div>
         </div>
         <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #E67E22; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas no Pátio</div>
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas</div>
             <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_agendas_pend}</div>
         </div>
         <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #D35400; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
