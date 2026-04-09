@@ -4162,10 +4162,10 @@ elif pagina == "📊 GD (Gestão Diária)":
                 df_prod_periodo[col_meta] = pd.to_numeric(df_prod_periodo[col_meta].astype(str).str.replace(',', '.'), errors='coerce')
                 df_prod_periodo[col_real] = pd.to_numeric(df_prod_periodo[col_real].astype(str).str.replace(',', '.'), errors='coerce')
                 
-                # 💡 Filtro 2: Remove as cargas multi-dias (expulsa o que passou de 427 minutos)
-                df_prod_limpo = df_prod_periodo[df_prod_periodo[col_real] <= 427].copy()
+                # 💡 Filtro 2 e 3: Remove as cargas multi-dias (>427) E erros de digitação/micro-cargas (<10)
+                df_prod_limpo = df_prod_periodo[(df_prod_periodo[col_real] <= 427) & (df_prod_periodo[col_real] >= 10)].copy()
                 
-                # Soma a base já limpa (30 dias sem os pontos fora da curva)
+                # Soma a base já limpa
                 meta_total = df_prod_limpo[col_meta].sum()
                 realizado_total = df_prod_limpo[col_real].sum()
                 
@@ -4181,7 +4181,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     sinal_ganho = "+" if ganho_pct >= 0 else ""
     
     # Texto de subtítulo atualizado para refletir a nova regra
-    texto_saldo = f"📅 Histórico: Últimos 30 dias (s/ multi-dias)"
+    texto_saldo = f"📅 Histórico 30 dias (cargas entre 10 e 427 min)"
 
     # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC E DINÂMICO) ---
     import math
