@@ -4177,6 +4177,51 @@ elif pagina == "📊 GD (Gestão Diária)":
     # Texto de subtítulo atualizado para mostrar que é uma visão mensal
     texto_saldo = f"📅 Média Histórica: {data_gd.strftime('%m/%Y')}"
 
+    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC E DINÂMICO) ---
+    import math
+    apc_dia = 0
+    
+    base_apc = df_filtrado_op if 'df_filtrado_op' in globals() else (df if 'df' in globals() else pd.DataFrame())
+    
+    if not base_apc.empty and 'Data' in base_apc.columns:
+        df_base_dia = base_apc[pd.to_datetime(base_apc['Data']).dt.date == data_gd].copy()
+        
+        if not df_base_dia.empty and 'Tempo_APC_Minutos' in df_base_dia.columns:
+            soma_minutos_cargas = df_base_dia['Tempo_APC_Minutos'].sum()
+            min_transf_fixa = (qtd_transf_gd * 240) if data_gd.weekday() < 5 else 0
+            minutos_totais = soma_minutos_cargas + min_transf_fixa
+            apc_dia = math.ceil(minutos_totais / 427)
+
+    # 3. CABEÇALHO DE PRODUTIVIDADE (ESTILO SÊNIOR)
+    st.markdown(f"""
+    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #8395A7; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
+            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">APC - DIA (Equipes Necessárias)</div>
+            <div style="font-size: 26px; font-weight: 900; color: #1E272E;">{apc_dia}</div>
+        </div>
+        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid #00C6FF; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px;">
+            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Equipes Disponíveis (Físico)</div>
+            <div style="font-size: 26px; font-weight: 900; color: #0086FF;">{total_equipes_gd}</div>
+        </div>
+        <div style="flex: 1; background-color: #FFFFFF; padding: 15px 20px; border-radius: 10px; border-left: 5px solid {cor_ganho}; box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-width: 200px; position: relative;">
+            <div style="font-size: 12px; font-weight: 800; color: #576574; text-transform: uppercase;">Ganho Produtivo (Equipes Reais)</div>
+            <div style="font-size: 26px; font-weight: 900; color: {cor_ganho};">
+                {equipes_efetivas:.1f} <span style="font-size: 14px; vertical-align: middle;">({sinal_ganho}{ganho_pct:.1f}%)</span>
+            </div>
+            <div style="font-size: 11px; font-weight: 700; color: {cor_ganho}; margin-top: 5px;">
+                {texto_saldo}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
+    cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
+    sinal_ganho = "+" if ganho_pct >= 0 else ""
+    
+    # Texto de subtítulo atualizado para mostrar que é uma visão mensal
+    texto_saldo = f"📅 Média Histórica: {data_gd.strftime('%m/%Y')}"
+
     # --- 🧠 LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
     df_status_dia = pd.DataFrame()
     if not df_status.empty:
