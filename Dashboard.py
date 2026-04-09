@@ -4253,23 +4253,41 @@ elif pagina == "📊 GD (Gestão Diária)":
     </div>
     """, unsafe_allow_html=True)
 
+    # ==========================================================================
+    # --- 🧠 LÓGICA DE CRUZAMENTO: ARMAZENAGEM VS TRANSFERÊNCIA (BLINDADO) ---
+    # ==========================================================================
     st.markdown("### 🚀 Impacto na Transferência (Liberação de Pedidos)")
+    
     if not df_pend.empty and not df_transf_base.empty:
-        if 'CD_AGENDA' in df_pend.columns and 'AGENDA' in df_transf_base.columns:
-            df_pend['CD_AGENDA'] = df_pend['CD_AGENDA'].astype(str).str.strip()
-            df_transf_base['AGENDA'] = df_transf_base['AGENDA'].astype(str).str.strip().str.replace('.0', '', regex=False)
-            
-            df_transf_resumo = df_transf_base.groupby('AGENDA').agg({
+        # Função para limpar agenda e garantir que 50010.0 vire "50010"
+        def limpar_coluna_agenda(df, nome_coluna):
+            if nome_coluna in df.columns:
+                # 1. Converte para numérico (força erros a virar NaN)
+                # 2. Preenche vazios com 0
+                # 3. Transforma em Inteiro (remove o .0)
+                # 4. Transforma em Texto e limpa espaços
+                return pd.to_numeric(df[nome_coluna], errors='coerce').fillna(0).astype(int).astype(str).str.strip()
+            return None
+
+        # Aplica a limpeza nas duas pontas
+        df_pend['CD_AGENDA_KEY'] = limpar_coluna_agenda(df_pend, 'CD_AGENDA')
+        df_transf_base['AGENDA_KEY'] = limpar_coluna_agenda(df_transf_base, 'AGENDA')
+
+        if df_pend['CD_AGENDA_KEY'] is not None and df_transf_base['AGENDA_KEY'] is not None:
+            # Agrupa pedidos na base de transferência
+            df_transf_resumo = df_transf_base.groupby('AGENDA_KEY').agg({
                 'NU_PED_ORIGEM': 'nunique',
                 'QTDE': 'sum'
             }).reset_index().rename(columns={'NU_PED_ORIGEM': 'Qtd_Pedidos', 'QTDE': 'Peças_Pedido'})
             
-            df_impacto = df_pend.groupby('CD_AGENDA').agg({
+            # Agrupa o que está parado na armazenagem
+            df_impacto = df_pend.groupby('CD_AGENDA_KEY').agg({
                 'QT_CONFERIDO': 'sum',
                 'FORNECEDOR': 'first'
             }).reset_index()
             
-            df_final = pd.merge(df_impacto, df_transf_resumo, left_on='CD_AGENDA', right_on='AGENDA', how='inner')
+            # Faz o cruzamento usando as chaves limpas
+            df_final = pd.merge(df_impacto, df_transf_resumo, left_on='CD_AGENDA_KEY', right_on='AGENDA_KEY', how='inner')
             
             if not df_final.empty:
                 df_final = df_final.sort_values(by='Qtd_Pedidos', ascending=False)
@@ -4278,15 +4296,26 @@ elif pagina == "📊 GD (Gestão Diária)":
                     st.metric("Pedidos Bloqueados por Armazenagem", df_final['Qtd_Pedidos'].sum())
                     st.metric("Peças C/ Pedido Aguardando Salto", f"{df_final['Peças_Pedido'].sum():,.0f}")
                 with col_im2:
+                    st.write("**Agendas que liberam pedidos se guardadas agora:**")
                     st.dataframe(
-                        df_final[['CD_AGENDA', 'FORNECEDOR', 'QT_CONFERIDO', 'Qtd_Pedidos', 'Peças_Pedido']],
-                        column_config={"CD_AGENDA": "Agenda", "QT_CONFERIDO": "Peças p/ Guardar", "Qtd_Pedidos": "Pedidos Atendidos", "Peças_Pedido": "Peças Liberadas"},
+                        df_final[['CD_AGENDA_KEY', 'FORNECEDOR', 'QT_CONFERIDO', 'Qtd_Pedidos', 'Peças_Pedido']],
+                        column_config={
+                            "CD_AGENDA_KEY": "Agenda", 
+                            "QT_CONFERIDO": "Peças p/ Guardar", 
+                            "Qtd_Pedidos": "Pedidos Atendidos", 
+                            "Peças_Pedido": "Peças Liberadas"
+                        },
                         hide_index=True, use_container_width=True
                     )
             else:
-                st.success("✅ Nenhuma agenda pendente possui pedidos na base de transferência.")
+                st.success("✅ Nenhuma agenda na armazenagem tem pedidos na base de transferência (Chaves validadas).")
+                
+                # 🛠️ MINI DEBUGGER (Só aparece se não cruzar nada)
+                with st.expander("🛠️ Por que não cruzou? (Verificador de Chaves)"):
+                    st.write("Agendas na Pendência:", df_pend['CD_AGENDA_KEY'].unique()[:5])
+                    st.write("Agendas na Transferência:", df_transf_base['AGENDA_KEY'].unique()[:5])
     else:
-        st.info("Aguardando carregamento das bases para calcular impacto.")
+        st.info("Bases de Pendência ou Transferência não carregadas.")
 
     # ==========================================================================
     # --- 🧠 LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
