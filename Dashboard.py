@@ -4097,10 +4097,14 @@ elif pagina == "📊 GD (Gestão Diária)":
     titulo_com_ari("📊 Gestão Diária (Raio-X Operacional)")
     st.markdown("Acompanhamento em tempo real do status das agendas e performance tática das equipes.")
 
-    # 1. FILTROS DA GD
-    col_f1, col_f2, col_f3 = st.columns([2, 3, 1])
+    # 1. FILTROS DA GD (AGORA COM AJUSTE DINÂMICO DE CAPACIDADE)
+    col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
         data_gd = st.date_input("🗓️ Data da Gestão Diária", pd.Timestamp.now().date())
+    with col_f2:
+        qtd_transf_gd = st.number_input("📦 Qtd Transferências (Hoje)", min_value=0, max_value=20, value=5, help="Cada transferência adiciona 240 min no APC.")
+    with col_f3:
+        equipes_fisicas_gd = st.number_input("👷 Equipes Físicas no Turno", min_value=1, max_value=30, value=5, help="Quantas equipes realmente vieram trabalhar hoje?")
     
     st.markdown("---")
 
@@ -4132,8 +4136,8 @@ elif pagina == "📊 GD (Gestão Diária)":
     realizado_total = 0
     ganho_pct = 0.0
     
-    # 🛡️ Salva-vidas de Variável: Tenta puxar as equipes, se não achar, usa 5 como padrão.
-    total_equipes_gd = globals().get('total_equipes', 5)
+    # 🛡️ Agora ele usa o input dinâmico que você digitou na tela!
+    total_equipes_gd = equipes_fisicas_gd
     equipes_efetivas = total_equipes_gd
     
     if not df_prod.empty:
@@ -4154,32 +4158,12 @@ elif pagina == "📊 GD (Gestão Diária)":
                     fator_produtividade = meta_total / realizado_total
                     ganho_pct = (fator_produtividade - 1) * 100
                     equipes_efetivas = total_equipes_gd * fator_produtividade
-    
-    if not df_prod.empty:
-        col_dt_p = next((c for c in df_prod.columns if 'DATA' in c.upper()), None)
-        if col_dt_p:
-            df_prod[col_dt_p] = pd.to_datetime(df_prod[col_dt_p], errors='coerce').dt.date
-            df_prod_dia = df_prod[df_prod[col_dt_p] == data_gd].copy()
-            
-            # Puxa colunas de tempo
-            col_meta = next((c for c in df_prod_dia.columns if 'META' in c.upper()), None)
-            col_real = next((c for c in df_prod_dia.columns if 'REALIZADO' in c.upper()), None)
-            
-            if col_meta and col_real:
-                meta_total = pd.to_numeric(df_prod_dia[col_meta], errors='coerce').sum()
-                realizado_total = pd.to_numeric(df_prod_dia[col_real], errors='coerce').sum()
-                
-                if realizado_total > 0:
-                    fator_produtividade = meta_total / realizado_total
-                    ganho_pct = (fator_produtividade - 1) * 100
-                    # 👇 AQUI ESTAVA O INFILTRADO! Agora está com o _gd
-                    equipes_efetivas = total_equipes_gd * fator_produtividade
 
     # Define a cor do ganho (Verde se for positivo, Vermelho se for negativo)
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
     sinal_ganho = "+" if ganho_pct >= 0 else ""
 
-    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC) ---
+    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC E DINÂMICO) ---
     import math
     apc_dia = 0
     
@@ -4194,8 +4178,8 @@ elif pagina == "📊 GD (Gestão Diária)":
             # 1. Soma os minutos reais calculados na sua base
             soma_minutos_cargas = df_base_dia['Tempo_APC_Minutos'].sum()
             
-            # 2. Regra Magalu: 1.200 minutos de Transferência Fixa nos dias úteis
-            min_transf_fixa = 1200 if data_gd.weekday() < 5 else 0
+            # 2. Regra Magalu: Multiplica as transferências informadas por 240 (Só em dias úteis)
+            min_transf_fixa = (qtd_transf_gd * 240) if data_gd.weekday() < 5 else 0
             
             # 3. Soma Total
             minutos_totais = soma_minutos_cargas + min_transf_fixa
@@ -4233,7 +4217,6 @@ elif pagina == "📊 GD (Gestão Diária)":
             df_status_dia = df_status[df_status[col_dt_s] == data_gd].copy()
 
     # Define os status e suas cores (Igualzinho ao seu print)
-    # Formato: Chave de busca na tabela : (Nome Bonito, Cor)
     mapa_status = {
         'AUSENTE': ('AUSENTE', '#2C3E50'),
         'LANÇAMENTO': ('AG LANÇAMENTO', '#E67E22'),
