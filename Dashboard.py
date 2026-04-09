@@ -4181,7 +4181,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     sinal_ganho = "+" if ganho_pct >= 0 else ""
     
     # Texto de subtítulo atualizado para refletir a nova regra
-    texto_saldo = f"📅 Histórico 30 dias (cargas entre 10 e 427 min)"
+    texto_saldo = f"📅 Histórico 30 dias de agendas"
 
     # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC (ESPELHADO DA VISÃO APC E DINÂMICO) ---
     import math
