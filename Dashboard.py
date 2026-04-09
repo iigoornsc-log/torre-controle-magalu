@@ -4263,7 +4263,6 @@ elif pagina == "📊 GD (Gestão Diária)":
         </div>
     </div>
     """, unsafe_allow_html=True)
-
     # ==========================================================================
     # --- 🚀 IMPACTO NA TRANSFERÊNCIA (VIA COLUNA MODALIDADE DIRETO NA BASE) ---
     # ==========================================================================
