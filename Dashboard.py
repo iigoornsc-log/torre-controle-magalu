@@ -4211,6 +4211,132 @@ elif pagina == "📊 GD (Gestão Diária)":
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # ==========================================================================
+    # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM (FILTRO RETROATIVO OU GERAL) ---
+    # ==========================================================================
+    tot_etq_pend, tot_agendas_pend, tot_pecas_pend, pct_agrupada = 0, 0, 0, 0
+
+    if not df_pend.empty:
+        df_pend.columns = df_pend.columns.str.strip().str.upper()
+        
+        # 🛠️ AJUSTE 1: Converter DT_CONFERENCIA para data
+        if 'DT_CONFERENCIA' in df_pend.columns:
+            df_pend['DT_CONF_DT'] = pd.to_datetime(df_pend['DT_CONFERENCIA'], errors='coerce').dt.date
+            
+            # 💡 A MÁGICA DO BOTÃO: Só corta a data se a "Visão Geral" estiver DESLIGADA
+            if not visao_geral:
+                df_pend = df_pend[df_pend['DT_CONF_DT'] < data_gd].copy()
+
+        # KPIs após passar (ou não) pelo filtro
+        if not df_pend.empty:
+            tot_etq_pend = df_pend['NU_ETIQUETA'].nunique() if 'NU_ETIQUETA' in df_pend.columns else 0
+            tot_agendas_pend = df_pend['CD_AGENDA'].nunique() if 'CD_AGENDA' in df_pend.columns else 0
+            tot_pecas_pend = pd.to_numeric(df_pend['QT_CONFERIDO'], errors='coerce').sum() if 'QT_CONFERIDO' in df_pend.columns else 0
+            
+            if tot_etq_pend > 0 and 'TP_RECEBIMENTO' in df_pend.columns:
+                qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].astype(str).str.contains('AGRUPADA', na=False, case=False)].shape[0]
+                pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
+
+    st.markdown("### 📦 Status de Armazenagem (Pendência Real)")
+    
+    # 💡 Aviso dinâmico na tela para o usuário saber o que está olhando
+    if visao_geral:
+        st.info("🌍 **Visão Geral ATIVADA:** Exibindo o volume TOTAL do pátio (incluindo as cargas conferidas hoje).")
+    else:
+        st.info(f"⏳ **Visão Retroativa:** Exibindo APENAS o que foi conferido até o dia { (data_gd - pd.Timedelta(days=1)).strftime('%d/%m/%Y') }.")
+
+    # 🟢 AQUI ESTÃO OS KPIS QUE TINHAM SUMIDO!
+    st.markdown(f"""
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #F39C12; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Etiquetas Pendentes</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_etq_pend}</div>
+            <div style="font-size: 11px; color: #8395A7;">{pct_agrupada:.1f}% Agrupadas / {100-pct_agrupada:.1f}% Normal</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #E67E22; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas no Pátio</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_agendas_pend}</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #D35400; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Peças Pendentes (WMS)</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_pecas_pend:,.0f}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ==========================================================================
+    # VISÃO 1: 🚀 IMPACTO NA TRANSFERÊNCIA (PRIORIDADES COM PEDIDO)
+    # ==========================================================================
+    st.markdown("### 🚀 Prioridade de Armazenagem (Pedidos Travados)")
+    
+    if not df_pend.empty:
+        if 'MODALIDADE' in df_pend.columns:
+            # Filtra apenas o que tem pedido (RTY ou ABA)
+            filtro_modalidade = df_pend['MODALIDADE'].astype(str).str.upper().str.contains('RTY|ABA', na=False, regex=True)
+            df_pedidos = df_pend[filtro_modalidade].copy()
+            
+            if not df_pedidos.empty:
+                df_prioridade = df_pedidos.groupby(['CD_AGENDA', 'FORNECEDOR']).agg({
+                    'NU_ETIQUETA': 'nunique', 
+                    'QT_CONFERIDO': 'sum'     
+                }).reset_index().rename(columns={
+                    'NU_ETIQUETA': 'Etiquetas_com_Pedido',
+                    'QT_CONFERIDO': 'Peças_Liberadas'
+                })
+                
+                df_prioridade = df_prioridade.sort_values(by='Peças_Liberadas', ascending=False)
+                
+                col_im1, col_im2 = st.columns([1, 2])
+                with col_im1:
+                    st.metric("Agendas c/ Pedido Travado", df_prioridade['CD_AGENDA'].nunique())
+                    st.metric("Peças C/ Pedido (RTY/ABA)", f"{df_prioridade['Peças_Liberadas'].sum():,.0f}")
+                with col_im2:
+                    st.dataframe(
+                        df_prioridade[['CD_AGENDA', 'FORNECEDOR', 'Etiquetas_com_Pedido', 'Peças_Liberadas']],
+                        column_config={
+                            "CD_AGENDA": "Agenda",
+                            "FORNECEDOR": "Fornecedor",
+                            "Etiquetas_com_Pedido": "Qtd Etiquetas (RTY/ABA)",
+                            "Peças_Liberadas": "Peças a Liberar"
+                        },
+                        hide_index=True, use_container_width=True
+                    )
+            else:
+                st.success("✅ Nenhuma pendência na visão atual possui pedidos (RTY/ABA).")
+        else:
+            st.info("⚠️ Coluna MODALIDADE não encontrada na base.")
+
+    # ==========================================================================
+    # VISÃO 2: 📋 LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM
+    # ==========================================================================
+    st.markdown("### 📋 Mapa Geral de Pendências de Armazenagem")
+    
+    if not df_pend.empty:
+        # Agrupa tudo que está na base de pendência (respeitando o botão de Visão Geral/Retroativa)
+        df_geral_pend = df_pend.groupby(['CD_AGENDA', 'FORNECEDOR']).agg({
+            'NU_ETIQUETA': 'nunique',
+            'QT_CONFERIDO': 'sum'
+        }).reset_index().rename(columns={
+            'NU_ETIQUETA': 'Total_Etiquetas',
+            'QT_CONFERIDO': 'Total_Peças'
+        })
+        
+        # Ordena pelas agendas maiores primeiro
+        df_geral_pend = df_geral_pend.sort_values(by='Total_Peças', ascending=False)
+        
+        st.dataframe(
+            df_geral_pend,
+            column_config={
+                "CD_AGENDA": "Agenda Pendente",
+                "FORNECEDOR": "Fornecedor",
+                "Total_Etiquetas": "Volume (Etiquetas/Paletes)",
+                "Total_Peças": "Peças a Guardar"
+            },
+            hide_index=True, use_container_width=True
+        )
+    else:
+        st.info("Nenhuma pendência para exibir nesta visão.")
     
     # ==========================================================================
     # VISÃO 1: 🚀 IMPACTO NA TRANSFERÊNCIA (PRIORIDADES COM PEDIDO)
