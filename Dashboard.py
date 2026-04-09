@@ -4219,6 +4219,16 @@ elif pagina == "📊 GD (Gestão Diária)":
             pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
 
     st.markdown("### 📦 Status de Armazenagem (Pendência Real)")
+    
+    # 🚨 CAIXA PRETA DO A.R.I. (DEBUGGER DE ARMAZENAGEM) 🚨
+    with st.expander("🛠️ DEBUG: Raio-X da Base de Armazenagem (Abra se não puxar)"):
+        if df_pend.empty:
+            st.error("❌ A tabela veio VAZIA! Verifique se a planilha de Armazenagem está compartilhada para 'Qualquer pessoa com o link' e se o nome da aba é 'BaseDadosPendArm' exato.")
+        else:
+            st.success("✅ Tabela lida com sucesso!")
+            st.write(f"**Total de linhas lidas:** {df_pend.shape[0]}")
+            st.write("**5 Primeiras linhas:**")
+            st.dataframe(df_pend.head())
     st.markdown(f"""
     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
         <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #F39C12; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
