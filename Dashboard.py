@@ -2445,10 +2445,17 @@ elif pagina == "📊 GD (Gestão Diária)":
                 # 4. Tabela Detalhada
                 st.write("**Lista de Itens com Restrição:**")
                 
-                # Selecionamos apenas colunas essenciais dinamicamente
-                colunas_desejadas = [col_agenda, 'FORNE_PRINC', col_sku, 'DESCRIÇÃO', 'LINHAS', col_pecas, 'RESLOG']
-                # Filtramos apenas as colunas que realmente existem (segurança)
-                colunas_view = [c for c in colunas_desejadas if c and c in df_reslog_filtrado.columns]
+                # 🛡️ O ANTÍDOTO DO ERRO: Remove qualquer coluna duplicada da base antes do Streamlit ler
+                df_reslog_filtrado = df_reslog_filtrado.loc[:, ~df_reslog_filtrado.columns.duplicated()]
+
+                # Mapeia as colunas desejadas (com variações de nome para garantir que acha)
+                colunas_desejadas = [col_agenda, 'FORNE_PRINC', 'FORNECEDOR', col_sku, 'DESCRIÇÃO', 'DESCRICAO', 'LINHAS', 'LINHA', col_pecas, 'RESLOG']
+                
+                # Filtra apenas as colunas que realmente existem e tira repetidas da própria lista
+                colunas_view = []
+                for c in colunas_desejadas:
+                    if c and c in df_reslog_filtrado.columns and c not in colunas_view:
+                        colunas_view.append(c)
                 
                 st.dataframe(
                     df_reslog_filtrado[colunas_view].sort_values(by='RESLOG', ascending=False),
