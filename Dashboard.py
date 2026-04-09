@@ -2411,10 +2411,15 @@ elif pagina == "📊 GD (Gestão Diária)":
         df_reslog = df_itens.copy()
         df_reslog.columns = df_reslog.columns.str.strip().str.upper()
 
-        # 1. Tratamento da Data e Filtros
-        if 'DTAGENDA' in df_reslog.columns:
+        # 🛡️ BUSCADOR INTELIGENTE DE COLUNAS (Evita o KeyError)
+        col_agenda = next((c for c in df_reslog.columns if c in ['AGENDA', 'CODAGENDA']), None)
+        col_sku = next((c for c in df_reslog.columns if c in ['SKU', 'COMPITEM']), None)
+        col_pecas = next((c for c in df_reslog.columns if c in ['QTD PEÇAS', 'QTAGENDA', 'QTCOMP']), None)
+        col_dt = next((c for c in df_reslog.columns if c in ['DTAGENDA', 'DATA AGENDA', 'DATA']), None)
+
+        if col_dt and 'RESLOG' in df_reslog.columns:
             # Converte a data da planilha para o formato de comparação do Streamlit
-            df_reslog['DATA_FORMATADA'] = pd.to_datetime(df_reslog['DTAGENDA'], dayfirst=True, errors='coerce').dt.date
+            df_reslog['DATA_FORMATADA'] = pd.to_datetime(df_reslog[col_dt], dayfirst=True, errors='coerce').dt.date
             
             # Filtro: Data selecionada na tela AND RESLOG >= 1
             df_reslog_filtrado = df_reslog[
@@ -2423,10 +2428,10 @@ elif pagina == "📊 GD (Gestão Diária)":
             ].copy()
 
             if not df_reslog_filtrado.empty:
-                # 2. Cálculos dos KPIs
-                qtd_agendas_reslog = df_reslog_filtrado['CODAGENDA'].nunique()
-                qtd_skus_reslog = df_reslog_filtrado['COMPITEM'].nunique()
-                qtd_pecas_reslog = pd.to_numeric(df_reslog_filtrado['QTAGENDA'], errors='coerce').sum()
+                # 2. Cálculos dos KPIs (Com proteção)
+                qtd_agendas_reslog = df_reslog_filtrado[col_agenda].nunique() if col_agenda else 0
+                qtd_skus_reslog = df_reslog_filtrado[col_sku].nunique() if col_sku else 0
+                qtd_pecas_reslog = pd.to_numeric(df_reslog_filtrado[col_pecas], errors='coerce').sum() if col_pecas else 0
 
                 # 3. Renderização dos KPIs
                 col_res1, col_res2, col_res3 = st.columns(3)
@@ -2439,19 +2444,20 @@ elif pagina == "📊 GD (Gestão Diária)":
 
                 # 4. Tabela Detalhada
                 st.write("**Lista de Itens com Restrição:**")
-                # Selecionamos apenas colunas essenciais para a visão
-                colunas_view = ['CODAGENDA', 'FORNE_PRINC', 'COMPITEM', 'DESCRICAO', 'LINHA', 'QTAGENDA', 'RESLOG']
+                
+                # Selecionamos apenas colunas essenciais dinamicamente
+                colunas_desejadas = [col_agenda, 'FORNE_PRINC', col_sku, 'DESCRIÇÃO', 'LINHAS', col_pecas, 'RESLOG']
                 # Filtramos apenas as colunas que realmente existem (segurança)
-                colunas_existentes = [c for c in colunas_view if c in df_reslog_filtrado.columns]
+                colunas_view = [c for c in colunas_desejadas if c and c in df_reslog_filtrado.columns]
                 
                 st.dataframe(
-                    df_reslog_filtrado[colunas_existentes].sort_values(by='RESLOG', ascending=False),
+                    df_reslog_filtrado[colunas_view].sort_values(by='RESLOG', ascending=False),
                     use_container_width=True,
                     hide_index=True
                 )
             else:
                 st.success(f"✅ Nenhum produto com RESLOG identificado para o dia {data_gd.strftime('%d/%m/%Y')}.")
         else:
-            st.error("⚠️ Coluna 'DTAGENDA' não encontrada na aba Item Agenda.")
+            st.error("⚠️ Coluna 'DTAGENDA' ou 'RESLOG' não encontrada na aba Item Agenda.")
     else:
         st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
