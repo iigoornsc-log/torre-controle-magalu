@@ -4097,18 +4097,21 @@ elif pagina == "📊 GD (Gestão Diária)":
     titulo_com_ari("📊 Gestão Diária (Raio-X Operacional)")
     st.markdown("Acompanhamento em tempo real do status das agendas, performance tática e pendências de armazenagem.")
 
-    # 1. FILTROS DA GD (COM AJUSTE DINÂMICO DE CAPACIDADE)
-    col_f1, col_f2, col_f3 = st.columns(3)
+    # 1. FILTROS DA GD (COM AJUSTE DINÂMICO E VISÃO GERAL)
+    col_f1, col_f2, col_f3, col_f4 = st.columns([1.5, 1.5, 2, 2])
     with col_f1:
         data_gd = st.date_input("🗓️ Data da Gestão Diária", pd.Timestamp.now().date())
     with col_f2:
-        qtd_transf_gd = st.number_input("📦 Qtd Transferências (Hoje)", min_value=0, max_value=20, value=5, help="Cada transferência adiciona 240 min no APC.")
+        # Espaçamento invisível para alinhar o botão com as caixas de texto
+        st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+        visao_geral = st.toggle("🌍 Visão Geral", value=False, help="Ative para ver TODAS as pendências. Desative para ver só os atrasados.")
     with col_f3:
-        equipes_fisicas_gd = st.number_input("👷 Equipes Físicas no Turno", min_value=1, max_value=30, value=5, help="Quantas equipes realmente vieram trabalhar hoje?")
+        qtd_transf_gd = st.number_input("📦 Qtd Transferências (Hoje)", min_value=0, max_value=20, value=5)
+    with col_f4:
+        equipes_fisicas_gd = st.number_input("👷 Equipes Físicas no Turno", min_value=1, max_value=30, value=5)
     
     st.markdown("---")
 
-    # 2. CONEXÃO COM AS BASES DE DADOS
     # 2. CONEXÃO COM AS BASES DE DADOS (USANDO CREDENCIAIS PARA PLANILHAS PRIVADAS)
    @st.cache_data(ttl=300)
     def puxar_bases_completas_gd():
@@ -4210,20 +4213,22 @@ elif pagina == "📊 GD (Gestão Diária)":
     """, unsafe_allow_html=True)
 
     # ==========================================================================
-    # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM (FILTRO RETROATIVO) ---
+    # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM (FILTRO RETROATIVO OU GERAL) ---
     # ==========================================================================
     tot_etq_pend, tot_agendas_pend, tot_pecas_pend, pct_agrupada = 0, 0, 0, 0
 
     if not df_pend.empty:
         df_pend.columns = df_pend.columns.str.strip().str.upper()
         
-        # 🛠️ AJUSTE 1: Converter DT_CONFERENCIA para data e filtrar apenas o que é ANTERIOR a hoje
+        # 🛠️ AJUSTE 1: Converter DT_CONFERENCIA para data
         if 'DT_CONFERENCIA' in df_pend.columns:
             df_pend['DT_CONF_DT'] = pd.to_datetime(df_pend['DT_CONFERENCIA'], errors='coerce').dt.date
-            # Só aceita o que foi conferido ANTES da data da GD (Pendência Real)
-            df_pend = df_pend[df_pend['DT_CONF_DT'] < data_gd].copy()
+            
+            # 💡 A MÁGICA DO BOTÃO: Só corta a data se a "Visão Geral" estiver DESLIGADA
+            if not visao_geral:
+                df_pend = df_pend[df_pend['DT_CONF_DT'] < data_gd].copy()
 
-        # KPIs após o filtro de data
+        # KPIs após passar (ou não) pelo filtro
         if not df_pend.empty:
             tot_etq_pend = df_pend['NU_ETIQUETA'].nunique() if 'NU_ETIQUETA' in df_pend.columns else 0
             tot_agendas_pend = df_pend['CD_AGENDA'].nunique() if 'CD_AGENDA' in df_pend.columns else 0
@@ -4234,7 +4239,12 @@ elif pagina == "📊 GD (Gestão Diária)":
                 pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
 
     st.markdown("### 📦 Status de Armazenagem (Pendência Real)")
-    st.info(f"💡 Exibindo apenas o que foi conferido até o dia { (data_gd - pd.Timedelta(days=1)).strftime('%d/%m/%Y') }.")
+    
+    # 💡 Aviso dinâmico na tela para o usuário saber o que está olhando
+    if visao_geral:
+        st.info("🌍 **Visão Geral ATIVADA:** Exibindo o volume TOTAL do pátio (incluindo as cargas conferidas hoje).")
+    else:
+        st.info(f"⏳ **Visão Retroativa:** Exibindo APENAS o que foi conferido até o dia { (data_gd - pd.Timedelta(days=1)).strftime('%d/%m/%Y') }.")
 
     st.markdown(f"""
     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
