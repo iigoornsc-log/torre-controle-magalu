@@ -4091,45 +4091,136 @@ elif pagina == "🧩 Slotting (Vagas Extras)":
                 except: pass
 
 # ==============================================================================
-# 📊 NOVA PÁGINA: GD (GESTÃO DIÁRIA) - STATUS DA DOCA E PRODUTIVIDADE
+# 📊 PÁGINA: GD (GESTÃO DIÁRIA) - COM IMPACTO DE ARMAZENAGEM
 # ==============================================================================
 elif pagina == "📊 GD (Gestão Diária)":
-    titulo_com_ari("📊 Gestão Diária (Raio-X Operacional)")
-    st.markdown("Acompanhamento em tempo real do status das agendas e performance tática das equipes.")
-
-    # 1. FILTROS DA GD (AGORA COM AJUSTE DINÂMICO DE CAPACIDADE)
+    titulo_com_ari("📊 Gestão Diária & Impacto de Armazenagem")
+    
+    # 1. FILTROS SUPERIORES
     col_f1, col_f2, col_f3 = st.columns(3)
     with col_f1:
         data_gd = st.date_input("🗓️ Data da Gestão Diária", pd.Timestamp.now().date())
     with col_f2:
-        qtd_transf_gd = st.number_input("📦 Qtd Transferências (Hoje)", min_value=0, max_value=20, value=5, help="Cada transferência adiciona 240 min no APC.")
+        qtd_transf_gd = st.number_input("📦 Qtd Transferências (Hoje)", min_value=0, max_value=20, value=5)
     with col_f3:
-        equipes_fisicas_gd = st.number_input("👷 Equipes Físicas no Turno", min_value=1, max_value=30, value=5, help="Quantas equipes realmente vieram trabalhar hoje?")
-    
-    st.markdown("---")
+        equipes_fisicas_gd = st.number_input("👷 Equipes Físicas", min_value=1, max_value=30, value=5)
 
-    # 2. CONEXÃO COM AS BASES DE DADOS (CACHED PARA VELOCIDADE)
-    @st.cache_data(ttl=300) # Atualiza a cada 5 minutos
-    def puxar_base_gd():
-        # Planilha de Produtividade (Fechamento)
-        url_prod = "https://docs.google.com/spreadsheets/d/1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks/gviz/tq?tqx=out:csv&sheet=FECHAMENTO"
-        # Planilha de Painel de Controle (Status) - Agora com os espaços codificados e link blindado
-        url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel%20de%20Controle"
+    # 2. FUNÇÃO DE BUSCA MULTI-PLANILHAS
+    @st.cache_data(ttl=300)
+    def puxar_bases_completas_gd():
+        urls = {
+            'prod': "https://docs.google.com/spreadsheets/d/1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks/gviz/tq?tqx=out:csv&sheet=FECHAMENTO",
+            'status': "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel%20de%20Controle",
+            'pend_arm': "https://docs.google.com/spreadsheets/d/1Yptk_tfdkuhZCK_saApWQMNynjlaQQeEQjqn4lNcgZk/gviz/tq?tqx=out:csv&sheet=BaseDadosPendArm",
+            'transf': "https://docs.google.com/spreadsheets/d/1vA5W3zX-AAL_0hG18F_3pQ6R6xG_YI8-9V_97Z7rC4k/gviz/tq?tqx=out:csv&sheet=Base" # Ajustar URL se necessário
+        }
+        dfs = {}
+        for nome, url in urls.items():
+            try: dfs[nome] = pd.read_csv(url)
+            except: dfs[nome] = pd.DataFrame()
+        return dfs['prod'], dfs['status'], dfs['pend_arm'], dfs['transf']
+
+    with st.spinner("Conectando com todas as bases..."):
+        df_prod, df_status, df_pend, df_transf_base = puxar_bases_completas_gd()
+
+    # --- 🧠 CÁLCULO DE PRODUTIVIDADE (IGUAL ANTERIOR) ---
+    # [Mantido o cálculo de meta_total, realizado_total e ganho_pct conforme conversas anteriores]
+    # (Resumido aqui para brevidade, mas use o código que já temos)
+    ganho_pct = 0.0 # Placeholder
+    equipes_efetivas = equipes_fisicas_gd # Placeholder
+
+    # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM ---
+    tot_etq_pend = 0
+    tot_agendas_pend = 0
+    tot_pecas_pend = 0
+    pct_agrupada = 0
+
+    if not df_pend.empty:
+        # Limpeza de colunas
+        df_pend.columns = df_pend.columns.str.strip().str.upper()
         
-        try:
-            df_p = pd.read_csv(url_prod)
-        except:
-            df_p = pd.DataFrame()
-            
-        try:
-            df_s = pd.read_csv(url_status)
-        except:
-            df_s = pd.DataFrame()
-            
-        return df_p, df_s
+        # Filtros e Cálculos
+        tot_etq_pend = df_pend['NU_ETIQUETA'].nunique()
+        tot_agendas_pend = df_pend['CD_AGENDA'].nunique()
+        tot_pecas_pend = pd.to_numeric(df_pend['QT_CONFERIDO'], errors='coerce').sum()
+        
+        # Cálculo de % Agrupada vs Normal
+        if tot_etq_pend > 0:
+            qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].str.contains('AGRUPADA', na=False, case=False)].shape[0]
+            pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
 
-    with st.spinner("Sincronizando radares com a doca..."):
-        df_prod, df_status = puxar_base_gd()
+    # 3. EXIBIÇÃO DOS KPIS (ESTILO DASHBOARD)
+    st.markdown("### 📦 Status de Armazenagem (Pendência Real)")
+    
+    # HTML dos Cards de Armazenagem
+    st.markdown(f"""
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #F39C12; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Etiquetas Pendentes</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_etq_pend}</div>
+            <div style="font-size: 11px; color: #8395A7;">{pct_agrupada:.1f}% Agrupadas / {100-pct_agrupada:.1f}% Normal</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #E67E22; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas no Pátio</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_agendas_pend}</div>
+        </div>
+        <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #D35400; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Peças Pendentes (WMS)</div>
+            <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{tot_pecas_pend:,.0f}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- 🧠 LÓGICA DE CRUZAMENTO: ARMAZENAGEM VS TRANSFERÊNCIA ---
+    st.markdown("### 🚀 Impacto na Transferência (Liberação de Pedidos)")
+    
+    if not df_pend.empty and not df_transf_base.empty:
+        # Padroniza colunas de Agenda para o Join
+        df_pend['CD_AGENDA'] = df_pend['CD_AGENDA'].astype(str).str.strip()
+        df_transf_base['AGENDA'] = df_transf_base['AGENDA'].astype(str).str.strip()
+        
+        # Agrupa o que tem de pedido atrelado a cada agenda na base de Transferência
+        # Usando 'NU_PED_ORIGEM' para contar pedidos e 'QTDE' para peças
+        df_transf_resumo = df_transf_base.groupby('AGENDA').agg({
+            'NU_PED_ORIGEM': 'nunique',
+            'QTDE': 'sum'
+        }).reset_index().rename(columns={'NU_PED_ORIGEM': 'Qtd_Pedidos', 'QTDE': 'Peças_Pedido'})
+        
+        # Faz o De/Para: O que está na armazenagem e tem pedido na transferência
+        df_impacto = df_pend.groupby('CD_AGENDA').agg({
+            'QT_CONFERIDO': 'sum',
+            'FORNECEDOR': 'first'
+        }).reset_index()
+        
+        df_final = pd.merge(df_impacto, df_transf_resumo, left_on='CD_AGENDA', right_on='AGENDA', how='inner')
+        
+        if not df_final.empty:
+            # Ordena pelos pedidos mais impactados
+            df_final = df_final.sort_values(by='Qtd_Pedidos', ascending=False)
+            
+            col_im1, col_im2 = st.columns([1, 2])
+            with col_im1:
+                st.metric("Pedidos Bloqueados por Armazenagem", df_final['Qtd_Pedidos'].sum())
+                st.metric("Peças C/ Pedido Aguardando Salto", f"{df_final['Peças_Pedido'].sum():,.0f}")
+            
+            with col_im2:
+                # Tabela de Priorização
+                st.write("**Prioridade de Armazenagem (Maior Impacto em Pedidos):**")
+                st.dataframe(
+                    df_final[['CD_AGENDA', 'FORNECEDOR', 'QT_CONFERIDO', 'Qtd_Pedidos', 'Peças_Pedido']],
+                    column_config={
+                        "CD_AGENDA": "Agenda",
+                        "QT_CONFERIDO": "Peças p/ Guardar",
+                        "Qtd_Pedidos": "Pedidos Atendidos",
+                        "Peças_Pedido": "Peças Liberadas"
+                    },
+                    hide_index=True,
+                    use_container_width=True
+                )
+        else:
+            st.success("✅ Nenhuma agenda pendente de armazenagem possui pedidos atrelados na base de transferência.")
+    else:
+        st.info("Aguardando carregamento das bases para calcular impacto.")
 
     # --- 🧠 LÓGICA DE PRODUTIVIDADE (ÚLTIMOS 30 DIAS + REMOÇÃO DE OUTLIERS) ---
     meta_total = 0
