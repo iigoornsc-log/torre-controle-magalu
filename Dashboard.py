@@ -2410,8 +2410,11 @@ elif pagina == "📊 GD (Gestão Diária)":
         # Criamos uma cópia para não afetar outras visões e padronizamos colunas
         df_reslog = df_itens.copy()
         df_reslog.columns = df_reslog.columns.str.strip().str.upper()
+        
+        # 🛡️ O ANTÍDOTO RAIZ: Remove colunas duplicadas da base LOGO DE CARA!
+        df_reslog = df_reslog.loc[:, ~df_reslog.columns.duplicated()]
 
-        # 🛡️ BUSCADOR INTELIGENTE DE COLUNAS (Evita o KeyError)
+        # 🛡️ BUSCADOR INTELIGENTE DE COLUNAS
         col_agenda = next((c for c in df_reslog.columns if c in ['AGENDA', 'CODAGENDA']), None)
         col_sku = next((c for c in df_reslog.columns if c in ['SKU', 'COMPITEM']), None)
         col_pecas = next((c for c in df_reslog.columns if c in ['QTD PEÇAS', 'QTAGENDA', 'QTCOMP']), None)
@@ -2428,9 +2431,9 @@ elif pagina == "📊 GD (Gestão Diária)":
             ].copy()
 
             if not df_reslog_filtrado.empty:
-                # 2. Cálculos dos KPIs (Com proteção)
-                qtd_agendas_reslog = df_reslog_filtrado[col_agenda].nunique() if col_agenda else 0
-                qtd_skus_reslog = df_reslog_filtrado[col_sku].nunique() if col_sku else 0
+                # 2. Cálculos dos KPIs (Com conversão forçada para int para garantir número limpo)
+                qtd_agendas_reslog = int(df_reslog_filtrado[col_agenda].nunique()) if col_agenda else 0
+                qtd_skus_reslog = int(df_reslog_filtrado[col_sku].nunique()) if col_sku else 0
                 qtd_pecas_reslog = pd.to_numeric(df_reslog_filtrado[col_pecas], errors='coerce').sum() if col_pecas else 0
 
                 # 3. Renderização dos KPIs
@@ -2445,9 +2448,6 @@ elif pagina == "📊 GD (Gestão Diária)":
                 # 4. Tabela Detalhada
                 st.write("**Lista de Itens com Restrição:**")
                 
-                # 🛡️ O ANTÍDOTO DO ERRO: Remove qualquer coluna duplicada da base antes do Streamlit ler
-                df_reslog_filtrado = df_reslog_filtrado.loc[:, ~df_reslog_filtrado.columns.duplicated()]
-
                 # Mapeia as colunas desejadas (com variações de nome para garantir que acha)
                 colunas_desejadas = [col_agenda, 'FORNE_PRINC', 'FORNECEDOR', col_sku, 'DESCRIÇÃO', 'DESCRICAO', 'LINHAS', 'LINHA', col_pecas, 'RESLOG']
                 
