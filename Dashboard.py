@@ -279,7 +279,7 @@ if pagina_selecionada == "📋 Absenteísmo (Doca)":
                     sucesso = gravar_absenteismo(lista_final)
                     if sucesso:
                         st.success(f"✅ {len(lista_final)} registros salvos!")
-                        st.cache_data.clear()
+                        carregar_equipe.clear()
             else:
                 st.warning("Nenhuma falta marcada.")
 
@@ -438,7 +438,7 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
                                 with st.spinner("Finalizando..."):
                                     if gravar_conclusao_doca(dados_conclusao, linha_log_fecha):
                                         st.success(f"Doca finalizada em {tempo_str}!")
-                                        st.cache_data.clear()
+                                        carregar_log_produtividade.clear()
                                         st.rerun()
         else:
             st.info("O Log ainda está vazio.")
@@ -446,64 +446,191 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
    # ==========================================================
     # LÓGICA DE GRAVAÇÃO E POP-UP (MÓDULO DE DOCAS)
     # ==========================================================
+    def gravar_conclusao_doca(linhas_conclusao, linha_encerramento_log):
+        client = conectar_google()
+        sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+        try:
+            # Grava as N linhas (uma para cada pessoa) na aba de finalizados
+            ws_final = sh.worksheet("DOCAS_FINALIZADAS")
+            ws_final.append_rows(linhas_conclusao) 
+            
+            # Grava a linha de encerramento no Log ativo
+            ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
+            ws_log.append_rows([linha_encerramento_log])
+            
+            return True
+        except Exception as e:
+            st.error(f"Erro ao finalizar doca: {e}")
+            return False
+
     def processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, encerrar):
         agora_dt = datetime.datetime.now()
         agora_str = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
 
         linhas_para_gravar = []
 
-        # Define os textos base
+        agenda_final = agenda_sel if agenda_sel else "-"
+        conferente_final = conferente_sel if conferente_sel else "-"
+
+        # 1º EVENTO: Registra a nova Doca (GRAVANDO UMA LINHA POR PESSOA)
         if encerrar:
-            auxiliares_str = "ENCERRADO"
-            agenda_final = agenda_sel if agenda_sel else "-"
-            conferente_final = conferente_sel if conferente_sel else "-"
+            linhas_para_gravar.append([agora_str, str(doca_sel).strip(), agenda_final, conferente_final, "ENCERRADO"])
+
+
         else:
-            auxiliares_str = ", ".join(equipe_sel)
-            agenda_final = agenda_sel
-            conferente_final = conferente_sel
+            for pessoa in equipe_sel:
+                linhas_para_gravar.append([agora_str, str(doca_sel).strip(), agenda_final, conferente_final, pessoa])
 
-        # 1º EVENTO: Registra a nova Doca (ou o encerramento dela)
-        linhas_para_gravar.append([agora_str, str(doca_sel).strip(), agenda_final, conferente_final, auxiliares_str])
 
-        # 2º EVENTO: Se houver transferência, tira o cara da doca antiga automaticamente
+
+
+
+        # 2º EVENTO: Tirar cara da doca antiga
         if conflitos and not encerrar:
             docas_afetadas = set(conflitos.values())
-            # Soma 1 segundo na data/hora para a atualização não atropelar o banco
+
             agora_dt = agora_dt + datetime.timedelta(seconds=1)
             agora_str_2 = agora_dt.strftime("%d/%m/%Y %H:%M:%S")
 
             for d_antiga in docas_afetadas:
                 eq_antiga = info_docas[d_antiga]['equipe'].copy()
-                # Tira apenas as pessoas que foram movidas
+
                 for p_movida in [p for p, d in conflitos.items() if d == d_antiga]:
                     if p_movida in eq_antiga:
                         eq_antiga.remove(p_movida)
 
-                nova_eq_str = ", ".join(eq_antiga) if eq_antiga else "ENCERRADO"
-                linhas_para_gravar.append([agora_str_2, d_antiga, info_docas[d_antiga]['agenda'], info_docas[d_antiga]['conferente'], nova_eq_str])
+                # Se não sobrou ninguém na doca antiga, encerra. Se sobrou, regrava 1 linha pra cada um que ficou.
+                if not eq_antiga:
+                    linhas_para_gravar.append([agora_str_2, d_antiga, info_docas[d_antiga]['agenda'], info_docas[d_antiga]['conferente'], "ENCERRADO"])
+                else:
+                    for p_restante in eq_antiga:
+                        linhas_para_gravar.append([agora_str_2, d_antiga, info_docas[d_antiga]['agenda'], info_docas[d_antiga]['conferente'], p_restante])
 
-        return gravar_produtividade(linhas_para_gravar)
+        # Envia todas as linhas explodidas pro Sheets
+        client = conectar_google()
+        sh = client.open_by_key("1lrX3wQ41ncVMLzCaqGIQlbwvd_0n-AYOyU-NH1ge5oI")
+        try:
+            ws_log = sh.worksheet("LOG_PRODUTIVIDADE")
+            ws_log.append_rows(linhas_para_gravar)
+            return True
+        except:
+            st.error("Erro ao gravar Log.")
+            return False
 
-    # Função que desenha o Pop-up na tela
+
     @st.dialog("⚠️ Confirmação de Transferência")
     def exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas):
-        st.write("O sistema detectou que alguns colaboradores já estão alocados em outras docas ativas:")
+        st.write("Colaboradores já alocados em outras docas:")
 
         for p, d in conflitos.items():
             st.markdown(f"- **{p}** (Sairá da Doca **{d}**)")
 
-        st.write(f"Deseja confirmar a transferência para a **Doca {doca_sel}**?")
+        st.write(f"Confirma a transferência para a **Doca {doca_sel}**?")
         st.markdown("<br>", unsafe_allow_html=True)
 
         c1, c2 = st.columns(2)
         if c1.button("✅ Sim, Transferir", use_container_width=True):
             with st.spinner("Atualizando docas..."):
                 if processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False):
-                    st.cache_data.clear()
-                    st.rerun() # Fecha o pop-up e recarrega a tela automaticamente
+                    carregar_log_produtividade.clear()
+                    st.rerun() 
 
         if c2.button("❌ Cancelar", use_container_width=True):
-            st.rerun() # Apenas fecha o pop-up
+            st.rerun()
+
+# ==========================================
+# PÁGINA 3: GESTÃO DE DOCAS E PRODUTIVIDADE
+# ==========================================
+elif pagina_selecionada == "🚛 Gestão de Docas":
+    st.markdown('<div class="magalu-page-title">Gestão de Docas</div>', unsafe_allow_html=True)
+    st.markdown('<div class="magalu-page-subtitle">Acompanhe e movimente a equipe em tempo real.</div>', unsafe_allow_html=True)
+    
+    aba1, aba2 = st.tabs(["👀 Visão das Docas (Agora)", "✍️ Apontar / Movimentar"])
+
+    # --- ABA 1: VISÃO EM TEMPO REAL ---
+    with aba1:
+        df_log = carregar_log_produtividade()
+        df_aux = carregar_aux()
+        
+        if not df_aux.empty:
+            df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
+        
+        if not df_log.empty:
+            df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
+            
+            # --- O PULO DO GATO DA LEITURA ---
+            # 1. Acha o horário da ÚLTIMA atualização de cada Doca
+            ultimos_horarios = df_log.groupby('DOCA')['DATA_HORA_DT'].transform('max')
+            # 2. Pega apenas as linhas que batem com esse horário (Traz todo mundo que tá na doca)
+            df_ativos_bruto = df_log[df_log['DATA_HORA_DT'] == ultimos_horarios]
+            # 3. Agrupa os nomes colocando vírgula de novo, SÓ para exibir bonitinho na tela!
+            df_ativos = df_ativos_bruto.groupby(['DOCA', 'AGENDA', 'CONFERENTE', 'DATA_HORA', 'DATA_HORA_DT'])['AUXILIARES'].apply(lambda x: ', '.join(x)).reset_index()
+            
+            # Filtra quem foi encerrado
+            df_ativos = df_ativos[df_ativos['AUXILIARES'] != 'ENCERRADO']
+            df_ativos = df_ativos.sort_values('DATA_HORA_DT', ascending=False)
+
+            if df_ativos.empty:
+                st.info("Nenhuma doca ativa no momento. Pátio limpo! 🍃")
+            else:
+                for index, row in df_ativos.iterrows():
+                    agenda_str = str(row['AGENDA']).strip()
+                    info = {'LINHA': '-', 'SKU': '-', 'PEÇAS': '-', 'VALOR': '-', 'PAGTO': '-', 'STATUS': '-'}
+                    
+                    if not df_aux.empty and agenda_str in df_aux['AGENDA WMS'].values:
+                        aux_row = df_aux[df_aux['AGENDA WMS'] == agenda_str].iloc[0]
+                        pagto_str = "✅ Sim" if str(aux_row.get('PAGAMENTO', '')).upper() == 'TRUE' else "⏳ Pendente"
+                        valor_desc = aux_row.get('R$ DESCARGA', '-')
+                        if str(valor_desc).replace('.','',1).isdigit():
+                            valor_desc = f"R$ {float(valor_desc):,.2f}".replace(',','X').replace('.',',').replace('X','.')
+                            
+                        info = {'LINHA': aux_row.get('LINHA', '-'), 'SKU': aux_row.get('SKU', '-'), 'PEÇAS': aux_row.get('PEÇAS', '-'), 'VALOR': valor_desc, 'PAGTO': pagto_str, 'STATUS': aux_row.get('STATUS', '-')}
+
+                    with st.container(border=True):
+                        c_title, c_time = st.columns([7, 3])
+                        c_title.markdown(f"<h4 style='margin:0; color:#0086FF;'>Doca {row['DOCA']}</h4>", unsafe_allow_html=True)
+                        c_time.markdown(f"<div style='text-align:right; font-size:11px; color:#64748B; margin-top:5px;'>⌚ Início: {row['DATA_HORA']}</div>", unsafe_allow_html=True)
+                        
+                        st.markdown(f"<div style='font-size: 13px; margin: 8px 0px 4px 0px;'><b>Agenda:</b> {row['AGENDA']} | <b>Líder:</b> {row['CONFERENTE']}</div>", unsafe_allow_html=True)
+                        
+                        st.markdown(f"""
+                        <div style='font-size: 11.5px; color: #475569; background-color: #F8FAFC; padding: 6px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #E2E8F0;'>
+                            <b>Linha:</b> {info['LINHA']} &nbsp;|&nbsp; <b>SKU:</b> {info['SKU']} &nbsp;|&nbsp; <b>Peças:</b> {info['PEÇAS']}<br>
+                            <b>Valor Carga:</b> {info['VALOR']} &nbsp;|&nbsp; <b>Pagto:</b> {info['PAGTO']} &nbsp;|&nbsp; <b>Status:</b> <span style="color:#0086FF; font-weight:bold;">{info['STATUS']}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        c_eq, c_btn = st.columns([7, 3])
+                        c_eq.markdown(f"<div style='font-size: 12px; color: #0086FF; background-color: #E6F2FF; padding: 6px; border-radius: 4px;'><b>Equipe:</b> {row['AUXILIARES']}</div>", unsafe_allow_html=True)
+                        
+                        with c_btn:
+                            if st.button("✅ Finalizar", key=f"btn_fin_{row['DOCA']}_{index}", type="primary", use_container_width=True):
+                                agora_dt = datetime.datetime.now()
+                                duracao = agora_dt - row['DATA_HORA_DT']
+                                total_minutos = int(duracao.total_seconds() / 60)
+                                horas, mins = total_minutos // 60, total_minutos % 60
+                                tempo_str = f"{horas:02d}:{mins:02d}"
+                                
+                                # AQUI TAMBÉM SEPARAMOS OS NOMES PARA A ABA 'DOCAS_FINALIZADAS'
+                                auxiliares_lista = [x.strip() for x in str(row['AUXILIARES']).split(',')]
+                                linhas_conclusao_multiplas = []
+                                
+                                for pessoa in auxiliares_lista:
+                                    linhas_conclusao_multiplas.append([
+                                        agora_dt.strftime("%d/%m/%Y"), str(row['DOCA']), str(row['AGENDA']), 
+                                        str(row['CONFERENTE']), len(auxiliares_lista), pessoa, # Grava SÓ o nome dele na linha
+                                        row['DATA_HORA'], agora_dt.strftime("%H:%M:%S"), tempo_str
+                                    ])
+                                
+                                linha_log_fecha = [agora_dt.strftime("%d/%m/%Y %H:%M:%S"), str(row['DOCA']), row['AGENDA'], row['CONFERENTE'], "ENCERRADO"]
+                                
+                                with st.spinner("Finalizando..."):
+                                    if gravar_conclusao_doca(linhas_conclusao_multiplas, linha_log_fecha):
+                                        st.success(f"Doca finalizada em {tempo_str}!")
+                                        carregar_log_produtividade.clear()
+                                        st.rerun()
+        else:
+            st.info("O Log ainda está vazio.")
 
     # --- ABA 2: LANÇAMENTO E MOVIMENTAÇÃO ---
     with aba2:
@@ -512,63 +639,112 @@ elif pagina_selecionada == "🚛 Gestão de Docas":
             lista_auxiliares = df_equipe[df_equipe['NOME'].notna()]['NOME'].unique().tolist()
             lista_auxiliares = [nome for nome in lista_auxiliares if str(nome).strip() != '']
 
-            # Mapeamento do Status Atual
+            # --- MAPEAMENTO DO STATUS ATUAL PARA O POP-UP ---
             df_log = carregar_log_produtividade()
             mapa_pessoas = {}
             info_docas = {}
 
             if not df_log.empty:
                 df_log['DATA_HORA_DT'] = pd.to_datetime(df_log['DATA_HORA'], format='%d/%m/%Y %H:%M:%S', errors='coerce')
-                df_ativos = df_log.sort_values('DATA_HORA_DT', ascending=False).drop_duplicates(subset=['DOCA'], keep='first')
-                df_ativos = df_ativos[df_ativos['AUXILIARES'].notna() & (df_ativos['AUXILIARES'] != '') & (df_ativos['AUXILIARES'] != 'ENCERRADO')]
+                ultimos_h = df_log.groupby('DOCA')['DATA_HORA_DT'].transform('max')
+                df_ativos_bruto = df_log[df_log['DATA_HORA_DT'] == ultimos_h]
+                df_ativos_agrupado = df_ativos_bruto.groupby(['DOCA', 'AGENDA', 'CONFERENTE'])['AUXILIARES'].apply(lambda x: ', '.join(x)).reset_index()
 
-                for _, row in df_ativos.iterrows():
+                df_ativos_agrupado = df_ativos_agrupado[df_ativos_agrupado['AUXILIARES'] != 'ENCERRADO']
+                
+                for _, row in df_ativos_agrupado.iterrows():
                     doca_atual = str(row['DOCA']).strip()
                     eq_atual = [x.strip() for x in str(row['AUXILIARES']).split(',')]
                     info_docas[doca_atual] = {'agenda': row['AGENDA'], 'conferente': row['CONFERENTE'], 'equipe': eq_atual}
-                    for p in eq_atual:
-                        mapa_pessoas[p] = doca_atual
+                    for p in eq_atual: mapa_pessoas[p] = doca_atual
 
-            # Formulário de Interface
+
+            # --- FORMULÁRIO DE INTERFACE ---
             st.markdown('<div class="magalu-card">', unsafe_allow_html=True)
             st.markdown('<b style="color: #0086FF;">📍 Nova Alocação / Atualizar Doca</b>', unsafe_allow_html=True)
 
-            # 1. Pede a Agenda primeiro para poder puxar os dados
-            agenda_sel = st.text_input("Nº da Agenda (Aperte Enter para buscar)", placeholder="Ex: 51183")
-            
-            doca_padrao = ""
-            conf_padrao = ""
+
             df_aux = carregar_aux()
-            
-            # Se digitou a agenda e ela existe na base 'aux', tenta puxar doca e conferente
-            if agenda_sel and not df_aux.empty:
+            lista_agendas = []
+            if not df_aux.empty:
                 df_aux['AGENDA WMS'] = df_aux['AGENDA WMS'].astype(str).str.strip()
+                lista_agendas = df_aux[df_aux['AGENDA WMS'] != '']['AGENDA WMS'].unique().tolist()
+
+
+            opcoes_agenda = [""] + lista_agendas + ["➕ DIGITAR OUTRA AGENDA..."]
+            agenda_combo = st.selectbox("Nº da Agenda (Selecione ou digite para buscar na lista)", options=opcoes_agenda, index=0)
+
+            if agenda_combo == "➕ DIGITAR OUTRA AGENDA...":
+                agenda_sel = st.text_input("Digite manualmente o Nº da Agenda", placeholder="Ex: 99999")
+            else: agenda_sel = agenda_combo
+
+
+
+
+
+            doca_padrao, conf_padrao = "", ""
+            if agenda_sel and agenda_sel != "➕ DIGITAR OUTRA AGENDA..." and not df_aux.empty:
                 match = df_aux[df_aux['AGENDA WMS'] == agenda_sel.strip()]
                 if not match.empty:
-                    st.success("✅ Agenda localizada na base!")
-                    if 'DOCA' in match.columns: doca_padrao = str(match.iloc[0]['DOCA'])
-                    if 'CONFERENTE' in match.columns: conf_padrao = str(match.iloc[0]['CONFERENTE'])
-            
+                    col_l = [str(c).upper().strip() for c in match.columns]
+                    for cr, cu in zip(match.columns, col_l):
+                        if 'DOCA' in cu:
+                            v = str(match.iloc[0][cr])
+                            if v.lower() != 'nan' and v.strip() != '': doca_padrao = v.strip()
+
+                            break
+                    for cr, cu in zip(match.columns, col_l):
+                        if 'CONFERENTE' in cu or 'LIDER' in cu or 'LÍDER' in cu:
+                            v = str(match.iloc[0][cr])
+                            if v.lower() != 'nan' and v.strip() != '': conf_padrao = v.strip()
+
+                            break
+
+
             col1, col2 = st.columns(2)
-            with col1:
-                # Se achou a doca, já vem preenchida
-                doca_sel = st.text_input("Número da Doca", value=doca_padrao, placeholder="Ex: 68")
-            with col2:
-                # Se achou o conferente, já vem preenchido
-                conferente_sel = st.text_input("Nome do Conferente", value=conf_padrao, placeholder="Ex: Edson")
+            with col1: doca_sel = st.text_input("Número da Doca", value=doca_padrao, placeholder="Ex: 68")
+            with col2: conferente_sel = st.text_input("Nome do Conferente", value=conf_padrao, placeholder="Ex: Edson")
+
 
 
             st.markdown('<br>', unsafe_allow_html=True)
-
             equipe_sel = st.multiselect("Equipe Alocada Agora", options=lista_auxiliares)
 
-            # Análise de Conflitos Oculta
+
             conflitos = {}
             for pessoa in equipe_sel:
                 if pessoa in mapa_pessoas:
-                    doca_antiga = mapa_pessoas[pessoa]
-                    if doca_antiga != str(doca_sel).strip():
-                        conflitos[pessoa] = doca_antiga
+                    if mapa_pessoas[pessoa] != str(doca_sel).strip(): conflitos[pessoa] = mapa_pessoas[pessoa]
+
+
+
+
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+
+
+            if st.button("Gravar / Atualizar Doca", use_container_width=True):
+                if not doca_sel: st.warning("Preencha o número da Doca para continuar.")
+                elif not equipe_sel: st.warning("Selecione a equipe atual.")
+
+
+                else:
+                    if conflitos:
+
+                        exibir_popup_transferencia(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas)
+                    else:
+
+                        with st.spinner("Registrando movimentação..."):
+                            sucesso = processar_gravacao_doca(doca_sel, agenda_sel, conferente_sel, equipe_sel, conflitos, info_docas, False)
+                            if sucesso:
+                                st.success(f"✅ Doca {doca_sel} atualizada!")
+                                st.balloons()
+
+
+
+                                carregar_log_produtividade.clear()
+                                st.rerun()
 
         except Exception as e:
             st.error(f"Erro no módulo de Docas: {e}")
