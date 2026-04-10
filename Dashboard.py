@@ -2282,7 +2282,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     # ==========================================================================
     # VISÃO 2: 📋 LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM
     # ==========================================================================
-    st.markdown("### 📋 Mapa Geral de Pendências de Armazenagem")
+    st.markdown("### 📋 Pendências de Armazenagem")
     
     if not df_pend.empty:
         # Agrupa tudo que está na base de pendência (respeitando o botão de Visão Geral/Retroativa)
