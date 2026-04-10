@@ -2245,7 +2245,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     if not df_pend.empty:
         if 'MODALIDADE' in df_pend.columns:
             # Filtra apenas o que tem pedido (RTY ou ABA)
-            filtro_modalidade = df_pend['MODALIDADE'].astype(str).str.upper().str.contains('RTY|ABA', na=False, regex=True)
+            filtro_modalidade = df_pend['MODALIDADE'].astype(str).str.upper().str.contains('RTY|RESLOG', na=False, regex=True)
             df_pedidos = df_pend[filtro_modalidade].copy()
             
             if not df_pedidos.empty:
@@ -2262,14 +2262,14 @@ elif pagina == "📊 GD (Gestão Diária)":
                 col_im1, col_im2 = st.columns([1, 2])
                 with col_im1:
                     st.metric("Agendas c/ Pedido Travado", df_prioridade['CD_AGENDA'].nunique())
-                    st.metric("Peças C/ Pedido (RTY/ABA)", f"{df_prioridade['Peças_Liberadas'].sum():,.0f}")
+                    st.metric("Peças C/ Pedido (RTY/RESLOG)", f"{df_prioridade['Peças_Liberadas'].sum():,.0f}")
                 with col_im2:
                     st.dataframe(
                         df_prioridade[['CD_AGENDA', 'FORNECEDOR', 'Etiquetas_com_Pedido', 'Peças_Liberadas']],
                         column_config={
                             "CD_AGENDA": "Agenda",
                             "FORNECEDOR": "Fornecedor",
-                            "Etiquetas_com_Pedido": "Qtd Etiquetas (RTY/ABA)",
+                            "Etiquetas_com_Pedido": "Qtd Etiquetas (RTY/RESLOG)",
                             "Peças_Liberadas": "Peças a Liberar"
                         },
                         hide_index=True, use_container_width=True
