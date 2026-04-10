@@ -2240,7 +2240,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     # ==========================================================================
     # VISÃO 1: 🚀 IMPACTO NA TRANSFERÊNCIA (PRIORIDADES COM PEDIDO)
     # ==========================================================================
-    st.markdown("### 🚀 Prioridade de Armazenagem (Pedidos Travados)")
+    st.markdown("### Prioridade de Armazenagem (Pedidos Travados)")
     
     if not df_pend.empty:
         if 'MODALIDADE' in df_pend.columns:
