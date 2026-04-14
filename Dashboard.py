@@ -2399,8 +2399,7 @@ elif pagina == "📊 GD (Gestão Diária)":
         st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
-
- # ==========================================================================
+# ==========================================================================
     # 🔍 NOVA VISÃO: PRODUTOS COM RESLOG (VISÃO CONSOLIDADA POR CARGA)
     # ==========================================================================
     st.markdown("---")
@@ -2430,7 +2429,7 @@ elif pagina == "📊 GD (Gestão Diária)":
             ].copy()
 
             if not df_reslog_filtrado.empty:
-                # 🛡️ A MARRETADA DO BUG DO TRILHÃO: Força a coluna a ser número antes de qualquer conta!
+                # 🛡️ Força a coluna a ser número antes de qualquer conta!
                 if col_pecas:
                     df_reslog_filtrado[col_pecas] = pd.to_numeric(df_reslog_filtrado[col_pecas], errors='coerce').fillna(0)
 
@@ -2438,16 +2437,30 @@ elif pagina == "📊 GD (Gestão Diária)":
                 qtd_agendas_reslog = int(df_reslog_filtrado[col_agenda].nunique()) if col_agenda else 0
                 qtd_skus_reslog = int(df_reslog_filtrado[col_sku].nunique()) if col_sku else 0
                 qtd_pecas_reslog = df_reslog_filtrado[col_pecas].sum() if col_pecas else 0
+                vol_pecas_str = f"{qtd_pecas_reslog:,.0f}".replace(",", ".")
 
-                col_res1, col_res2, col_res3 = st.columns(3)
-                with col_res1:
-                    exibir_kpi("Agendas Impactadas", qtd_agendas_reslog, "Total de veículos", "#E67E22")
-                with col_res2:
-                    exibir_kpi("Total de SKUs", qtd_skus_reslog, "Itens c/ restrição", "#3498DB")
-                with col_res3:
-                    exibir_kpi("Volume de Peças", f"{qtd_pecas_reslog:,.0f}".replace(",", "."), "Físico total", "#9B59B6")
+                # 3. Renderização dos KPIs (FORMATO COMPACTO)
+                st.markdown(f"""
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #E67E22; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas Impactadas</div>
+                        <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{qtd_agendas_reslog}</div>
+                        <div style="font-size: 11px; color: #8395A7;">Total de veículos</div>
+                    </div>
+                    <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #3498DB; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Total de SKUs</div>
+                        <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{qtd_skus_reslog}</div>
+                        <div style="font-size: 11px; color: #8395A7;">Itens c/ restrição</div>
+                    </div>
+                    <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #9B59B6; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Volume de Peças</div>
+                        <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{vol_pecas_str}</div>
+                        <div style="font-size: 11px; color: #8395A7;">Físico total</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-                # 2. TABELA AGRUPADA (Simplificada)
+                # 4. TABELA AGRUPADA (Simplificada)
                 st.write("**Detalhamento de Cargas com Restrição:**")
                 
                 # Definimos as colunas para o agrupamento
@@ -2461,7 +2474,6 @@ elif pagina == "📊 GD (Gestão Diária)":
                     }).reset_index()
 
                     # Renomeia colunas para a exibição ficar profissional
-                    # Como group_cols pode variar, pegamos dinamicamente e juntamos com as duas finais
                     novos_nomes = ['Agenda', 'Fornecedor', 'Linha/Categoria'][:len(group_cols)] + ['Qtd SKUs', 'Total Peças']
                     df_resumo_cargas.columns = novos_nomes
                     
