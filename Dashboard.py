@@ -2400,7 +2400,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     else:
         st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
 
-# ==========================================================================
+ # ==========================================================================
     # 🔍 NOVA VISÃO: PRODUTOS COM RESLOG (VISÃO CONSOLIDADA POR CARGA)
     # ==========================================================================
     st.markdown("---")
@@ -2476,6 +2476,3 @@ elif pagina == "📊 GD (Gestão Diária)":
             st.error("⚠️ Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
     else:
         st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
-                st.success(f"✅ Nenhuma restrição RESLOG identificada para o dia {data_gd.strftime('%d/%m/%Y')}.")
-        else:
-            st.error("⚠️ Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
