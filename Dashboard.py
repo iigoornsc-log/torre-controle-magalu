@@ -2430,10 +2430,14 @@ elif pagina == "📊 GD (Gestão Diária)":
             ].copy()
 
             if not df_reslog_filtrado.empty:
+                # 🛡️ A MARRETADA DO BUG DO TRILHÃO: Força a coluna a ser número antes de qualquer conta!
+                if col_pecas:
+                    df_reslog_filtrado[col_pecas] = pd.to_numeric(df_reslog_filtrado[col_pecas], errors='coerce').fillna(0)
+
                 # 1. KPIs GERAIS (Soma total do dia)
-                qtd_agendas_reslog = int(df_reslog_filtrado[col_agenda].nunique())
-                qtd_skus_reslog = int(df_reslog_filtrado[col_sku].nunique())
-                qtd_pecas_reslog = pd.to_numeric(df_reslog_filtrado[col_pecas], errors='coerce').sum()
+                qtd_agendas_reslog = int(df_reslog_filtrado[col_agenda].nunique()) if col_agenda else 0
+                qtd_skus_reslog = int(df_reslog_filtrado[col_sku].nunique()) if col_sku else 0
+                qtd_pecas_reslog = df_reslog_filtrado[col_pecas].sum() if col_pecas else 0
 
                 col_res1, col_res2, col_res3 = st.columns(3)
                 with col_res1:
@@ -2449,21 +2453,29 @@ elif pagina == "📊 GD (Gestão Diária)":
                 # Definimos as colunas para o agrupamento
                 group_cols = [c for c in [col_agenda, col_forn, col_linha] if c]
                 
-                # Agrupamos os dados
-                df_resumo_cargas = df_reslog_filtrado.groupby(group_cols).agg({
-                    col_sku: 'nunique', # Conta quantos itens diferentes
-                    col_pecas: 'sum'    # Soma as peças totais da carga
-                }).reset_index()
+                if group_cols:
+                    # Agrupamos os dados
+                    df_resumo_cargas = df_reslog_filtrado.groupby(group_cols).agg({
+                        col_sku: 'nunique', # Conta quantos itens diferentes
+                        col_pecas: 'sum'    # Soma as peças totais da carga
+                    }).reset_index()
 
-                # Renomeia colunas para a exibição ficar profissional
-                df_resumo_cargas.columns = ['Agenda', 'Fornecedor', 'Linha/Categoria', 'Qtd SKUs', 'Total Peças']
-                
-                st.dataframe(
-                    df_resumo_cargas.sort_values(by='Total Peças', ascending=False),
-                    use_container_width=True,
-                    hide_index=True
-                )
+                    # Renomeia colunas para a exibição ficar profissional
+                    # Como group_cols pode variar, pegamos dinamicamente e juntamos com as duas finais
+                    novos_nomes = ['Agenda', 'Fornecedor', 'Linha/Categoria'][:len(group_cols)] + ['Qtd SKUs', 'Total Peças']
+                    df_resumo_cargas.columns = novos_nomes
+                    
+                    st.dataframe(
+                        df_resumo_cargas.sort_values(by='Total Peças', ascending=False),
+                        use_container_width=True,
+                        hide_index=True
+                    )
             else:
+                st.success(f"✅ Nenhuma restrição RESLOG identificada para o dia {data_gd.strftime('%d/%m/%Y')}.")
+        else:
+            st.error("⚠️ Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
+    else:
+        st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
                 st.success(f"✅ Nenhuma restrição RESLOG identificada para o dia {data_gd.strftime('%d/%m/%Y')}.")
         else:
             st.error("⚠️ Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
