@@ -2401,70 +2401,69 @@ elif pagina == "📊 GD (Gestão Diária)":
         st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
 
 # ==========================================================================
-    # 🔍 NOVA VISÃO: PRODUTOS COM RESLOG
+    # 🔍 NOVA VISÃO: PRODUTOS COM RESLOG (VISÃO CONSOLIDADA POR CARGA)
     # ==========================================================================
     st.markdown("---")
-    titulo_com_ari("📦 Produtos com RESLOG")
+    titulo_com_ari("📦 Resumo de Agendas com RESLOG (Restrição Logística)")
 
     if not df_itens.empty:
-        # Criamos uma cópia para não afetar outras visões e padronizamos colunas
+        # Padronização da base
         df_reslog = df_itens.copy()
         df_reslog.columns = df_reslog.columns.str.strip().str.upper()
-
-        # 🛡️ O ANTÍDOTO RAIZ: Remove colunas duplicadas da base LOGO DE CARA!
         df_reslog = df_reslog.loc[:, ~df_reslog.columns.duplicated()]
 
-        # 🛡️ BUSCADOR INTELIGENTE DE COLUNAS (Agora aprendendo que ITEM = SKU)
+        # Buscador de colunas
         col_agenda = next((c for c in df_reslog.columns if c in ['AGENDA', 'CODAGENDA']), None)
         col_sku = next((c for c in df_reslog.columns if c in ['SKU', 'COMPITEM', 'ITEM', 'CÓDIGO', 'CODIGO']), None)
         col_pecas = next((c for c in df_reslog.columns if c in ['QTD PEÇAS', 'QTAGENDA', 'QTCOMP', 'QTDE']), None)
         col_dt = next((c for c in df_reslog.columns if c in ['DTAGENDA', 'DATA AGENDA', 'DATA']), None)
+        col_forn = next((c for c in df_reslog.columns if c in ['FORNE_PRINC', 'FORNECEDOR']), None)
+        col_linha = next((c for c in df_reslog.columns if c in ['LINHA', 'LINHAS', 'CATEGORIA']), None)
 
         if col_dt and 'RESLOG' in df_reslog.columns:
-            # Converte a data da planilha para o formato de comparação do Streamlit
             df_reslog['DATA_FORMATADA'] = pd.to_datetime(df_reslog[col_dt], dayfirst=True, errors='coerce').dt.date
-
-            # Filtro: Data selecionada na tela AND RESLOG >= 1
+            
+            # Filtro: Apenas o que tem RESLOG >= 1 na data selecionada
             df_reslog_filtrado = df_reslog[
                 (df_reslog['DATA_FORMATADA'] == data_gd) & 
                 (pd.to_numeric(df_reslog['RESLOG'], errors='coerce').fillna(0) >= 1)
             ].copy()
 
             if not df_reslog_filtrado.empty:
-                # 2. Cálculos dos KPIs (Com conversão forçada para int para garantir número limpo)
-                qtd_agendas_reslog = int(df_reslog_filtrado[col_agenda].nunique()) if col_agenda else 0
-                qtd_skus_reslog = int(df_reslog_filtrado[col_sku].nunique()) if col_sku else 0
-                qtd_pecas_reslog = pd.to_numeric(df_reslog_filtrado[col_pecas], errors='coerce').sum() if col_pecas else 0
+                # 1. KPIs GERAIS (Soma total do dia)
+                qtd_agendas_reslog = int(df_reslog_filtrado[col_agenda].nunique())
+                qtd_skus_reslog = int(df_reslog_filtrado[col_sku].nunique())
+                qtd_pecas_reslog = pd.to_numeric(df_reslog_filtrado[col_pecas], errors='coerce').sum()
 
-                # 3. Renderização dos KPIs
                 col_res1, col_res2, col_res3 = st.columns(3)
                 with col_res1:
-                    exibir_kpi("Agendas c/ RESLOG", qtd_agendas_reslog, "Cargas impactadas", "#E67E22")
+                    exibir_kpi("Agendas Impactadas", qtd_agendas_reslog, "Total de veículos", "#E67E22")
                 with col_res2:
-                    exibir_kpi("SKUs c/ RESLOG", qtd_skus_reslog, "Itens específicos", "#3498DB")
+                    exibir_kpi("Total de SKUs", qtd_skus_reslog, "Itens c/ restrição", "#3498DB")
                 with col_res3:
-                    exibir_kpi("Total Peças", f"{qtd_pecas_reslog:,.0f}".replace(",", "."), "Volume em restrição", "#9B59B6")
+                    exibir_kpi("Volume de Peças", f"{qtd_pecas_reslog:,.0f}".replace(",", "."), "Físico total", "#9B59B6")
 
-                # 4. Tabela Detalhada
-                st.write("**Lista de Itens com Restrição:**")
+                # 2. TABELA AGRUPADA (Simplificada)
+                st.write("**Detalhamento de Cargas com Restrição:**")
+                
+                # Definimos as colunas para o agrupamento
+                group_cols = [c for c in [col_agenda, col_forn, col_linha] if c]
+                
+                # Agrupamos os dados
+                df_resumo_cargas = df_reslog_filtrado.groupby(group_cols).agg({
+                    col_sku: 'nunique', # Conta quantos itens diferentes
+                    col_pecas: 'sum'    # Soma as peças totais da carga
+                }).reset_index()
 
-                # Mapeia as colunas desejadas (com variações de nome para garantir que acha)
-                colunas_desejadas = [col_agenda, 'FORNE_PRINC', 'FORNECEDOR', col_sku, 'DESCRIÇÃO', 'DESCRICAO', 'LINHAS', 'LINHA', col_pecas, 'RESLOG']
-
-                # Filtra apenas as colunas que realmente existem e tira repetidas da própria lista
-                colunas_view = []
-                for c in colunas_desejadas:
-                    if c and c in df_reslog_filtrado.columns and c not in colunas_view:
-                        colunas_view.append(c)
-
+                # Renomeia colunas para a exibição ficar profissional
+                df_resumo_cargas.columns = ['Agenda', 'Fornecedor', 'Linha/Categoria', 'Qtd SKUs', 'Total Peças']
+                
                 st.dataframe(
-                    df_reslog_filtrado[colunas_view].sort_values(by='RESLOG', ascending=False),
+                    df_resumo_cargas.sort_values(by='Total Peças', ascending=False),
                     use_container_width=True,
                     hide_index=True
                 )
             else:
-                st.success(f"✅ Nenhum produto com RESLOG identificado para o dia {data_gd.strftime('%d/%m/%Y')}.")
+                st.success(f"✅ Nenhuma restrição RESLOG identificada para o dia {data_gd.strftime('%d/%m/%Y')}.")
         else:
-            st.error("⚠️ Coluna 'DTAGENDA' ou 'RESLOG' não encontrada na aba Item Agenda.")
-    else:
-        st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
+            st.error("⚠️ Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
