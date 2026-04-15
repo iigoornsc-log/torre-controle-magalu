@@ -2791,47 +2791,126 @@ elif pagina == "Status das Agendas":
 
     render_hero(
         "Status das Agendas",
-        f"Visão simplificada da operação no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}, com foco na quantidade de agendas por status.",
-        "Magalu • Visão Simplificada"
+        f"Visão simplificada das agendas no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}.",
+        "Magalu • Visão Operacional"
     )
-
-    section_heading("Resumo por Status", icon="list_alt")
 
     if df_status.empty:
         st.info("Nenhuma agenda encontrada no período selecionado.")
     else:
         resumo_status = (
             df_status.groupby("Status")
-            .agg(Qtd_Agendas=("Agenda_Texto", "nunique"))
+            .agg(QTD=("Agenda_Texto", "nunique"))
             .reset_index()
-            .sort_values("Qtd_Agendas", ascending=False)
         )
 
-        total_agendas = int(resumo_status["Qtd_Agendas"].sum())
+        ordem_status = [
+            "Ausente",
+            "Devolvida",
+            "Diver. Comercial",
+            "Ag. Lançamento",
+            "Pátio Externo",
+            "Em Doca",
+            "Em Processo",
+            "Pend. Armazenagem",
+            "Finalizadas",
+        ]
 
-        col_top_1, col_top_2 = st.columns([1, 2])
+        mapa_nomes = {
+            "Agendado": "Ag. Lançamento",
+            "Aguardando": "Pátio Externo",
+            "Em Descarga": "Em Doca",
+            "Recebido": "Finalizadas",
+        }
 
-        with col_top_1:
-            exibir_kpi("Total de Agendas", total_agendas, "Período selecionado", "#3498DB")
-            exibir_kpi("Qtd de Status", resumo_status["Status"].nunique(), "Status distintos", "#9B59B6")
+        resumo_status["Status_Exibicao"] = resumo_status["Status"].replace(mapa_nomes)
 
-        with col_top_2:
-            fig_status = px.bar(
-                resumo_status,
-                x="Status",
-                y="Qtd_Agendas",
-                text="Qtd_Agendas",
-                title="Quantidade de Agendas por Status"
-            )
-            fig_status.update_traces(textposition="outside")
-            fig_status = aplicar_estilo_premium(fig_status)
-            st.plotly_chart(fig_status, use_container_width=True)
-
-        st.markdown("---")
-        section_heading("Tabela de Status", level=3, icon="table_view")
-
-        st.dataframe(
-            resumo_status.rename(columns={"Status": "Status da Agenda", "Qtd_Agendas": "Quantidade"}),
-            use_container_width=True,
-            hide_index=True
+        resumo_dict = (
+            resumo_status.groupby("Status_Exibicao")["QTD"]
+            .sum()
+            .to_dict()
         )
+
+        cores_status = {
+            "Ausente": "#B0B7C3",
+            "Devolvida": "#9AA4B2",
+            "Diver. Comercial": "#8B949E",
+            "Ag. Lançamento": "#7C8796",
+            "Pátio Externo": "#FF00FF",
+            "Em Doca": "#FFD000",
+            "Em Processo": "#0066FF",
+            "Pend. Armazenagem": "#FF8800",
+            "Finalizadas": "#00C853",
+            "Total": "#FF2D2D",
+        }
+
+        icone_svg = """
+        <svg width="34" height="22" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 8H36L48 20H62V30H56C54.8 34.2 51.1 37 46.5 37C41.9 37 38.2 34.2 37 30H23C21.8 34.2 18.1 37 13.5 37C8.9 37 5.2 34.2 4 30H2V8Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+          <circle cx="13.5" cy="30.5" r="5.5" stroke="currentColor" stroke-width="3"/>
+          <circle cx="46.5" cy="30.5" r="5.5" stroke="currentColor" stroke-width="3"/>
+          <path d="M36 8V20H48" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M10 13H24" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <path d="M10 19H20" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        """
+
+        linhas = []
+        total = 0
+
+        for status in ordem_status:
+            qtd = int(resumo_dict.get(status, 0))
+            total += qtd
+            cor = cores_status.get(status, "#FFFFFF")
+
+            linhas.append(f"""
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px dotted rgba(255,255,255,0.18);">
+                    <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                        <div style="color:{cor}; display:flex; align-items:center; justify-content:center;">
+                            {icone_svg}
+                        </div>
+                        <div style="font-size:18px; font-weight:800; color:#FFFFFF; white-space:nowrap;">
+                            {status.upper()}
+                        </div>
+                    </div>
+                    <div style="font-size:22px; font-weight:900; color:#FFFFFF; min-width:40px; text-align:right;">
+                        {qtd}
+                    </div>
+                </div>
+            """)
+
+        linhas.append(f"""
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 0 4px 0;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="color:{cores_status['Total']}; display:flex; align-items:center; justify-content:center;">
+                        {icone_svg}
+                    </div>
+                    <div style="font-size:19px; font-weight:900; color:#FFFFFF;">
+                        TOTAL
+                    </div>
+                </div>
+                <div style="font-size:24px; font-weight:900; color:#FFFFFF;">
+                    {total}
+                </div>
+            </div>
+        """)
+
+        html_status = f"""
+        <div style="
+            background: linear-gradient(180deg, #05070B 0%, #0A0D14 100%);
+            border-radius: 24px;
+            padding: 26px 28px;
+            border: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 18px 45px rgba(0,0,0,0.28);
+            max-width: 760px;
+            margin: 0 auto 20px auto;
+        ">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div style="font-size:28px; font-weight:900; color:#FFFFFF; letter-spacing:-0.5px;">STATUS AGENDAS</div>
+                <div style="font-size:26px; font-weight:900; color:#FFFFFF;">QTD</div>
+            </div>
+            {''.join(linhas)}
+        </div>
+        """
+
+        st.markdown(html_status, unsafe_allow_html=True)
