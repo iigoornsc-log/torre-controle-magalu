@@ -898,7 +898,22 @@ st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 st.sidebar.markdown(icon_chip("explore", "Menu de Navegação", "slate"), unsafe_allow_html=True)
-pagina = st.sidebar.radio("Ir para:", ["Painel Operacional", "Previsão de Agendas", "Simular Cenários", "Simulador Mão de Obra", "Planejamento Lego", "Transferências", "Solicitações Extras", "Registro de Backlog", "Slotting (Vagas Extras)","GD (Gestão Diária)"])
+pagina = st.sidebar.radio(
+    "Ir para:",
+    [
+        "Painel Operacional",
+        "Status das Agendas",
+        "Previsão de Agendas",
+        "Simular Cenários",
+        "Simulador Mão de Obra",
+        "Planejamento Lego",
+        "Transferências",
+        "Solicitações Extras",
+        "Registro de Backlog",
+        "Slotting (Vagas Extras)",
+        "GD (Gestão Diária)"
+    ]
+)
 st.sidebar.markdown("---")
 
 if st.sidebar.button("Atualizar Dados Agora", use_container_width=True):
@@ -2767,3 +2782,56 @@ elif pagina == "GD (Gestão Diária)":
             st.error("Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
     else:
         st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
+
+# ==============================================================================
+# NOVA PÁGINA: STATUS DAS AGENDAS
+# ==============================================================================
+elif pagina == "Status das Agendas":
+    df_status = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
+
+    render_hero(
+        "Status das Agendas",
+        f"Visão simplificada da operação no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}, com foco na quantidade de agendas por status.",
+        "Magalu • Visão Simplificada"
+    )
+
+    section_heading("Resumo por Status", icon="list_alt")
+
+    if df_status.empty:
+        st.info("Nenhuma agenda encontrada no período selecionado.")
+    else:
+        resumo_status = (
+            df_status.groupby("Status")
+            .agg(Qtd_Agendas=("Agenda_Texto", "nunique"))
+            .reset_index()
+            .sort_values("Qtd_Agendas", ascending=False)
+        )
+
+        total_agendas = int(resumo_status["Qtd_Agendas"].sum())
+
+        col_top_1, col_top_2 = st.columns([1, 2])
+
+        with col_top_1:
+            exibir_kpi("Total de Agendas", total_agendas, "Período selecionado", "#3498DB")
+            exibir_kpi("Qtd de Status", resumo_status["Status"].nunique(), "Status distintos", "#9B59B6")
+
+        with col_top_2:
+            fig_status = px.bar(
+                resumo_status,
+                x="Status",
+                y="Qtd_Agendas",
+                text="Qtd_Agendas",
+                title="Quantidade de Agendas por Status"
+            )
+            fig_status.update_traces(textposition="outside")
+            fig_status = aplicar_estilo_premium(fig_status)
+            st.plotly_chart(fig_status, use_container_width=True)
+
+        st.markdown("---")
+        section_heading("Tabela de Status", level=3, icon="table_view")
+
+        st.dataframe(
+            resumo_status.rename(columns={"Status": "Status da Agenda", "Qtd_Agendas": "Quantidade"}),
+            use_container_width=True,
+            hide_index=True
+        )
