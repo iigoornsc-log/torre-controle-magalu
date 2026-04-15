@@ -75,7 +75,9 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
 
-    * { font-family: 'Inter', sans-serif !important; }
+    html, body, [class*="css"], .stApp {
+    font-family: 'Inter', sans-serif !important;
+}
 
     .icon-magalu {
         font-family: 'Material Symbols Rounded' !important;
