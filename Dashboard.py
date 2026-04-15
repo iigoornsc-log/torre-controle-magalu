@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 import json
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="M", layout="wide", initial_sidebar_state="expanded")
 
 # ==============================================================================
 # POP-UP DE BOAS-VINDAS A.R.I. (APARECE SÓ 1x AO ENTRAR)
@@ -68,90 +68,231 @@ if "ari_boas_vindas" not in st.session_state:
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 🎨 FRONT-END SÊNIOR | IDENTIDADE VISUAL MAGALU E A.R.I.
+# 🎨 FRONT-END PREMIUM | IDENTIDADE VISUAL MAGALU + A.R.I. (SOMENTE FRONT)
 # ==============================================================================
 st.markdown("""
 <style>
-    /* Importando Fonte Tecnológica e Limpa */
-    @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
 
-    .stApp { 
-        background-color: #F5F7FA; 
-        font-family: 'Nunito Sans', sans-serif; 
-        color: #2D3436;
-    }
-    
-    h1, h2, h3, h4, h5, h6 { 
-        color: #1E272E !important; 
-        font-family: 'Nunito Sans', sans-serif !important;
-        font-weight: 800 !important; 
-        letter-spacing: -0.5px; 
-    }
-    
-    hr { border-top: 2px solid #E1E8ED; border-radius: 2px; margin-top: 2rem; margin-bottom: 2rem; }
-    
-    /* Paineis e DataFrames: Bordas suaves e Sombras flutuantes */
-    [data-testid="stDataFrame"], [data-testid="stPlotlyChart"] { 
-        background-color: #FFFFFF !important; 
-        border-radius: 16px !important; 
-        box-shadow: 0 4px 20px rgba(0, 134, 255, 0.05) !important; 
-        padding: 10px;
-        border: 1px solid #F0F3F5;
-        transition: all 0.3s ease;
-    }
-    
-    [data-testid="stPlotlyChart"]:hover {
-        box-shadow: 0 10px 30px rgba(0, 134, 255, 0.1) !important;
-        transform: translateY(-3px);
+    * { font-family: 'Inter', sans-serif !important; }
+
+    .icon-magalu {
+        font-family: 'Material Symbols Rounded' !important;
+        font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+        font-weight: normal;
+        font-style: normal;
+        letter-spacing: normal;
+        text-transform: none;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-smoothing: antialiased;
+        vertical-align: middle;
+        display: inline-block;
+        line-height: 1;
+        font-size: inherit;
     }
 
-    /* Menu Lateral Branco e Elegante */
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-        border-right: 1px solid #E1E8ED;
-        box-shadow: 4px 0 20px rgba(0,0,0,0.02);
+    .material-icons, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] * {
+        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
     }
-    
-    /* Customização dos Botões (Estilo Magalu) */
-    .stButton>button {
-        background: linear-gradient(135deg, #0086FF 0%, #006DCC 100%);
+
+    @keyframes magaluGlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    @keyframes ari-pulse {
+        0% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.18); transform: scale(1); }
+        50% { box-shadow: 0 0 16px rgba(100, 255, 218, 0.45); transform: scale(1.02); }
+        100% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.18); transform: scale(1); }
+    }
+
+    @keyframes ari-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.38; }
+    }
+
+    .stApp::before {
+        content: ""; position: fixed; top: 0; left: 0; right: 0; height: 5px;
+        background: linear-gradient(90deg, #0086FF, #FF007F, #00C853, #0086FF, #FF8A3D);
+        background-size: 300% 300%;
+        animation: magaluGlow 6s linear infinite;
+        z-index: 999999;
+    }
+
+    .stApp {
+        background-color: #F0F4F8;
+        background-image: radial-gradient(circle at 100% 0%, #E2EDF8 0%, transparent 40%);
+        color: #0F172A;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: #0F172A !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.5px;
+    }
+
+    p, li, label, div, span {
+        color: inherit;
+    }
+
+    hr { border-top: 1px solid #E2E8F0; margin-top: 1.6rem; margin-bottom: 1.6rem; }
+
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #082a63 0%, #00153d 100%) !important;
+        border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    section[data-testid="stSidebar"] * { color: #EAF2FF; }
+
+    section[data-testid="stSidebar"] .stRadio > div { gap: 8px; }
+
+    section[data-testid="stSidebar"] label[data-baseweb="radio"] {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        transition: all 0.25s ease;
+    }
+
+    section[data-testid="stSidebar"] label[data-baseweb="radio"]:hover {
+        background: rgba(255,255,255,0.12);
+        border-color: rgba(85,170,255,0.55);
+    }
+
+    section[data-testid="stSidebar"] .stButton>button {
+        background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%);
         color: #FFFFFF;
         border: none;
-        border-radius: 8px;
-        font-weight: 700;
-        font-size: 15px;
-        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 14px;
+        padding: 0.8rem 1rem;
+        box-shadow: 0 6px 20px rgba(0,134,255,0.25);
         transition: all 0.3s ease;
-        box-shadow: 0 4px 10px rgba(0, 134, 255, 0.2);
-    }
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(0, 134, 255, 0.4);
-        color: #FFFFFF;
-    }
-    
-    /* Expanders Limpos */
-    .streamlit-expanderHeader {
-        background-color: #FFFFFF !important;
-        border-radius: 10px !important;
-        border: 1px solid #E1E8ED !important;
-        font-weight: 700 !important;
-        color: #0086FF !important;
     }
 
-    /* ========================================================= */
-    /* SELO INLINE A.R.I. (FUTURISTA / NEON)                  */
-    /* ========================================================= */
+    section[data-testid="stSidebar"] .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0,134,255,0.4);
+        color: #FFFFFF;
+    }
+
+    .stButton>button {
+        background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%);
+        color: #FFFFFF;
+        border: none;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 14px;
+        padding: 0.72rem 1rem;
+        box-shadow: 0 6px 20px rgba(0,134,255,0.20);
+        transition: all 0.28s ease;
+    }
+
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(0,134,255,0.32);
+        color: #FFFFFF;
+    }
+
+    button[kind="primary"] {
+        background: linear-gradient(135deg, #00C853 0%, #009624 100%) !important;
+        box-shadow: 0 6px 20px rgba(0,200,83,0.25) !important;
+    }
+
+    button[kind="primary"]:hover {
+        box-shadow: 0 10px 24px rgba(0,200,83,0.38) !important;
+    }
+
+    [data-testid="stDataFrame"],
+    [data-testid="stPlotlyChart"],
+    div[data-testid="stVerticalBlock"] > div > div[data-testid="stVerticalBlockBorderWrapper"],
+    [data-testid="stMetric"],
+    [data-testid="stAlert"] {
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255,255,255,0.6) !important;
+        border-radius: 18px !important;
+        box-shadow: 0 8px 30px rgba(15,23,42,0.05) !important;
+    }
+
+    [data-testid="stPlotlyChart"], [data-testid="stDataFrame"] {
+        padding: 10px;
+        transition: transform 0.28s ease, box-shadow 0.28s ease;
+    }
+
+    [data-testid="stPlotlyChart"]:hover, [data-testid="stDataFrame"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 38px rgba(0,134,255,0.10) !important;
+    }
+
+    .streamlit-expanderHeader {
+        background: rgba(255,255,255,0.95) !important;
+        border-radius: 14px !important;
+        border: 1px solid #E5EEF9 !important;
+        font-weight: 800 !important;
+        color: #0A4FB3 !important;
+    }
+
+    [data-baseweb="tab-list"] {
+        background-color: #FFFFFF;
+        border-radius: 14px;
+        padding: 6px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        gap: 8px;
+        margin-bottom: 22px;
+    }
+
+    button[data-baseweb="tab"] {
+        background-color: transparent !important;
+        border-radius: 10px !important;
+        padding: 12px 18px !important;
+        color: #64748B !important;
+        font-weight: 700 !important;
+        border: none !important;
+        transition: all 0.3s ease !important;
+    }
+
+    button[data-baseweb="tab"]:hover {
+        background-color: #F1F5F9 !important;
+        color: #0F172A !important;
+    }
+
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #0086FF !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 4px 15px rgba(0,134,255,0.35) !important;
+    }
+
+    [data-baseweb="tab-border"] { display: none; }
+
+    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div, textarea, input {
+        border-radius: 12px !important;
+    }
+
+    span[data-baseweb="tag"] {
+        background-color: #E6F2FF !important;
+        color: #0086FF !important;
+        border-radius: 8px !important;
+        border: 1px solid #BAE6FD !important;
+        font-weight: 700 !important;
+        padding: 6px 12px !important;
+    }
+
     .ari-inline-badge {
         background: linear-gradient(135deg, #0A192F 0%, #112240 100%);
         color: #64FFDA;
-        padding: 4px 12px;
-        border-radius: 20px;
+        padding: 5px 12px;
+        border-radius: 999px;
         font-size: 11px;
         font-weight: 900;
         letter-spacing: 1px;
         text-transform: uppercase;
-        box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
+        box-shadow: 0 0 10px rgba(100, 255, 218, 0.18);
         border: 1px solid #64FFDA;
         display: inline-flex;
         align-items: center;
@@ -170,24 +311,42 @@ st.markdown("""
         animation: ari-blink 1.5s infinite;
     }
 
-    @keyframes ari-pulse {
-        0% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.2); transform: scale(1); }
-        50% { box-shadow: 0 0 15px rgba(100, 255, 218, 0.6); transform: scale(1.02); }
-        100% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.2); transform: scale(1); }
+    .magalu-ribbon {
+        background: linear-gradient(90deg, #0086FF, #005BFF, #FF007F, #0086FF);
+        background-size: 300% 300%;
+        animation: magaluGlow 8s ease infinite;
+        color: #FFFFFF; padding: 8px 24px; font-size: 13px; font-weight: 800;
+        border-radius: 0px 10px 10px 0px; margin-bottom: 15px; margin-top: 10px;
+        position: relative; left: -1rem; box-shadow: 0 4px 15px rgba(0,134,255,0.22);
+        text-transform: uppercase; letter-spacing: 1px;
     }
 
-    @keyframes ari-blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
-    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 </style>
 """, unsafe_allow_html=True)
 
+
+def render_hero(titulo, subtitulo, badge="Magalu • A.R.I."):
+    st.markdown(f"""
+        <div style="position: relative; overflow: hidden; background: linear-gradient(135deg, #0A4FB3 0%, #062B76 45%, #0D1836 100%); border-radius: 28px; padding: 34px 34px 26px 34px; color: #FFFFFF; box-shadow: 0 24px 70px rgba(0, 74, 173, 0.22); margin-bottom: 24px;">
+            <div style="display:inline-block; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 800; letter-spacing: .08em; margin-bottom: 16px; text-transform: uppercase; backdrop-filter: blur(8px);">{badge}</div>
+            <div style="font-size: 40px; font-weight: 900; line-height: 1.02; letter-spacing: -1.2px; margin-bottom: 10px; position: relative; z-index: 2; color:#FFFFFF;">{strip_emojis(titulo)}</div>
+            <div style="color: rgba(255,255,255,0.82); font-size: 16px; max-width: 920px; position: relative; z-index: 2;">{strip_emojis(subtitulo)}</div>
+            <div style="content:''; position:absolute; inset:auto -80px -90px auto; width:320px; height:320px; background: radial-gradient(circle, rgba(0,255,255,0.20) 0%, rgba(0,255,255,0) 68%);"></div>
+        </div>
+    """, unsafe_allow_html=True)
+
 # --- GERADOR DE TÍTULOS COM SELO A.R.I ---
 def titulo_com_ari(texto_titulo, texto_selo="IA - A.R.I"):
+    texto_limpo = strip_emojis(texto_titulo)
+    icone = infer_icon(texto_limpo, "auto_awesome")
     st.markdown(f"""
-    <div style="display: flex; align-items: center; margin-bottom: 1rem; margin-top: 1rem;">
-        <h2 style="margin: 0; padding: 0; color: #1E272E; font-family: 'Nunito Sans', sans-serif; font-weight: 800; letter-spacing: -0.5px;">{texto_titulo}</h2>
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; margin-top: 1rem; flex-wrap: wrap;">
+        <div style="width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#E9F3FF 0%,#DDEBFF 100%);border:1px solid #D4E7FF;"><span class="icon-magalu" style="font-size:22px;color:#0A4FB3;">{icone}</span></div>
+        <h2 style="margin: 0; padding: 0; color: #0F172A; font-family: 'Inter', sans-serif; font-weight: 900; letter-spacing: -0.6px;">{texto_limpo}</h2>
         <div class="ari-inline-badge">
             <div class="ari-dot"></div>
             <span>{texto_selo}</span>
@@ -195,50 +354,124 @@ def titulo_com_ari(texto_titulo, texto_selo="IA - A.R.I"):
     </div>
     """, unsafe_allow_html=True)
 
-# --- ESTILIZADOR DE GRÁFICOS (PLOTLY SÊNIOR) ---
+# --- ESTILIZADOR DE GRÁFICOS (VISUAL APENAS) ---
 def aplicar_estilo_premium(fig):
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family="Nunito Sans, sans-serif", color='#2D3436', size=13),
+        font=dict(family="Inter, sans-serif", color='#0F172A', size=13),
         hovermode="x unified",
         hoverlabel=dict(
-            bgcolor="rgba(255, 255, 255, 0.95)", 
+            bgcolor="rgba(255, 255, 255, 0.96)", 
             font_size=14, 
-            font_family="Nunito Sans", 
+            font_family="Inter", 
             bordercolor="#E1E8ED",
-            font_color="#1E272E"
+            font_color="#1E293B"
         ),
         margin=dict(t=50, b=20, l=20, r=20),
-        title_font=dict(size=18, color='#1E272E', family="Nunito Sans", weight='bold')
+        title_font=dict(size=18, color='#0F172A', family="Inter")
     )
-    # Borda branca que dá o efeito de "fatias soltas" super moderno
-    fig.update_traces(marker=dict(line=dict(width=1.5, color='#FFFFFF')), opacity=0.9)
-    # Linhas de grade tracejadas (muito mais limpo)
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#E1E8ED', griddash='dash', tickfont=dict(color='#8395A7', size=12))
-    fig.update_xaxes(showgrid=False, tickfont=dict(color='#8395A7', size=12), title_font=dict(color='#8395A7'))
+    fig.update_traces(marker=dict(line=dict(width=1.5, color='#FFFFFF')), opacity=0.92)
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', griddash='dash', tickfont=dict(color='#64748B', size=12))
+    fig.update_xaxes(showgrid=False, tickfont=dict(color='#64748B', size=12), title_font=dict(color='#64748B'))
     return fig
 
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# --- COMPONENTE DE KPI VIVO E MODERNO ---
+
+EMOJI_REPLACEMENTS = {
+    "🛍️": "", "🤖": "", "💡": "", "❓": "", "🧠": "", "🚨": "", "⏳": "", "📍": "", "🏠": "",
+    "📅": "", "📈": "", "👷": "", "🧩": "", "🚛": "", "📝": "", "📦": "", "📊": "", "⚙️": "",
+    "🏢": "", "🚦": "", "⚠️": "", "📉": "", "📏": "", "✅": "", "❌": "", "🔥": "", "👥": "",
+    "🎯": "", "🔍": "", "🔢": "", "👇": "", "🗓️": "", "🪵": "", "📺": "", "🛞": "", "🔒": "",
+    "🧪": "", "🗑️": "", "⚖️": "", "💾": "", "🔴": "", "🟡": "", "🟢": "", "📑": "", "📚": "",
+    "📥": "", "🌍": "", "⛔": "", "🚀": "", "📋": "", "👈": ""
+}
+
+ICON_BY_TEXT = {
+    "Painel Operacional": "monitoring",
+    "Previsão de Agendas": "calendar_month",
+    "Simular Cenários": "analytics",
+    "Simulador Mão de Obra": "groups",
+    "Planejamento Lego": "view_in_ar",
+    "Transferências": "swap_horiz",
+    "Solicitações Extras": "note_add",
+    "Registro de Backlog": "inventory_2",
+    "Slotting (Vagas Extras)": "grid_view",
+    "GD (Gestão Diária)": "insights",
+    "Agendado": "calendar_today",
+    "Em Trânsito": "local_shipping",
+    "Pátio": "schedule",
+    "Em Descarga": "forklift",
+    "Recebido": "check_circle",
+    "No-Show": "cancel",
+    "Qtd de SKUs": "barcode",
+    "SKUs Distintos": "barcode",
+    "Qtd Peças Totais": "deployed_code",
+    "Total de Peças": "deployed_code",
+    "Fornecedor": "storefront",
+    "H.E. Projetadas": "warning",
+    "Matriz de Risco Crítico": "crisis_alert",
+    "Possíveis Gargalos": "speed",
+    "Análise de Mão de obra": "group_work",
+    "Slotting Inteligente (S&OP)": "space_dashboard",
+    "GD - Gestão Diária": "dashboard",
+    "Resumo de Agendas com RESLOG (Restrição Logística)": "rule",
+}
+
+def strip_emojis(texto):
+    if texto is None:
+        return ""
+    texto = str(texto)
+    for k, v in EMOJI_REPLACEMENTS.items():
+        texto = texto.replace(k, v)
+    return " ".join(texto.split())
+
+def infer_icon(texto, default="dashboard"):
+    texto_limpo = strip_emojis(texto)
+    for chave, icone in ICON_BY_TEXT.items():
+        if chave.lower() in texto_limpo.lower():
+            return icone
+    return default
+
+def icon_chip(icon, text, tone="blue"):
+    palette = {
+        "blue": ("#E8F2FF", "#0A4FB3", "#D6E8FF"),
+        "green": ("#E8FFF1", "#159947", "#CFF7DD"),
+        "orange": ("#FFF4E8", "#D97706", "#FFE3C2"),
+        "red": ("#FFECEC", "#C0392B", "#FFD4CF"),
+        "slate": ("#F1F5F9", "#334155", "#E2E8F0"),
+    }
+    bg, fg, bd = palette.get(tone, palette["blue"])
+    return f"<span style='display:inline-flex;align-items:center;gap:8px;background:{bg};color:{fg};border:1px solid {bd};border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;letter-spacing:.04em;'><span class='icon-magalu' style='font-size:16px;color:{fg};'>{icon}</span><span>{strip_emojis(text)}</span></span>"
+
+def section_heading(texto, level=2, icon=None, badge=None):
+    icon = icon or infer_icon(texto)
+    badge_html = f"<div class='ari-inline-badge' style='margin-left:14px;'><div class='ari-dot'></div><span>{badge}</span></div>" if badge else ""
+    size = {1:36,2:30,3:22,4:18}.get(level, 22)
+    st.markdown(f"<div style='display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 16px 0;'><div style='width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#E9F3FF 0%,#DDEBFF 100%);border:1px solid #D4E7FF;box-shadow:0 8px 20px rgba(10,79,179,0.08);'><span class='icon-magalu' style='font-size:22px;color:#0A4FB3;'>{icon}</span></div><div style='font-size:{size}px;font-weight:900;color:#0F172A;letter-spacing:-0.6px;'>{strip_emojis(texto)}</div>{badge_html}</div>", unsafe_allow_html=True)
+
+# --- COMPONENTE DE KPI (VISUAL APENAS) ---
 def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
-    # Converte o HEX para RGB para fazer a sombra brilhar na mesma cor
     cor_hex = cor.lstrip('#')
     if len(cor_hex) == 6:
         r, g, b = tuple(int(cor_hex[i:i+2], 16) for i in (0, 2, 4))
-        sombra_hover = f"rgba({r}, {g}, {b}, 0.25)"
+        sombra_hover = f"rgba({r}, {g}, {b}, 0.20)"
     else:
-        sombra_hover = "rgba(0, 134, 255, 0.25)"
+        sombra_hover = "rgba(0, 134, 255, 0.20)"
 
-    # HTML TODO JUNTO PARA O STREAMLIT NÃO SE PERDER
+    titulo_limpo = strip_emojis(titulo)
+    subtitulo_limpo = strip_emojis(subtitulo)
+    icon = infer_icon(titulo_limpo, "monitoring")
+
     st.markdown(f"""
-    <div style="background: #FFFFFF; border-radius: 16px; padding: 22px 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); border-top: 5px solid {cor}; margin-bottom: 16px; position: relative; overflow: hidden; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 25px {sombra_hover}';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.03)';">
-        <div style="position: absolute; top: -15px; right: -15px; width: 70px; height: 70px; background: {cor}; opacity: 0.08; border-radius: 50%;"></div>
-        <p style="margin: 0; font-size: 13px; color: #576574; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</p>
-        <h2 style="margin: 8px 0; font-size: 36px; color: #1E272E; font-weight: 900; line-height: 1.1;">{valor}</h2>
-        <p style="margin: 0; font-size: 13px; color: #8395A7; font-weight: 600;">{subtitulo}</p>
+    <div style="background: rgba(255,255,255,0.96); border-radius: 18px; padding: 22px 18px; box-shadow: 0 8px 26px rgba(15,23,42,0.05); border: 1px solid #EEF3F8; margin-bottom: 16px; position: relative; overflow: hidden; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 14px 32px {sombra_hover}';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 26px rgba(15,23,42,0.05)';">
+        <div style="position: absolute; inset: 0 auto 0 0; width: 5px; background: {cor};"></div>
+        <div style="position: absolute; top: -18px; right: -18px; width: 82px; height: 82px; background: {cor}; opacity: 0.08; border-radius: 50%;"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin:0 0 8px 0;"><span class='icon-magalu' style='font-size:17px;color:{cor};'>{icon}</span><p style="margin:0;font-size:11px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;">{titulo_limpo}</p></div>
+        <h2 style="margin: 0 0 6px 0; font-size: 34px; color: #0F172A; font-weight: 900; line-height: 1.05;">{valor}</h2>
+        <p style="margin: 0; font-size: 13px; color: #64748B; font-weight: 600;">{subtitulo_limpo}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -254,7 +487,7 @@ def conectar_google():
     return gspread.authorize(creds)
 
 # --- MOTOR DE INTELIGÊNCIA ARTIFICIAL GLOBAL ---
-def consultar_ia_contextual(prompt_contexto, mensagem_carregamento="🧠 IA analisando cenário..."):
+def consultar_ia_contextual(prompt_contexto, mensagem_carregamento="IA analisando cenário..."):
     import google.generativeai as genai
     try:
         # Puxando a chave com segurança direto do cofre do Streamlit
@@ -267,7 +500,7 @@ def consultar_ia_contextual(prompt_contexto, mensagem_carregamento="🧠 IA anal
             resposta = model.generate_content(prompt_contexto)
             return resposta.text
     except Exception as e:
-        return f"🚨 Falha de comunicação com a IA: {e}"
+        return f"Falha de comunicação com a IA: {e}"
 
 # --- EXTRAÇÃO DE DADOS (MULTIPLAS PLANILHAS & AGRUPAMENTOS) ---
 @st.cache_data(ttl=300)
@@ -572,19 +805,31 @@ def carregar_dados():
             pass 
 
     except Exception as e: 
-        st.error(f"🚨 Erro crítico de conexão com o Banco de Dados do Google: {e}")
+        st.error(f"Erro crítico de conexão com o banco de dados do Google: {e}")
 
     return df, df_itens, df_plan, df_transf, df_excecoes
 
 df, df_itens, df_plan, df_transf, df_excecoes = carregar_dados()
 
 if df.empty and df_transf.empty:
-    st.warning("⏳ Aguardando dados das planilhas para renderizar o Dashboard.")
+    st.warning("Aguardando dados das planilhas para renderizar o dashboard.")
     st.stop()
 
 # --- BARRA LATERAL E NAVEGAÇÃO ---
 
+st.sidebar.markdown("""
+    <div style="padding: 10px 8px 4px 8px; margin-bottom: 14px;">
+        <div style="background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05)); border:1px solid rgba(255,255,255,0.10); border-radius: 22px; padding: 18px 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);">
+            <div style="font-size: 13px; font-weight: 800; letter-spacing:.08em; text-transform: uppercase; color:#9CC8FF; margin-bottom:8px;">Magalu</div>
+            <div style="font-size: 26px; font-weight: 900; line-height:1.0; color:#FFFFFF; margin-bottom:8px;">Torre de Controle</div>
+            <div style="font-size: 13px; color:rgba(255,255,255,0.72);">Operação inbound, planejamento e leitura executiva em uma única visão.</div>
+            <div style="height: 8px; margin-top:14px; border-radius: 999px; background: linear-gradient(90deg, #0086FF, #00D2FF, #FF8A3D, #FF4D6D); background-size:300% 300%; animation: magaluGlow 7s linear infinite;"></div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
 # 1. BOTÃO DO FAQ A.R.I. (Clean e Minimalista)
+st.sidebar.markdown(icon_chip("smart_toy", "A.R.I. Intelligence", "slate"), unsafe_allow_html=True)
 if st.sidebar.button("FAQ A.R.I", key="botao_faq_ari_unico", use_container_width=True):
     st.session_state["mostrar_faq_ari"] = not st.session_state.get("mostrar_faq_ari", False)
 
@@ -620,7 +865,7 @@ Analiso seu cenário operacional de forma complexa, listo os dias com riscos e d
 st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-st.sidebar.header("Menu de Navegação")
+st.sidebar.markdown(icon_chip("explore", "Menu de Navegação", "slate"), unsafe_allow_html=True)
 pagina = st.sidebar.radio("Ir para:", ["Painel Operacional", "Previsão de Agendas", "Simular Cenários", "Simulador Mão de Obra", "Planejamento Lego", "Transferências", "Solicitações Extras", "Registro de Backlog", "Slotting (Vagas Extras)","GD (Gestão Diária)"])
 st.sidebar.markdown("---")
 
@@ -628,7 +873,7 @@ if st.sidebar.button("Atualizar Dados Agora", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
 
-st.sidebar.header("Período de Análise")
+st.sidebar.markdown(icon_chip("date_range", "Período de Análise", "slate"), unsafe_allow_html=True)
 
 hoje = pd.Timestamp.now(tz='America/Sao_Paulo').date()
 primeiro_dia_mes = hoje.replace(day=1)
@@ -657,7 +902,7 @@ if pagina == "Painel Operacional":
     df_filtrado = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)]
 
     st.sidebar.markdown("---")
-    st.sidebar.header("Parâmetros Operacionais")
+    st.sidebar.markdown(icon_chip("tune", "Parâmetros Operacionais", "slate"), unsafe_allow_html=True)
     capacidade_diaria = st.sidebar.number_input("Equipes Disponíveis/Dia", min_value=1, max_value=30, value=6)
     pessoas_por_equipe = st.sidebar.number_input("Pessoas por Equipe", min_value=1, max_value=20, value=6)
     custo_hora_extra = st.sidebar.number_input("Custo da Hora Extra (R$)", min_value=1.0, value=9.0, format="%.2f")
@@ -673,11 +918,9 @@ if pagina == "Painel Operacional":
     else:
         df_filtrado_op = df_filtrado[(df_filtrado['Canal'].isin(canal_selecionado)) & (df_filtrado['Status'].isin(status_operacao))]
 
-    st.title("Torre de Controle Inbound | CD2900")
-    st.markdown(f"**Visão Executiva:** {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
-    st.markdown("---")
+    render_hero("Torre de Controle Inbound | CD2900", f"Visão executiva consolidada de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')} com foco em operação, risco e capacidade.", "Magalu • Controle operacional")
 
-    st.header("Painel Operacional")
+    section_heading("Painel Operacional", icon="monitoring")
     col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5, col_kpi6 = st.columns(6)
 
     qtd_agendado = len(df_filtrado_op[df_filtrado_op['Status'] == 'Agendado'])
@@ -691,14 +934,15 @@ if pagina == "Painel Operacional":
 
     with col_kpi1: exibir_kpi("Agendado", qtd_agendado, "Total de agendas", "#3498DB")
     with col_kpi2: exibir_kpi("Em Trânsito", qtd_transito, "A caminho do CD", "#9B59B6")
-    with col_kpi3: exibir_kpi("⏳ Pátio", qtd_aguardando, "Aguardando doca", "#F39C12")
+    with col_kpi3: exibir_kpi("Pátio", qtd_aguardando, "Aguardando doca", "#F39C12")
     with col_kpi4: exibir_kpi("Em Descarga", qtd_descarga, "Operação rodando", "#1ABC9C")
     with col_kpi5: exibir_kpi("Recebido", qtd_recebido, "Finalizados", "#2ECC71")
     with col_kpi6: exibir_kpi("No-Show", qtd_noshow, f"{taxa_noshow:.1f}% de quebra", "#E74C3C")
 
     st.markdown("---")
 
-    st.header("Painel de Ausências (Detalhamento)")
+    section_heading("Painel de Ausências", level=3, icon="event_busy")
+    st.caption("Detalhamento por canal e impacto no período filtrado.")
     df_noshow = df_filtrado_op[df_filtrado_op['Status'] == 'No-Show'].copy()
 
     col_aus_full, col_aus_1p = st.columns(2)
@@ -720,7 +964,7 @@ if pagina == "Painel Operacional":
 
     st.markdown("---")
 
-    st.header("Recebimento: Teto de Agendas 1P")
+    section_heading("Recebimento: Teto de Agendas 1P", level=3, icon="straighten")
     df_1p = df_filtrado_op[df_filtrado_op['Canal'] == '1P Fornecedor'].copy()
 
     if not df_1p.empty:
@@ -759,7 +1003,7 @@ if pagina == "Painel Operacional":
     # NOVA VISÃO: PLANEJAMENTO LEGO LADO A LADO COM 1P
     # ====================================================================
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🧱 Planejamento Lego: Vagas Liberadas pelo Comercial")
+    section_heading("Planejamento Lego: Vagas Liberadas pelo Comercial", level=3, icon="view_in_ar")
 
     if not df_plan.empty:
         df_plan_1p = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy()
@@ -802,7 +1046,7 @@ if pagina == "Painel Operacional":
 
     st.markdown("---")
 
-    st.header("Visão APC - CD2900")
+    section_heading("Visão APC - CD2900", level=3, icon="groups")
     df_apc = df_filtrado_op.groupby('Data').agg({'Tempo_APC_Minutos': 'sum', 'Agenda_Texto': 'count'}).reset_index()
     df_apc['Min_Transf_Fixa'] = df_apc['Data'].apply(lambda x: 1200 if x.weekday() < 5 else 0)
     df_apc['Minutos Totais'] = df_apc['Tempo_APC_Minutos'] + df_apc['Min_Transf_Fixa']
@@ -814,7 +1058,7 @@ if pagina == "Painel Operacional":
     df_apc['Custo_HE'] = df_apc['Horas_Extras'] * pessoas_por_equipe * custo_hora_extra
 
     if not df_apc.empty:
-        st.markdown("### Visão Acumulada")
+        section_heading("Visão Acumulada", level=3, icon="stacked_line_chart")
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
         with col_m1: exibir_kpi("Média Equipes/Dia", math.ceil(df_apc['Equipes Necessárias'].mean()), "Recurso Humano", "#3498DB")
         with col_m2: exibir_kpi("Dias em Sobrecarga", len(df_apc[df_apc['Gap_Equipes'] > 0]), f"De {len(df_apc)} analisados", "#E74C3C")
@@ -831,7 +1075,7 @@ if pagina == "Painel Operacional":
     # NOVA VISÃO: MATRIZ DE RISCO CRÍTICO SÊNIOR (DEEP ANALYTICS A.R.I.)
     # ====================================================================
     st.markdown("---")
-    titulo_com_ari("🚨 Matriz de Risco Crítico")
+    titulo_com_ari("Matriz de Risco Crítico")
     st.markdown("O A.R.I. vasculhou o detalhe de SKUs e Volume de **cada agenda** para prever travamento de endereçamento e impactos de recebimento. Clique nos alertas para expandir os detalhes.")
 
     df_risco = df_filtrado_op.copy()
@@ -844,7 +1088,7 @@ if pagina == "Painel Operacional":
         alertas_dia = []
         cargas_detalhadas = [] 
 
-        # 🧠 O SEGREDO: Memória do A.R.I para não contar a mesma agenda duas vezes!
+        # O SEGREDO: Memória do A.R.I para não contar a mesma agenda duas vezes!
         agendas_vistas_altissimo = set()
         agendas_vistas_atencao = set()
 
@@ -929,7 +1173,7 @@ if pagina == "Painel Operacional":
 
             # Define a gravidade do título do Expander
             if len(cargas_altissimo) >= 3:
-                titulo_alerta = f"🚨 DIA {dia_str}: RISCO DETECTADO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
+                titulo_alerta = f"DIA {dia_str}: RISCO DETECTADO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
                 cor_status = "#C0392B"
             elif len(cargas_altissimo) > 0:
                 titulo_alerta = f"DIA {dia_str}: AVISO DE RISCO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
@@ -949,7 +1193,7 @@ if pagina == "Painel Operacional":
 
     # Renderiza o relatório na tela (Os famosos Expanders Interativos)
     if dias_criticos_report:
-        st.error("**O A.R.I. detectou configurações críticas de carga que exigem plano de ação imediato:**")
+        st.error("O A.R.I. detectou configurações críticas de carga que exigem plano de ação imediato:")
 
         for rep in dias_criticos_report:
             with st.expander(rep["titulo"]):
@@ -968,7 +1212,7 @@ if pagina == "Painel Operacional":
                     st.markdown("**Raio-X das Agendas :**")
                     st.dataframe(rep["df_detalhes"], use_container_width=True, hide_index=True)
     else:
-        st.success("**A.R.I. INFORMA:** Cenário Operacional limpo. Nenhuma mutação de risco (ex: Diversos com >1k peças ou excesso de SKUs) identificada no período.")
+        st.success("A.R.I. informa: cenário operacional limpo. Nenhuma mutação de risco identificada no período.")
 
     st.markdown("---")
     titulo_com_ari("Possíveis Gargalos")
@@ -981,11 +1225,11 @@ if pagina == "Painel Operacional":
         df_dia_critico = df_filtrado_op[df_filtrado_op['Data'].dt.strftime('%d/%m/%Y') == dia_selecionado].copy()
         dados_apc_dia = df_apc[df_apc['Data'].dt.strftime('%d/%m/%Y') == dia_selecionado].iloc[0]
 
-        st.markdown(f"### Analise Operacional: {dia_selecionado}")
+        section_heading(f"Análise Operacional: {dia_selecionado}", level=3, icon="target")
         met_col1, met_col2, met_col3, met_col4 = st.columns(4)
         with met_col1: exibir_kpi("Equipes Necessárias", dados_apc_dia['Equipes Necessárias'], "Demanda do dia", "#3498DB")
         with met_col2: exibir_kpi("Capacidade Atual", capacidade_diaria, "Headcount Fixo", "#95A5A6")
-        with met_col3: exibir_kpi("🚨 H.E. Projetadas", f"{dados_apc_dia['Horas_Extras']} h", f"Custo: {formatar_moeda(dados_apc_dia['Custo_HE'])}", "#E74C3C")
+        with met_col3: exibir_kpi("H.E. Projetadas", f"{dados_apc_dia['Horas_Extras']} h", f"Custo: {formatar_moeda(dados_apc_dia['Custo_HE'])}", "#E74C3C")
         with met_col4: exibir_kpi("Volume de Peças", f"{df_dia_critico['Qtd Peças'].sum():,.0f}".replace(',', '.'), "Físico", "#9B59B6")
 
         col_chart, col_tab = st.columns([1, 2])
@@ -1008,7 +1252,7 @@ if pagina == "Painel Operacional":
                 selection_mode="single-row"
             )
 
-        st.markdown("### Detalhamento da Carga")
+        section_heading("Detalhamento da Carga", level=3, icon="inventory_2")
         linhas_sel = evento_agenda.selection.rows
 
         if linhas_sel:
@@ -1048,12 +1292,13 @@ if pagina == "Painel Operacional":
         else:
             st.info("Selecione uma carga na tabela acima para ver os produtos dela.")
 
-    else: st.success("A operação fluiu sem gargalos no período analisado!")
+    else: st.success("A operação fluiu sem gargalos no período analisado.")
 
 # ==============================================================================
 # 🎨 REESTRUTURAÇÃO COMPLETA: PÁGINA 1 - PREVISÃO DE AGENDAS (VISÃO DASHBOARD)
 # ==============================================================================
 elif pagina == "Previsão de Agendas":
+    render_hero("Previsão de Agendas", "Leitura tática das cargas previstas para apoiar decisão operacional sem alterar a lógica atual do painel.", "Planejamento diário")
     # 1. BARRA DE FILTROS SUPERIOR
     col_vaz_1, col_fil_data, col_vaz_2 = st.columns([2, 2, 2])
     with col_fil_data:
@@ -1142,7 +1387,7 @@ elif pagina == "Previsão de Agendas":
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        st.markdown(f"#### 1P ({tot_ag_main})")
+        st.markdown(f"#### 🛒 1P ({tot_ag_main})")
         if not df_1p_ia.empty and col_ct:
             st.plotly_chart(px.bar(df_1p_ia.groupby(col_ct).size().reset_index(name='Qtd'), y=col_ct, x='Qtd', orientation='h', height=250), use_container_width=True)
             with st.expander("Ver Agendas 1P"):
@@ -1177,9 +1422,10 @@ elif pagina == "Previsão de Agendas":
 # PÁGINA 2.5: Simulador Cenário APC
 # ==============================================================================
 elif pagina == "Simular Cenários":
+    render_hero("Simular Cenários", "Teste impactos de mudanças operacionais mantendo exatamente a mesma lógica do simulador atual.", "Simulação")
     col_titulo, col_reset = st.columns([4, 1])
     with col_titulo:
-        st.title("Simulador Cenário APC | Estresse de Malha")
+        render_hero("Simulador Cenário APC", "Simulação de estresse de malha e impactos operacionais com visual executivo.", "Magalu • Cenários")
         st.markdown("Adicione novas cargas em múltiplos dias e veja o impacto cumulativo na semana inteira. O sistema **salva as suas adições** enquanto você navega pelas datas!")
 
     if 'simulador_cargas' not in st.session_state:
@@ -1195,7 +1441,7 @@ elif pagina == "Simular Cenários":
 
     if not df_base_periodo.empty:
         st.markdown("---")
-        st.markdown("### Filtro de Cenário Base")
+        section_heading("Filtro de Cenário Base", level=3, icon="tune")
         canais_disponiveis = df_base_periodo['Canal'].unique().tolist()
         canais_selecionados = st.multiselect("Selecione quais canais você quer manter no cálculo ANTES de simular o estresse:", options=canais_disponiveis, default=canais_disponiveis)
 
@@ -1218,7 +1464,7 @@ elif pagina == "Simular Cenários":
         col_painel, col_resumo = st.columns([2, 1])
 
         with col_painel:
-            st.markdown("### Injetar Cargas por Dia")
+            section_heading("Injetar Cargas por Dia", level=3, icon="experiment")
             dia_alvo = st.selectbox("Selecione o Dia para adicionar as cargas:", df_apc_base['Data_Str'].tolist())
 
             if dia_alvo not in st.session_state['simulador_cargas']:
@@ -1253,7 +1499,7 @@ elif pagina == "Simular Cenários":
         df_apc_simulado['Equipes_Simuladas'] = df_apc_simulado['Minutos_Simulados'].apply(lambda x: math.ceil(x / 427))
 
         with col_resumo:
-            st.markdown(f"### Impacto no dia {dia_alvo}")
+            section_heading(f"Impacto no dia {dia_alvo}", level=3, icon="target")
             linha_alvo = df_apc_simulado[df_apc_simulado['Data_Str'] == dia_alvo].iloc[0]
 
             min_injetados_hoje = linha_alvo['Minutos_Simulados'] - linha_alvo['Minutos_Originais']
@@ -1265,12 +1511,12 @@ elif pagina == "Simular Cenários":
                 st.info("Nenhuma carga extra salva para este dia. Reflete a base atual.")
             else:
                 cor_alerta = "#E74C3C" if delta_eq > 0 else "#2ECC71"
-                txt_alerta = f"🚨 Requer +{int(delta_eq)} Equipe(s) extra" if delta_eq > 0 else "Absorvido pela ociosidade"
+                txt_alerta = f"Requer +{int(delta_eq)} Equipe(s) extra" if delta_eq > 0 else "Absorvido pela ociosidade"
                 exibir_kpi("Novo Headcount Necessário", int(eq_simuladas), txt_alerta, cor_alerta)
                 exibir_kpi("Carga Horária Total", f"{linha_alvo['Minutos_Simulados']:,.0f} min", f"+{min_injetados_hoje} min adicionados", "#F39C12")
 
         st.markdown("---")
-        st.markdown("### Projeção da Semana (Com todos os dias simulados)")
+        section_heading("Projeção da Semana", level=3, icon="query_stats")
 
         fig_sim = px.bar(
             df_apc_simulado.sort_values(by='Data'), x='Data', y='Equipes_Simuladas', text='Equipes_Simuladas', 
@@ -1288,6 +1534,7 @@ elif pagina == "Simular Cenários":
 # PÁGINA 3: PROVA DE SOBRECARGA (COMERCIAL)
 # ==============================================================================
 elif pagina == "Simulador Mão de Obra":
+    render_hero("Simulador Mão de Obra", "Balanceie a distribuição das cargas do dia com leitura visual mais corporativa, sem mexer nas regras existentes.", "Capacity planning")
     titulo_com_ari("Análise de Mão de obra")
     st.markdown("Esta visão simula o cenário do dia selecionado, balanceando as cargas de acordo com a quantidade de equipes disponíveis.")
 
@@ -1295,7 +1542,7 @@ elif pagina == "Simulador Mão de Obra":
 
     if dias_disponiveis:
         st.sidebar.markdown("---")
-        st.sidebar.header("Parâmetros da Simulação")
+        st.sidebar.markdown(icon_chip("tune", "Parâmetros da Simulação", "slate"), unsafe_allow_html=True)
         dia_simulacao = st.sidebar.selectbox("Escolha um dia para balancear as cargas:", dias_disponiveis)
 
         total_equipes = st.sidebar.number_input("Total de Equipes Disponíveis", min_value=1, max_value=20, value=6)
@@ -1362,17 +1609,17 @@ elif pagina == "Simulador Mão de Obra":
             equipes_estouradas = sum(1 for v in tempo_equipes.values() if v > 427)
 
             # ====================================================================
-            # 🧠 IA EMBUTIDA: A.R.I. ESTRATEGISTA DE TROPA
+            # IA EMBUTIDA: A.R.I. ESTRATEGISTA DE TROPA
             # ====================================================================
             st.markdown("---")
             col_ia_tropa_txt, col_ia_tropa_btn = st.columns([3, 1])
             with col_ia_tropa_txt:
-                st.markdown("### 🧠 A.R.I. | Otimizador de Headcount")
+                section_heading("A.R.I. | Otimizador de Headcount", level=3, icon="auto_awesome", badge="IA - A.R.I")
                 st.caption("Deixe o A.R.I. analisar a volumetria exata deste dia e sugerir a melhor formação tática para as suas equipes operacionais.")
 
             with col_ia_tropa_btn:
                 st.markdown("<br>", unsafe_allow_html=True)
-                btn_ia_tropa = st.button("Sugerir Formação Ideal", use_container_width=True)
+                btn_ia_tropa = st.button("✨ Sugerir Formação Ideal", use_container_width=True)
 
             if btn_ia_tropa:
                 # O A.R.I junta todos os pedaços de carga do dia para entender a guerra
@@ -1401,12 +1648,12 @@ elif pagina == "Simulador Mão de Obra":
                 [REGRAS DE RESPOSTA]:
                 1. Dê a ordem direta de como o usuário deve preencher o menu lateral. Ex: "Para equalizar hoje, coloque X na Transferência, Y na Madeira."
                 2. Explique a matemática por trás da sua escolha de forma curta e genérica.
-                3. Se os minutos exigidos pela carga ({minutos_totais}) forem MAIORES que a capacidade total ({capacidade_total_cd}), emita um "🚨 ALERTA DE COLAPSO" dizendo que a melhor formação apenas ameniza os danos, mas o déficit de horas extras é inevitável. Seja curto e direto!
+                3. Se os minutos exigidos pela carga ({minutos_totais}) forem MAIORES que a capacidade total ({capacidade_total_cd}), emita um "ALERTA DE COLAPSO" dizendo que a melhor formação apenas ameniza os danos, mas o déficit de horas extras é inevitável. Seja curto e direto!
                 """
 
-                resposta_ia = consultar_ia_contextual(prompt_tropa, "🧠 Simulando milhares de combinações de equipes...")
+                resposta_ia = consultar_ia_contextual(prompt_tropa, "Simulando milhares de combinações de equipes...")
 
-                st.info("**Formação Tática sugerida pelo A.R.I.:**")
+                st.info("Formação tática sugerida pelo A.R.I.:")
                 st.markdown(resposta_ia)
             # ====================================================================
 
@@ -1440,16 +1687,16 @@ elif pagina == "Simulador Mão de Obra":
 # PÁGINA 4: MATRIZ DE PLANEJAMENTO (S&OP COMERCIAL)
 # ==============================================================================
 elif pagina == "Planejamento Lego":
-    st.title("Visão planejamento capacidade LEGO")
+    render_hero("Visão planejamento capacidade LEGO", "Leitura de metas, distribuição diária e apoio à decisão comercial sem alterar a lógica da operação.", "Magalu • Planejamento")
 
     st.sidebar.markdown("---")
-    st.sidebar.header("Parâmetros do Lego")
+    st.sidebar.markdown(icon_chip("tune", "Parâmetros do Lego", "slate"), unsafe_allow_html=True)
     limite_agendas_1p = st.sidebar.number_input("Teto Agendas 1P/Dia", min_value=1, max_value=50, value=14)
 
     df_plan_filtrado = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy() if not df_plan.empty else pd.DataFrame()
 
     if not df_plan.empty:
-        st.markdown("### Planejamento Mensal do Comercial")
+        section_heading("Planejamento Mensal do Comercial", level=3, icon="flag")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
 
         # 1. USA AS CATEGORIAS TRADUZIDAS PARA AS METAS E SALDO
@@ -1478,7 +1725,7 @@ elif pagina == "Planejamento Lego":
 
         df_metas_iniciais['LEGO (Meta)'] = df_metas_iniciais['LEGO (Meta)'].astype(int)
 
-        with st.expander("CLIQUE AQUI PARA PREENCHER AS METAS DO MÊS", expanded=False):
+        with st.expander("Clique aqui para preencher as metas do mês", expanded=False):
             df_metas_editadas = st.data_editor(df_metas_iniciais, use_container_width=True, hide_index=True)
 
             if st.button("Salvar Metas na Nuvem"):
@@ -1498,7 +1745,7 @@ elif pagina == "Planejamento Lego":
 
                     st.success("Metas sincronizadas com sucesso no Google Sheets!")
                 except Exception as e:
-                    st.error(f"🚨 Erro ao salvar na nuvem: {e}")
+                    st.error(f"Erro ao salvar na nuvem: {e}")
 
         # 2. BALANÇO POR CATEGORIA TRADUZIDA
         resumo_real = df_plan_filtrado.groupby('categoria')['quantidade_real'].sum().reset_index()
@@ -1508,7 +1755,7 @@ elif pagina == "Planejamento Lego":
         df_executivo['VAGAS (Saldo)'] = df_executivo['LEGO (Meta)'] - df_executivo['CARROS (Realizado)']
 
         st.markdown("---")
-        st.markdown("### Balanço Geral do Período")
+        section_heading("Balanço Geral do Período", level=3, icon="finance")
 
         meta_total = df_executivo['LEGO (Meta)'].sum()
         realizado_total = df_executivo['CARROS (Realizado)'].sum()
@@ -1524,7 +1771,7 @@ elif pagina == "Planejamento Lego":
         with col_e4: exibir_kpi("Categorias Estouradas", estouradas, "Acima da Meta", "#E74C3C")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("#### Fechamento por Categoria (Metas Agrupadas)")
+        section_heading("Fechamento por Categoria (Metas Agrupadas)", level=4, icon="category")
 
         df_executivo_limpo = df_executivo[(df_executivo['LEGO (Meta)'] > 0) | (df_executivo['CARROS (Realizado)'] > 0)]
 
@@ -1543,7 +1790,7 @@ elif pagina == "Planejamento Lego":
         st.markdown("---")
 
         # 3. MATRIZ DE ACOMPANHAMENTO DIÁRIO (ORIGINAL)
-        st.markdown("### Distribuição Diária: Planejado x Realizado (Linhas Originais)")
+        section_heading("Distribuição Diária: Planejado x Realizado (Linhas Originais)", level=3, icon="table_chart")
 
         # Legenda do Heatmap de Cores
         st.markdown("""
@@ -1605,17 +1852,17 @@ elif pagina == "Planejamento Lego":
                 st.dataframe(tabela_estilizada, use_container_width=True, height=600)
 
                 # ====================================================================
-                # 🧠 IA EMBUTIDA: ASSISTENTE DE REDISTRIBUIÇÃO LEGO vs APC
+                # IA EMBUTIDA: ASSISTENTE DE REDISTRIBUIÇÃO LEGO vs APC
                 # ====================================================================
                 st.markdown("---")
                 col_ia_txt, col_ia_btn = st.columns([3, 1])
                 with col_ia_txt:
-                    st.markdown("### 🧠 Otimização de Malha com IA")
+                    section_heading("Otimização de Malha com IA", level=3, icon="auto_awesome", badge="IA - A.R.I")
                     st.caption("A IA cruzará o saldo de vagas desta tabela com o risco de Hora Extra (APC) para sugerir a redistribuição de cargas.")
 
                 with col_ia_btn:
                     st.markdown("<br>", unsafe_allow_html=True)
-                    btn_ia_lego = st.button("Sugerir Redistribuição", use_container_width=True)
+                    btn_ia_lego = st.button("✨ Sugerir Redistribuição", use_container_width=True)
 
                 if btn_ia_lego:
                     # 1. DADOS DO LEGO (Detalhado por Categoria e Vagas Livres)
@@ -1675,10 +1922,10 @@ elif pagina == "Planejamento Lego":
                     4. Responda em formato de 'Plano de Ação' com bullet points. Seja cirúrgico, sem blá-blá-blá.
                     """
 
-                    resposta_ia = consultar_ia_contextual(prompt_final, "🧠 Cruzando capacidade, Teto de agendas do mês, e Vagas no Lego...")
+                    resposta_ia = consultar_ia_contextual(prompt_final, "Cruzando capacidade, Teto de agendas do mês, e Vagas no Lego...")
 
                     # Exibe a resposta
-                    st.info("**Veredito da Inteligência Artificial:**")
+                    st.info("Veredito da inteligência artificial:")
                     st.markdown(resposta_ia)
             else:
                 st.info("Nenhuma vaga com valor preenchido no período selecionado.")
@@ -1691,13 +1938,13 @@ elif pagina == "Planejamento Lego":
 # PÁGINA 5: HISTÓRICO 325 (TRANSFERÊNCIAS)
 # ==============================================================================
 elif pagina == "Transferências" or pagina == "Histórico325":
-    st.title("Visão de Transferências")
+    render_hero("Visão de Transferências", "Acompanhamento executivo de veículos, itens e fluxo de transferência com leitura premium.", "Magalu • Transferências")
 
     if not df_transf.empty:
         df_transf_periodo = df_transf[(df_transf['DATA_FILTRO'] >= ts_inicio) & (df_transf['DATA_FILTRO'] <= ts_fim)].copy()
 
         st.sidebar.markdown("---")
-        st.sidebar.header("Filtros de Transferência")
+        st.sidebar.markdown(icon_chip("filter_alt", "Filtros de Transferência", "slate"), unsafe_allow_html=True)
 
         opcoes_modal = sorted(df_transf_periodo['MODAL2'].dropna().unique()) if 'MODAL2' in df_transf_periodo.columns else []
         modal_selecionado = st.sidebar.multiselect("Tipo de Carga (Modal)", options=opcoes_modal, default=opcoes_modal)
@@ -1744,15 +1991,15 @@ elif pagina == "Transferências" or pagina == "Histórico325":
             total_skus = df_transf_periodo['PRODUTO'].nunique() if 'PRODUTO' in df_transf_periodo.columns else 0
             total_pecas = resumo_tabela['Peças'].sum()
 
-            st.markdown("### Indicadores de Transferência")
+            section_heading("Indicadores de Transferência", level=3, icon="swap_driving_apps")
             col_t1, col_t2, col_t3 = st.columns(3)
             with col_t1: exibir_kpi("Cargas Esperadas", total_cargas, "Veículos de transf.", "#9B59B6") 
             with col_t2: exibir_kpi("Mix de Produtos", total_skus, "SKUs distintos", "#3498DB")         
             with col_t3: exibir_kpi("Volume Físico", f"{total_pecas:,.0f}".replace(',', '.'), "Peças a receber", "#2ECC71")
 
             st.markdown("---")
-            st.markdown("### Tabela de Acompanhamento (Master)")
-            st.caption("👈 Clique em qualquer linha da tabela abaixo para ver os itens da carga.")
+            section_heading("Tabela de Acompanhamento (Master)", level=3, icon="table_rows")
+            st.caption("Clique em qualquer linha da tabela abaixo para ver os itens da carga.")
 
             evento_tabela = st.dataframe(
                 resumo_tabela, 
@@ -1769,7 +2016,7 @@ elif pagina == "Transferências" or pagina == "Histórico325":
                 id_selecionado = resumo_tabela.iloc[indice_clicado]['ID2900 (Carga)']
 
                 st.markdown("---")
-                st.markdown(f"### Inspecionar Itens: Carga {id_selecionado}")
+                section_heading(f"Inspecionar Itens: Carga {id_selecionado}", level=3, icon="inventory")
 
                 df_detalhe = df_transf_periodo[df_transf_periodo['ID_CARGA_PCP'] == id_selecionado].copy()
 
@@ -1804,10 +2051,10 @@ elif pagina == "Transferências" or pagina == "Histórico325":
                 else:
                     st.warning("Nenhum detalhe encontrado para esta carga.")
             else:
-                st.info("Selecione uma carga na tabela acima para ver os detalhes dos produtos.")
+                st.info("👆 Selecione uma carga na tabela acima para ver os detalhes dos produtos.")
 
             st.markdown("---")
-            st.markdown("### Análise de Fluxo")
+            section_heading("Análise de Fluxo", level=3, icon="monitoring")
 
             graf_col1, graf_col2 = st.columns([2, 1])
             with graf_col1:
@@ -1825,16 +2072,16 @@ elif pagina == "Transferências" or pagina == "Histórico325":
         else:
             st.warning("A coluna 'ID_CARGA_PCP' não foi encontrada na planilha de Transferências.")
     else:
-        st.warning("Planilha de Transferências não carregou. O e-mail do robô está como Leitor nela?")
+        st.warning("Planilha de Transferências não carregou. O e-mail do robô está como leitor nela?")
 
 # ==============================================================================
 # PÁGINA 6: REGISTRO DE SOLICITAÇÕES EXTRAS
 # ==============================================================================
 elif pagina == "Solicitações Extras":
-    st.title("Registro de Vagas Extras 1P")
+    render_hero("Registro de Vagas Extras 1P", "Cadastro e histórico de liberações extras com visual mais corporativo.", "Magalu • Solicitações")
     st.markdown("Utilize este canal para registrar exceções autorizadas pelo Comercial que justifiquem o estouro do Teto Diário de Agendas.")
 
-    st.markdown("### Nova Solicitação")
+    st.markdown("### ➕ Nova Solicitação")
     with st.form(key="form_excecao", clear_on_submit=True):
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -1870,12 +2117,12 @@ elif pagina == "Solicitações Extras":
                         pd.Timestamp.now(tz='America/Sao_Paulo').strftime("%d/%m/%Y %H:%M:%S")
                     ])
 
-                    st.success("Vaga extra registrada com sucesso! Ela já justificará o Teto de Agendas no Painel Operacional.")
+                    st.success("Vaga extra registrada com sucesso. Ela já justificará o teto de agendas no painel operacional.")
                 except Exception as e:
-                    st.error(f"🚨 Erro ao salvar na nuvem: {e}")
+                    st.error(f"Erro ao salvar na nuvem: {e}")
 
     st.markdown("---")
-    st.markdown("### Histórico de Exceções")
+    section_heading("Histórico de Exceções", level=3, icon="history")
 
     if not df_excecoes.empty and 'Data da Vaga' in df_excecoes.columns:
         df_exibir = df_excecoes.copy()
@@ -1888,10 +2135,10 @@ elif pagina == "Solicitações Extras":
 # PÁGINA 7: REGISTRO DE BACKLOG (SOBRAS DE DOCA)
 # ==============================================================================
 elif pagina == "Registro de Backlog":
-    st.title("Registro de Backlog Diário")
+    render_hero("Registro de Backlog Diário", "Lançamento e consulta de backlog com leitura visual unificada ao restante da plataforma.", "Magalu • Backlog")
     st.markdown("Registre aqui as cargas que não puderam ser descarregadas no dia previsto e precisaram ser roladas para o dia seguinte. Isso gerará um histórico de gargalos operacionais.")
 
-    st.markdown("### Novo Registro de Backlog")
+    st.markdown("### ➕ Novo Registro de Backlog")
     with st.form(key="form_backlog", clear_on_submit=True):
         col_b1, col_b2 = st.columns(2)
         with col_b1:
@@ -1932,12 +2179,12 @@ elif pagina == "Registro de Backlog":
                         int(qtd_pecas_backlog),
                         pd.Timestamp.now(tz='America/Sao_Paulo').strftime("%d/%m/%Y %H:%M:%S")
                     ])
-                    st.success("Backlog registrado com sucesso! Os dados já estão na nuvem.")
+                    st.success("Backlog registrado com sucesso. Os dados já estão na nuvem.")
                 except Exception as e:
-                    st.error(f"🚨 Erro ao salvar: {e}")
+                    st.error(f"Erro ao salvar: {e}")
 
     st.markdown("---")
-    st.markdown("### Histórico de Backlogs Registrados")
+    section_heading("Histórico de Backlogs Registrados", level=3, icon="history")
 
     # O robô lê a planilha de Backlog em tempo real para exibir na tela
     try:
@@ -1982,11 +2229,11 @@ elif pagina == "Slotting (Vagas Extras)":
         placeholder="Ex: Preciso encaixar 2 carretas da Artely de madeira..."
     )
 
-    if st.button("A.R.I. - Analisar e Sugerir Slotting", type="primary", use_container_width=True):
+    if st.button("✨ A.R.I. - Analisar e Sugerir Slotting", type="primary", use_container_width=True):
         if not texto_comercial.strip():
             st.warning("Cole o texto antes de rodar.")
         else:
-            with st.spinner("🧠 A.R.I. calculando janelas de oportunidade..."):
+            with st.spinner("A.R.I. calculando janelas de oportunidade..."):
 
                 # --- PASSO A: MAPA DE CAPACIDADE (BLOQUEANDO FIM DE SEMANA) ---
                 hoje = pd.Timestamp.now().date()
@@ -2044,10 +2291,10 @@ elif pagina == "Slotting (Vagas Extras)":
                 Explique sua decisão e forneça a tabela: Fornecedor | Categoria | Qtd Peças | Retorno CD | Justificativa.
                 """
 
-                resposta_ia = consultar_ia_contextual(prompt_slotting, "🧠 Analisando dias úteis e volumetria...")
+                resposta_ia = consultar_ia_contextual(prompt_slotting, "Analisando dias úteis e volumetria...")
 
                 st.markdown("---")
-                st.markdown("### Veredito de Slotting do A.R.I.")
+                section_heading("Veredito de Slotting do A.R.I.", level=3, icon="fact_check", badge="IA - A.R.I")
                 st.markdown(resposta_ia)
 
                 # Botão de Download (CSV)
@@ -2066,7 +2313,7 @@ elif pagina == "Slotting (Vagas Extras)":
 # NOVA PÁGINA: GD (GESTÃO DIÁRIA) - STATUS, PRODUTIVIDADE E ARMAZENAGEM
 # ==============================================================================
 elif pagina == "GD (Gestão Diária)":
-    titulo_com_ari("GD - Gestão Diária ")
+    titulo_com_ari("GD - Gestão Diária")
     st.markdown("Acompanhamento em tempo real do status das agendas, performance tática e pendências de armazenagem.")
 
     # 1. FILTROS DA GD (COM AJUSTE DINÂMICO E VISÃO GERAL)
@@ -2112,7 +2359,7 @@ elif pagina == "GD (Gestão Diária)":
         # Usa a base global de transferência que você já tem no app
         df_transf_base = df.copy() if 'df' in globals() else pd.DataFrame()
 
-    # --- 🧠 LÓGICA DE PRODUTIVIDADE (ÚLTIMOS 30 DIAS + REMOÇÃO DE OUTLIERS) ---
+    # --- LÓGICA DE PRODUTIVIDADE (ÚLTIMOS 30 DIAS + REMOÇÃO DE OUTLIERS) ---
     meta_total = 0
     realizado_total = 0
     ganho_pct = 0.0
@@ -2150,7 +2397,7 @@ elif pagina == "GD (Gestão Diária)":
     sinal_ganho = "+" if ganho_pct >= 0 else ""
     texto_saldo = f"Histórico 30 dias (cargas entre 10 e 427 min)"
 
-    # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC ---
+    # --- LÓGICA DE CÁLCULO REAL DO APC ---
     import math
     apc_dia = 0
     base_apc = df_filtrado_op if 'df_filtrado_op' in globals() else (df_transf_base if not df_transf_base.empty else pd.DataFrame())
@@ -2185,7 +2432,7 @@ elif pagina == "GD (Gestão Diária)":
     """, unsafe_allow_html=True)
 
     # ==========================================================================
-    # --- 🧠 LÓGICA DE PENDÊNCIA DE ARMAZENAGEM (FILTRO RETROATIVO OU GERAL) ---
+    # --- LÓGICA DE PENDÊNCIA DE ARMAZENAGEM (FILTRO RETROATIVO OU GERAL) ---
     # ==========================================================================
     tot_etq_pend, tot_agendas_pend, tot_pecas_pend, pct_agrupada = 0, 0, 0, 0
 
@@ -2210,13 +2457,13 @@ elif pagina == "GD (Gestão Diária)":
                 qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].astype(str).str.contains('AGRUPADA', na=False, case=False)].shape[0]
                 pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
 
-    st.markdown("### Status de Armazenagem")
+    section_heading("Status de Armazenagem", level=3, icon="warehouse")
 
     # Aviso dinâmico na tela para o usuário saber o que está olhando
     if visao_geral:
-        st.info("**Visão Geral ATIVADA:** Exibindo o volume TOTAL (incluindo as cargas conferidas hoje).")
+        st.info("Visão geral ativada: exibindo o volume total, incluindo as cargas conferidas hoje.")
     else:
-        st.info(f"⏳ **Visão Retroativa:** Exibindo APENAS o que foi conferido até o dia { (data_gd - pd.Timedelta(days=1)).strftime('%d/%m/%Y') }.")
+        st.info(f"**Visão Retroativa:** Exibindo APENAS o que foi conferido até o dia { (data_gd - pd.Timedelta(days=1)).strftime('%d/%m/%Y') }.")
 
     # AQUI ESTÃO OS KPIS QUE TINHAM SUMIDO!
     st.markdown(f"""
@@ -2282,7 +2529,7 @@ elif pagina == "GD (Gestão Diária)":
     # ==========================================================================
     # VISÃO 2: LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM
     # ==========================================================================
-    st.markdown("### Pendências de Armazenagem")
+    section_heading("Pendências de Armazenagem", level=3, icon="assignment_late")
 
     if not df_pend.empty:
         # Agrupa tudo que está na base de pendência (respeitando o botão de Visão Geral/Retroativa)
@@ -2311,10 +2558,10 @@ elif pagina == "GD (Gestão Diária)":
         st.info("Nenhuma pendência para exibir nesta visão.")
 
     # ==========================================================================
-    # --- 🧠 LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
+    # --- LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
     # ==========================================================================
     st.markdown("---")
-    st.markdown("### 🚚 Status das Agendas na Doca")
+    section_heading("Status das Agendas na Doca", level=3, icon="local_shipping")
 
     df_status_dia = pd.DataFrame()
     col_dt_s = None
@@ -2391,7 +2638,7 @@ elif pagina == "GD (Gestão Diária)":
     st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
 
     # TABELA DETALHADA E FILTRO DE STATUS
-    st.markdown("### Detalhamento das Agendas na Doca")
+    section_heading("Detalhamento das Agendas na Doca", level=3, icon="search")
     if not df_status_dia.empty and col_st:
         status_unicos = df_status_dia[col_st].dropna().unique().tolist()
         status_selecionados = st.multiselect("Filtrar por Status:", options=status_unicos, default=status_unicos)
