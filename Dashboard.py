@@ -534,6 +534,29 @@ def consultar_ia_contextual(prompt_contexto, mensagem_carregamento="IA analisand
     except Exception as e:
         return f"Falha de comunicação com a IA: {e}"
 
+@st.cache_data(ttl=300)
+def puxar_bases_completas_gd():
+    url_pend = "https://docs.google.com/spreadsheets/d/1Yptk_tfdkuhZCK_saApWQMNynjlaQQeEQjqn4lNcgZk/gviz/tq?tqx=out:csv&sheet=BaseDadosPendArm"
+    url_prod = "https://docs.google.com/spreadsheets/d/1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks/gviz/tq?tqx=out:csv&sheet=FECHAMENTO"
+    url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel%20de%20Controle"
+
+    try:
+        df_p = pd.read_csv(url_prod)
+    except:
+        df_p = pd.DataFrame()
+
+    try:
+        df_s = pd.read_csv(url_status)
+    except:
+        df_s = pd.DataFrame()
+
+    try:
+        df_pe = pd.read_csv(url_pend)
+    except:
+        df_pe = pd.DataFrame()
+
+    return df_p, df_s, df_pe
+
 # --- EXTRAÇÃO DE DADOS (MULTIPLAS PLANILHAS & AGRUPAMENTOS) ---
 @st.cache_data(ttl=300)
 def carregar_dados():
@@ -2379,28 +2402,6 @@ elif pagina == "GD (Gestão Diária)":
     st.markdown("---")
 
     # 2. CONEXÃO COM AS BASES DE DADOS (USANDO CREDENCIAIS PARA PLANILHAS PRIVADAS)
-    @st.cache_data(ttl=300)
-def puxar_bases_completas_gd():
-    url_pend = "https://docs.google.com/spreadsheets/d/1Yptk_tfdkuhZCK_saApWQMNynjlaQQeEQjqn4lNcgZk/gviz/tq?tqx=out:csv&sheet=BaseDadosPendArm"
-    url_prod = "https://docs.google.com/spreadsheets/d/1bj5vIu8LOIWqaW5evogwQeyrJd9yj1iQkXHbJKvTeks/gviz/tq?tqx=out:csv&sheet=FECHAMENTO"
-    url_status = "https://docs.google.com/spreadsheets/d/1NWH9BHXgUmS-6WCQ8AjAHbt8DUHIvgQLRJ8hwUSDC7U/gviz/tq?tqx=out:csv&sheet=Painel%20de%20Controle"
-
-    try:
-        df_p = pd.read_csv(url_prod)
-    except:
-        df_p = pd.DataFrame()
-
-    try:
-        df_s = pd.read_csv(url_status)
-    except:
-        df_s = pd.DataFrame()
-
-    try:
-        df_pe = pd.read_csv(url_pend)
-    except:
-        df_pe = pd.DataFrame()
-
-    return df_p, df_s, df_pe
 
     with st.spinner("Sincronizando com as credenciais do ROUT..."):
         df_prod, df_status, df_pend = puxar_bases_completas_gd()
