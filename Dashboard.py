@@ -7,10 +7,10 @@ from google.oauth2.service_account import Credentials
 import json
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="🛍️", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Torre de Controle | Magalu", page_icon="", layout="wide", initial_sidebar_state="expanded")
 
 # ==============================================================================
-# 🤖 POP-UP DE BOAS-VINDAS A.R.I. (APARECE SÓ 1x AO ENTRAR)
+# POP-UP DE BOAS-VINDAS A.R.I. (APARECE SÓ 1x AO ENTRAR)
 # ==============================================================================
 if "ari_boas_vindas" not in st.session_state:
     st.session_state["ari_boas_vindas"] = True
@@ -63,236 +63,95 @@ if "ari_boas_vindas" not in st.session_state:
         </h4>
         <p>Este sistema conta com o <b>A.R.I. (Agente de Recebimento Inteligente)</b> para análises e planejamento tático.<br><br>
         As funções com auxílio de I.A. estarão identificadas com um selo nas páginas. <b>Sempre revise os dados</b> antes de executar qualquer ação.<br><br>
-        <i>💡 Se você tiver interesse em saber mais sobre o que o A.R.I. faz, aperte no botão <b>"❓ FAQ A.R.I"</b> no menu lateral para entender todas as suas funções e onde ele está presente!</i></p>
+        <i>Se você tiver interesse em saber mais sobre o que o A.R.I. faz, aperte no botão <b>"FAQ A.R.I"</b> no menu lateral para entender todas as suas funções e onde ele está presente!</i></p>
     </div>
     """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 🎨 FRONT-END PREMIUM | IDENTIDADE VISUAL MAGALU + A.R.I. (SOMENTE FRONT)
+# 🎨 FRONT-END SÊNIOR | IDENTIDADE VISUAL MAGALU E A.R.I.
 # ==============================================================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0');
+    /* Importando Fonte Tecnológica e Limpa */
+    @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
 
-    * { font-family: 'Inter', sans-serif !important; }
-
-    .icon-magalu {
-        font-family: 'Material Symbols Rounded' !important;
-        font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
-        font-weight: normal;
-        font-style: normal;
-        letter-spacing: normal;
-        text-transform: none;
-        white-space: nowrap;
-        direction: ltr;
-        -webkit-font-smoothing: antialiased;
-        vertical-align: middle;
-        display: inline-block;
-        line-height: 1;
-        font-size: inherit;
+    .stApp { 
+        background-color: #F5F7FA; 
+        font-family: 'Nunito Sans', sans-serif; 
+        color: #2D3436;
     }
-
-    .material-icons, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] * {
-        font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+    
+    h1, h2, h3, h4, h5, h6 { 
+        color: #1E272E !important; 
+        font-family: 'Nunito Sans', sans-serif !important;
+        font-weight: 800 !important; 
+        letter-spacing: -0.5px; 
     }
-
-    @keyframes magaluGlow {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    @keyframes ari-pulse {
-        0% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.18); transform: scale(1); }
-        50% { box-shadow: 0 0 16px rgba(100, 255, 218, 0.45); transform: scale(1.02); }
-        100% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.18); transform: scale(1); }
-    }
-
-    @keyframes ari-blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.38; }
-    }
-
-    .stApp::before {
-        content: ""; position: fixed; top: 0; left: 0; right: 0; height: 5px;
-        background: linear-gradient(90deg, #0086FF, #FF007F, #00C853, #0086FF, #FF8A3D);
-        background-size: 300% 300%;
-        animation: magaluGlow 6s linear infinite;
-        z-index: 999999;
-    }
-
-    .stApp {
-        background-color: #F0F4F8;
-        background-image: radial-gradient(circle at 100% 0%, #E2EDF8 0%, transparent 40%);
-        color: #0F172A;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-        color: #0F172A !important;
-        font-weight: 800 !important;
-        letter-spacing: -0.5px;
-    }
-
-    p, li, label, div, span {
-        color: inherit;
-    }
-
-    hr { border-top: 1px solid #E2E8F0; margin-top: 1.6rem; margin-bottom: 1.6rem; }
-
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #082a63 0%, #00153d 100%) !important;
-        border-right: 1px solid rgba(255,255,255,0.08);
-    }
-
-    section[data-testid="stSidebar"] * { color: #EAF2FF; }
-
-    section[data-testid="stSidebar"] .stRadio > div { gap: 8px; }
-
-    section[data-testid="stSidebar"] label[data-baseweb="radio"] {
-        background: rgba(255,255,255,0.06);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 14px;
-        padding: 10px 12px;
-        margin-bottom: 8px;
-        transition: all 0.25s ease;
-    }
-
-    section[data-testid="stSidebar"] label[data-baseweb="radio"]:hover {
-        background: rgba(255,255,255,0.12);
-        border-color: rgba(85,170,255,0.55);
-    }
-
-    section[data-testid="stSidebar"] .stButton>button {
-        background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%);
-        color: #FFFFFF;
-        border: none;
-        border-radius: 12px;
-        font-weight: 800;
-        font-size: 14px;
-        padding: 0.8rem 1rem;
-        box-shadow: 0 6px 20px rgba(0,134,255,0.25);
+    
+    hr { border-top: 2px solid #E1E8ED; border-radius: 2px; margin-top: 2rem; margin-bottom: 2rem; }
+    
+    /* Paineis e DataFrames: Bordas suaves e Sombras flutuantes */
+    [data-testid="stDataFrame"], [data-testid="stPlotlyChart"] { 
+        background-color: #FFFFFF !important; 
+        border-radius: 16px !important; 
+        box-shadow: 0 4px 20px rgba(0, 134, 255, 0.05) !important; 
+        padding: 10px;
+        border: 1px solid #F0F3F5;
         transition: all 0.3s ease;
     }
-
-    section[data-testid="stSidebar"] .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(0,134,255,0.4);
-        color: #FFFFFF;
+    
+    [data-testid="stPlotlyChart"]:hover {
+        box-shadow: 0 10px 30px rgba(0, 134, 255, 0.1) !important;
+        transform: translateY(-3px);
     }
 
+    /* Menu Lateral Branco e Elegante */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 1px solid #E1E8ED;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.02);
+    }
+    
+    /* Customização dos Botões (Estilo Magalu) */
     .stButton>button {
-        background: linear-gradient(135deg, #0086FF 0%, #005BFF 100%);
+        background: linear-gradient(135deg, #0086FF 0%, #006DCC 100%);
         color: #FFFFFF;
         border: none;
-        border-radius: 12px;
-        font-weight: 800;
-        font-size: 14px;
-        padding: 0.72rem 1rem;
-        box-shadow: 0 6px 20px rgba(0,134,255,0.20);
-        transition: all 0.28s ease;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 15px;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0, 134, 255, 0.2);
     }
-
     .stButton>button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 10px 24px rgba(0,134,255,0.32);
+        box-shadow: 0 6px 15px rgba(0, 134, 255, 0.4);
         color: #FFFFFF;
     }
-
-    button[kind="primary"] {
-        background: linear-gradient(135deg, #00C853 0%, #009624 100%) !important;
-        box-shadow: 0 6px 20px rgba(0,200,83,0.25) !important;
-    }
-
-    button[kind="primary"]:hover {
-        box-shadow: 0 10px 24px rgba(0,200,83,0.38) !important;
-    }
-
-    [data-testid="stDataFrame"],
-    [data-testid="stPlotlyChart"],
-    div[data-testid="stVerticalBlock"] > div > div[data-testid="stVerticalBlockBorderWrapper"],
-    [data-testid="stMetric"],
-    [data-testid="stAlert"] {
-        background: rgba(255, 255, 255, 0.95) !important;
-        backdrop-filter: blur(10px) !important;
-        border: 1px solid rgba(255,255,255,0.6) !important;
-        border-radius: 18px !important;
-        box-shadow: 0 8px 30px rgba(15,23,42,0.05) !important;
-    }
-
-    [data-testid="stPlotlyChart"], [data-testid="stDataFrame"] {
-        padding: 10px;
-        transition: transform 0.28s ease, box-shadow 0.28s ease;
-    }
-
-    [data-testid="stPlotlyChart"]:hover, [data-testid="stDataFrame"]:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 14px 38px rgba(0,134,255,0.10) !important;
-    }
-
+    
+    /* Expanders Limpos */
     .streamlit-expanderHeader {
-        background: rgba(255,255,255,0.95) !important;
-        border-radius: 14px !important;
-        border: 1px solid #E5EEF9 !important;
-        font-weight: 800 !important;
-        color: #0A4FB3 !important;
-    }
-
-    [data-baseweb="tab-list"] {
-        background-color: #FFFFFF;
-        border-radius: 14px;
-        padding: 6px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-        gap: 8px;
-        margin-bottom: 22px;
-    }
-
-    button[data-baseweb="tab"] {
-        background-color: transparent !important;
+        background-color: #FFFFFF !important;
         border-radius: 10px !important;
-        padding: 12px 18px !important;
-        color: #64748B !important;
+        border: 1px solid #E1E8ED !important;
         font-weight: 700 !important;
-        border: none !important;
-        transition: all 0.3s ease !important;
-    }
-
-    button[data-baseweb="tab"]:hover {
-        background-color: #F1F5F9 !important;
-        color: #0F172A !important;
-    }
-
-    button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #0086FF !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 4px 15px rgba(0,134,255,0.35) !important;
-    }
-
-    [data-baseweb="tab-border"] { display: none; }
-
-    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div, textarea, input {
-        border-radius: 12px !important;
-    }
-
-    span[data-baseweb="tag"] {
-        background-color: #E6F2FF !important;
         color: #0086FF !important;
-        border-radius: 8px !important;
-        border: 1px solid #BAE6FD !important;
-        font-weight: 700 !important;
-        padding: 6px 12px !important;
     }
 
+    /* ========================================================= */
+    /* SELO INLINE A.R.I. (FUTURISTA / NEON)                  */
+    /* ========================================================= */
     .ari-inline-badge {
         background: linear-gradient(135deg, #0A192F 0%, #112240 100%);
         color: #64FFDA;
-        padding: 5px 12px;
-        border-radius: 999px;
+        padding: 4px 12px;
+        border-radius: 20px;
         font-size: 11px;
         font-weight: 900;
         letter-spacing: 1px;
         text-transform: uppercase;
-        box-shadow: 0 0 10px rgba(100, 255, 218, 0.18);
+        box-shadow: 0 0 10px rgba(100, 255, 218, 0.2);
         border: 1px solid #64FFDA;
         display: inline-flex;
         align-items: center;
@@ -311,39 +170,24 @@ st.markdown("""
         animation: ari-blink 1.5s infinite;
     }
 
-    .magalu-ribbon {
-        background: linear-gradient(90deg, #0086FF, #005BFF, #FF007F, #0086FF);
-        background-size: 300% 300%;
-        animation: magaluGlow 8s ease infinite;
-        color: #FFFFFF; padding: 8px 24px; font-size: 13px; font-weight: 800;
-        border-radius: 0px 10px 10px 0px; margin-bottom: 15px; margin-top: 10px;
-        position: relative; left: -1rem; box-shadow: 0 4px 15px rgba(0,134,255,0.22);
-        text-transform: uppercase; letter-spacing: 1px;
+    @keyframes ari-pulse {
+        0% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.2); transform: scale(1); }
+        50% { box-shadow: 0 0 15px rgba(100, 255, 218, 0.6); transform: scale(1.02); }
+        100% { box-shadow: 0 0 8px rgba(100, 255, 218, 0.2); transform: scale(1); }
     }
 
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+    @keyframes ari-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
-
-def render_hero(titulo, subtitulo, badge="Magalu • A.R.I."):
-    st.markdown(f"""
-        <div style="position: relative; overflow: hidden; background: linear-gradient(135deg, #0A4FB3 0%, #062B76 45%, #0D1836 100%); border-radius: 28px; padding: 34px 34px 26px 34px; color: #FFFFFF; box-shadow: 0 24px 70px rgba(0, 74, 173, 0.22); margin-bottom: 24px;">
-            <div style="display:inline-block; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15); border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 800; letter-spacing: .08em; margin-bottom: 16px; text-transform: uppercase; backdrop-filter: blur(8px);">{badge}</div>
-            <div style="font-size: 40px; font-weight: 900; line-height: 1.02; letter-spacing: -1.2px; margin-bottom: 10px; position: relative; z-index: 2; color:#FFFFFF;">{titulo}</div>
-            <div style="color: rgba(255,255,255,0.82); font-size: 16px; max-width: 920px; position: relative; z-index: 2;">{subtitulo}</div>
-            <div style="content:''; position:absolute; inset:auto -80px -90px auto; width:320px; height:320px; background: radial-gradient(circle, rgba(0,255,255,0.20) 0%, rgba(0,255,255,0) 68%);"></div>
-        </div>
-    """, unsafe_allow_html=True)
-
-# --- 🤖 GERADOR DE TÍTULOS COM SELO A.R.I ---
+# --- GERADOR DE TÍTULOS COM SELO A.R.I ---
 def titulo_com_ari(texto_titulo, texto_selo="IA - A.R.I"):
     st.markdown(f"""
-    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; margin-top: 1rem; flex-wrap: wrap;">
-        <h2 style="margin: 0; padding: 0; color: #0F172A; font-family: 'Inter', sans-serif; font-weight: 900; letter-spacing: -0.6px;">{texto_titulo}</h2>
+    <div style="display: flex; align-items: center; margin-bottom: 1rem; margin-top: 1rem;">
+        <h2 style="margin: 0; padding: 0; color: #1E272E; font-family: 'Nunito Sans', sans-serif; font-weight: 800; letter-spacing: -0.5px;">{texto_titulo}</h2>
         <div class="ari-inline-badge">
             <div class="ari-dot"></div>
             <span>{texto_selo}</span>
@@ -351,47 +195,50 @@ def titulo_com_ari(texto_titulo, texto_selo="IA - A.R.I"):
     </div>
     """, unsafe_allow_html=True)
 
-# --- ESTILIZADOR DE GRÁFICOS (VISUAL APENAS) ---
+# --- ESTILIZADOR DE GRÁFICOS (PLOTLY SÊNIOR) ---
 def aplicar_estilo_premium(fig):
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        font=dict(family="Inter, sans-serif", color='#0F172A', size=13),
+        font=dict(family="Nunito Sans, sans-serif", color='#2D3436', size=13),
         hovermode="x unified",
         hoverlabel=dict(
-            bgcolor="rgba(255, 255, 255, 0.96)", 
+            bgcolor="rgba(255, 255, 255, 0.95)", 
             font_size=14, 
-            font_family="Inter", 
+            font_family="Nunito Sans", 
             bordercolor="#E1E8ED",
-            font_color="#1E293B"
+            font_color="#1E272E"
         ),
         margin=dict(t=50, b=20, l=20, r=20),
-        title_font=dict(size=18, color='#0F172A', family="Inter")
+        title_font=dict(size=18, color='#1E272E', family="Nunito Sans", weight='bold')
     )
-    fig.update_traces(marker=dict(line=dict(width=1.5, color='#FFFFFF')), opacity=0.92)
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', griddash='dash', tickfont=dict(color='#64748B', size=12))
-    fig.update_xaxes(showgrid=False, tickfont=dict(color='#64748B', size=12), title_font=dict(color='#64748B'))
+    # Borda branca que dá o efeito de "fatias soltas" super moderno
+    fig.update_traces(marker=dict(line=dict(width=1.5, color='#FFFFFF')), opacity=0.9)
+    # Linhas de grade tracejadas (muito mais limpo)
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#E1E8ED', griddash='dash', tickfont=dict(color='#8395A7', size=12))
+    fig.update_xaxes(showgrid=False, tickfont=dict(color='#8395A7', size=12), title_font=dict(color='#8395A7'))
     return fig
 
 def formatar_moeda(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-# --- COMPONENTE DE KPI (VISUAL APENAS) ---
+# --- COMPONENTE DE KPI VIVO E MODERNO ---
 def exibir_kpi(titulo, valor, subtitulo="", cor="#0086FF"):
+    # Converte o HEX para RGB para fazer a sombra brilhar na mesma cor
     cor_hex = cor.lstrip('#')
     if len(cor_hex) == 6:
         r, g, b = tuple(int(cor_hex[i:i+2], 16) for i in (0, 2, 4))
-        sombra_hover = f"rgba({r}, {g}, {b}, 0.20)"
+        sombra_hover = f"rgba({r}, {g}, {b}, 0.25)"
     else:
-        sombra_hover = "rgba(0, 134, 255, 0.20)"
+        sombra_hover = "rgba(0, 134, 255, 0.25)"
 
+    # HTML TODO JUNTO PARA O STREAMLIT NÃO SE PERDER
     st.markdown(f"""
-    <div style="background: rgba(255,255,255,0.96); border-radius: 18px; padding: 22px 18px; box-shadow: 0 8px 26px rgba(15,23,42,0.05); border: 1px solid #EEF3F8; margin-bottom: 16px; position: relative; overflow: hidden; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 14px 32px {sombra_hover}';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 26px rgba(15,23,42,0.05)';">
-        <div style="position: absolute; inset: 0 auto 0 0; width: 5px; background: {cor};"></div>
-        <div style="position: absolute; top: -18px; right: -18px; width: 82px; height: 82px; background: {cor}; opacity: 0.08; border-radius: 50%;"></div>
-        <p style="margin: 0 0 8px 0; font-size: 11px; color: #64748B; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em;">{titulo}</p>
-        <h2 style="margin: 0 0 6px 0; font-size: 34px; color: #0F172A; font-weight: 900; line-height: 1.05;">{valor}</h2>
-        <p style="margin: 0; font-size: 13px; color: #64748B; font-weight: 600;">{subtitulo}</p>
+    <div style="background: #FFFFFF; border-radius: 16px; padding: 22px 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); border-top: 5px solid {cor}; margin-bottom: 16px; position: relative; overflow: hidden; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 12px 25px {sombra_hover}';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 0, 0, 0.03)';">
+        <div style="position: absolute; top: -15px; right: -15px; width: 70px; height: 70px; background: {cor}; opacity: 0.08; border-radius: 50%;"></div>
+        <p style="margin: 0; font-size: 13px; color: #576574; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">{titulo}</p>
+        <h2 style="margin: 8px 0; font-size: 36px; color: #1E272E; font-weight: 900; line-height: 1.1;">{valor}</h2>
+        <p style="margin: 0; font-size: 13px; color: #8395A7; font-weight: 600;">{subtitulo}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -737,19 +584,8 @@ if df.empty and df_transf.empty:
 
 # --- BARRA LATERAL E NAVEGAÇÃO ---
 
-st.sidebar.markdown("""
-    <div style="padding: 10px 8px 4px 8px; margin-bottom: 14px;">
-        <div style="background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05)); border:1px solid rgba(255,255,255,0.10); border-radius: 22px; padding: 18px 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);">
-            <div style="font-size: 13px; font-weight: 800; letter-spacing:.08em; text-transform: uppercase; color:#9CC8FF; margin-bottom:8px;">Magalu</div>
-            <div style="font-size: 26px; font-weight: 900; line-height:1.0; color:#FFFFFF; margin-bottom:8px;">Torre de Controle</div>
-            <div style="font-size: 13px; color:rgba(255,255,255,0.72);">Operação inbound, planejamento e leitura executiva em uma única visão.</div>
-            <div style="height: 8px; margin-top:14px; border-radius: 999px; background: linear-gradient(90deg, #0086FF, #00D2FF, #FF8A3D, #FF4D6D); background-size:300% 300%; animation: magaluGlow 7s linear infinite;"></div>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
-
 # 1. BOTÃO DO FAQ A.R.I. (Clean e Minimalista)
-if st.sidebar.button("❓ FAQ A.R.I", key="botao_faq_ari_unico", use_container_width=True):
+if st.sidebar.button("FAQ A.R.I", key="botao_faq_ari_unico", use_container_width=True):
     st.session_state["mostrar_faq_ari"] = not st.session_state.get("mostrar_faq_ari", False)
 
 # Subtítulo "grudado" embaixo do botão para compor o bloco visual
@@ -763,7 +599,7 @@ st.sidebar.markdown("""
 if st.session_state.get("mostrar_faq_ari", False):
     st.sidebar.markdown(
         """<div style="background-color: #F8F9FA; padding: 15px; border-radius: 10px; border-left: 4px solid #64FFDA; margin-bottom: 15px; font-size: 13px;">
-<b style="color: #1E272E;">🤖 Onde o A.R.I atua?</b><br><br>
+<b style="color: #1E272E;">Onde o A.R.I atua?</b><br><br>
 <b>1. IA Recebimento (Omni-Radar):</b><br>
 Conectado a 100% da malha (Lego, APC, Nuvem). O A.R.I. analisa ofensores da semana, rastreia SKUs e calcula risco de hora extra.<br><br>
 <b>2. Planejamento Lego:</b><br>
@@ -784,15 +620,15 @@ Analiso seu cenário operacional de forma complexa, listo os dias com riscos e d
 st.sidebar.image("https://magalog.com.br/opengraph-image.jpg?fdd536e7d35ec9da", width=300)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-st.sidebar.header("📍 Menu de Navegação")
-pagina = st.sidebar.radio("Ir para:", ["🏠 Painel Operacional", "📅 Previsão de Agendas", "📈 Simular Cenários", "👷 Simulador Mão de Obra", "🧩 Planejamento Lego", "🚛 Transferências", "📝 Solicitações Extras", "📦 Registro de Backlog", "🧩 Slotting (Vagas Extras)","📊 GD (Gestão Diária)"])
+st.sidebar.header("Menu de Navegação")
+pagina = st.sidebar.radio("Ir para:", ["Painel Operacional", "Previsão de Agendas", "Simular Cenários", "Simulador Mão de Obra", "Planejamento Lego", "Transferências", "Solicitações Extras", "Registro de Backlog", "Slotting (Vagas Extras)","GD (Gestão Diária)"])
 st.sidebar.markdown("---")
 
-if st.sidebar.button("🔄 Atualizar Dados Agora", use_container_width=True):
+if st.sidebar.button("Atualizar Dados Agora", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
 
-st.sidebar.header("📅 Período de Análise")
+st.sidebar.header("Período de Análise")
 
 hoje = pd.Timestamp.now(tz='America/Sao_Paulo').date()
 primeiro_dia_mes = hoje.replace(day=1)
@@ -817,29 +653,31 @@ ts_fim = pd.to_datetime(data_fim)
 # ==============================================================================
 # PÁGINA 1: PAINEL OPERACIONAL
 # ==============================================================================
-if pagina == "🏠 Painel Operacional":
+if pagina == "Painel Operacional":
     df_filtrado = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)]
 
     st.sidebar.markdown("---")
-    st.sidebar.header("⚙️ Parâmetros Operacionais")
+    st.sidebar.header("Parâmetros Operacionais")
     capacidade_diaria = st.sidebar.number_input("Equipes Disponíveis/Dia", min_value=1, max_value=30, value=6)
     pessoas_por_equipe = st.sidebar.number_input("Pessoas por Equipe", min_value=1, max_value=20, value=6)
     custo_hora_extra = st.sidebar.number_input("Custo da Hora Extra (R$)", min_value=1.0, value=9.0, format="%.2f")
     limite_agendas_1p = st.sidebar.number_input("Teto Agendas 1P/Dia", min_value=1, max_value=50, value=14)
 
     st.sidebar.markdown("---")
-    canal_selecionado = st.sidebar.multiselect("🏢 Canal de Entrada", options=df_filtrado['Canal'].unique(), default=df_filtrado['Canal'].unique())
-    status_operacao = st.sidebar.multiselect("🚦 Status da Carga", options=df_filtrado['Status'].unique(), default=df_filtrado['Status'].unique())
+    canal_selecionado = st.sidebar.multiselect("Canal de Entrada", options=df_filtrado['Canal'].unique(), default=df_filtrado['Canal'].unique())
+    status_operacao = st.sidebar.multiselect("Status da Carga", options=df_filtrado['Status'].unique(), default=df_filtrado['Status'].unique())
 
     if 'É Ofensor?' in df_filtrado.columns:
-        status_ofensor = st.sidebar.multiselect("⚠️ Risco de Planejamento", options=df_filtrado['É Ofensor?'].unique(), default=df_filtrado['É Ofensor?'].unique())
+        status_ofensor = st.sidebar.multiselect("Risco de Planejamento", options=df_filtrado['É Ofensor?'].unique(), default=df_filtrado['É Ofensor?'].unique())
         df_filtrado_op = df_filtrado[(df_filtrado['É Ofensor?'].isin(status_ofensor)) & (df_filtrado['Canal'].isin(canal_selecionado)) & (df_filtrado['Status'].isin(status_operacao))]
     else:
         df_filtrado_op = df_filtrado[(df_filtrado['Canal'].isin(canal_selecionado)) & (df_filtrado['Status'].isin(status_operacao))]
 
-    render_hero("Torre de Controle Inbound | CD2900", f"Visão executiva consolidada de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')} com foco em operação, risco e capacidade.", "Magalu • Controle operacional")
+    st.title("Torre de Controle Inbound | CD2900")
+    st.markdown(f"**Visão Executiva:** {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}")
+    st.markdown("---")
 
-    st.header("🚦 Painel Operacional")
+    st.header("Painel Operacional")
     col_kpi1, col_kpi2, col_kpi3, col_kpi4, col_kpi5, col_kpi6 = st.columns(6)
 
     qtd_agendado = len(df_filtrado_op[df_filtrado_op['Status'] == 'Agendado'])
@@ -851,16 +689,16 @@ if pagina == "🏠 Painel Operacional":
     total_agendas = len(df_filtrado_op)
     taxa_noshow = (qtd_noshow / total_agendas * 100) if total_agendas > 0 else 0
 
-    with col_kpi1: exibir_kpi("📅 Agendado", qtd_agendado, "Total de agendas", "#3498DB")
-    with col_kpi2: exibir_kpi("🚛 Em Trânsito", qtd_transito, "A caminho do CD", "#9B59B6")
+    with col_kpi1: exibir_kpi("Agendado", qtd_agendado, "Total de agendas", "#3498DB")
+    with col_kpi2: exibir_kpi("Em Trânsito", qtd_transito, "A caminho do CD", "#9B59B6")
     with col_kpi3: exibir_kpi("⏳ Pátio", qtd_aguardando, "Aguardando doca", "#F39C12")
-    with col_kpi4: exibir_kpi("⚙️ Em Descarga", qtd_descarga, "Operação rodando", "#1ABC9C")
-    with col_kpi5: exibir_kpi("✅ Recebido", qtd_recebido, "Finalizados", "#2ECC71")
-    with col_kpi6: exibir_kpi("❌ No-Show", qtd_noshow, f"{taxa_noshow:.1f}% de quebra", "#E74C3C")
+    with col_kpi4: exibir_kpi("Em Descarga", qtd_descarga, "Operação rodando", "#1ABC9C")
+    with col_kpi5: exibir_kpi("Recebido", qtd_recebido, "Finalizados", "#2ECC71")
+    with col_kpi6: exibir_kpi("No-Show", qtd_noshow, f"{taxa_noshow:.1f}% de quebra", "#E74C3C")
 
     st.markdown("---")
 
-    st.header("📉 Painel de Ausências (Detalhamento)")
+    st.header("Painel de Ausências (Detalhamento)")
     df_noshow = df_filtrado_op[df_filtrado_op['Status'] == 'No-Show'].copy()
 
     col_aus_full, col_aus_1p = st.columns(2)
@@ -882,7 +720,7 @@ if pagina == "🏠 Painel Operacional":
 
     st.markdown("---")
 
-    st.header("📏 Recebimento: Teto de Agendas 1P")
+    st.header("Recebimento: Teto de Agendas 1P")
     df_1p = df_filtrado_op[df_filtrado_op['Canal'] == '1P Fornecedor'].copy()
 
     if not df_1p.empty:
@@ -905,7 +743,7 @@ if pagina == "🏠 Painel Operacional":
                 df_ex_filtro = df_excecoes[(df_excecoes['Data da Vaga'] >= ts_inicio) & (df_excecoes['Data da Vaga'] <= ts_fim)].copy()
                 if not df_ex_filtro.empty:
                     df_ex_filtro['Data da Vaga'] = df_ex_filtro['Data da Vaga'].dt.strftime('%d/%m/%Y')
-                    with st.expander("💡 Visualizar Justificativas de Vagas Extras no Período", expanded=False):
+                    with st.expander("Visualizar Justificativas de Vagas Extras no Período", expanded=False):
                         colunas_desejadas = ['Data da Vaga', 'Fornecedor', 'Solicitante', 'Qtd Peças', 'Qtd SKUs']
                         colunas_existentes = [c for c in colunas_desejadas if c in df_ex_filtro.columns]
                         st.dataframe(df_ex_filtro[colunas_existentes], use_container_width=True, hide_index=True)
@@ -964,7 +802,7 @@ if pagina == "🏠 Painel Operacional":
 
     st.markdown("---")
 
-    st.header("👥 Visão APC - CD2900")
+    st.header("Visão APC - CD2900")
     df_apc = df_filtrado_op.groupby('Data').agg({'Tempo_APC_Minutos': 'sum', 'Agenda_Texto': 'count'}).reset_index()
     df_apc['Min_Transf_Fixa'] = df_apc['Data'].apply(lambda x: 1200 if x.weekday() < 5 else 0)
     df_apc['Minutos Totais'] = df_apc['Tempo_APC_Minutos'] + df_apc['Min_Transf_Fixa']
@@ -976,7 +814,7 @@ if pagina == "🏠 Painel Operacional":
     df_apc['Custo_HE'] = df_apc['Horas_Extras'] * pessoas_por_equipe * custo_hora_extra
 
     if not df_apc.empty:
-        st.markdown("### 📊 Visão Acumulada")
+        st.markdown("### Visão Acumulada")
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
         with col_m1: exibir_kpi("Média Equipes/Dia", math.ceil(df_apc['Equipes Necessárias'].mean()), "Recurso Humano", "#3498DB")
         with col_m2: exibir_kpi("Dias em Sobrecarga", len(df_apc[df_apc['Gap_Equipes'] > 0]), f"De {len(df_apc)} analisados", "#E74C3C")
@@ -1016,7 +854,7 @@ if pagina == "🏠 Painel Operacional":
         agendas_por_cat = df_dia_unico['Categorias'].astype(str).str.upper().value_counts()
         for cat, qtd in agendas_por_cat.items():
             if qtd >= 8 and any(x in cat for x in ['ELETRO', 'IMAGEM']):
-                alertas_dia.append(f"📍 **Risco Trava Endereço:** {qtd} agendas de {cat} simultâneas.")
+                alertas_dia.append(f"**Risco Trava Endereço:** {qtd} agendas de {cat} simultâneas.")
 
         # 2. Avaliação Linha a Linha (Mutações de Risco)
         for _, row in df_dia.iterrows():
@@ -1069,7 +907,7 @@ if pagina == "🏠 Painel Operacional":
             if alerta_secundario:
                 chave_at = f"{agenda_id}-{alerta_secundario}"
                 if chave_at not in agendas_vistas_atencao:
-                    alertas_dia.append(f"🟡 **Atenção:** Agenda {agenda_id} - {alerta_secundario} ({pecas:,.0f} pts / {skus} skus).".replace(',', '.'))
+                    alertas_dia.append(f"**Atenção:** Agenda {agenda_id} - {alerta_secundario} ({pecas:,.0f} pts / {skus} skus).".replace(',', '.'))
                     agendas_vistas_atencao.add(chave_at)
                     registrou_algo = True
 
@@ -1094,10 +932,10 @@ if pagina == "🏠 Painel Operacional":
                 titulo_alerta = f"🚨 DIA {dia_str}: RISCO DETECTADO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
                 cor_status = "#C0392B"
             elif len(cargas_altissimo) > 0:
-                titulo_alerta = f"⚠️ DIA {dia_str}: AVISO DE RISCO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
+                titulo_alerta = f"DIA {dia_str}: AVISO DE RISCO ({len(cargas_altissimo)} Cargas de Alta Complexidade)"
                 cor_status = "#D35400"
             else:
-                titulo_alerta = f"🟡 DIA {dia_str}: ATENÇÃO REQUERIDA (Travamento de Endereço/SKUs)"
+                titulo_alerta = f"DIA {dia_str}: ATENÇÃO REQUERIDA (Travamento de Endereço/SKUs)"
                 cor_status = "#F39C12"
 
             dias_criticos_report.append({
@@ -1111,7 +949,7 @@ if pagina == "🏠 Painel Operacional":
 
     # Renderiza o relatório na tela (Os famosos Expanders Interativos)
     if dias_criticos_report:
-        st.error("⚠️ **O A.R.I. detectou configurações críticas de carga que exigem plano de ação imediato:**")
+        st.error("**O A.R.I. detectou configurações críticas de carga que exigem plano de ação imediato:**")
 
         for rep in dias_criticos_report:
             with st.expander(rep["titulo"]):
@@ -1127,13 +965,13 @@ if pagina == "🏠 Painel Operacional":
 
                 # Tabela de Detalhes (O Drill-down)
                 if not rep["df_detalhes"].empty:
-                    st.markdown("🔍 **Raio-X das Agendas :**")
+                    st.markdown("**Raio-X das Agendas :**")
                     st.dataframe(rep["df_detalhes"], use_container_width=True, hide_index=True)
     else:
-        st.success("✅ **A.R.I. INFORMA:** Cenário Operacional limpo. Nenhuma mutação de risco (ex: Diversos com >1k peças ou excesso de SKUs) identificada no período.")
+        st.success("**A.R.I. INFORMA:** Cenário Operacional limpo. Nenhuma mutação de risco (ex: Diversos com >1k peças ou excesso de SKUs) identificada no período.")
 
     st.markdown("---")
-    titulo_com_ari("🔥 Possíveis Gargalos")
+    titulo_com_ari("Possíveis Gargalos")
     df_apc_sobrecarga = df_apc[df_apc['Gap_Equipes'] > 0]
 
     if not df_apc_sobrecarga.empty:
@@ -1143,7 +981,7 @@ if pagina == "🏠 Painel Operacional":
         df_dia_critico = df_filtrado_op[df_filtrado_op['Data'].dt.strftime('%d/%m/%Y') == dia_selecionado].copy()
         dados_apc_dia = df_apc[df_apc['Data'].dt.strftime('%d/%m/%Y') == dia_selecionado].iloc[0]
 
-        st.markdown(f"### 🎯 Analise Operacional: {dia_selecionado}")
+        st.markdown(f"### Analise Operacional: {dia_selecionado}")
         met_col1, met_col2, met_col3, met_col4 = st.columns(4)
         with met_col1: exibir_kpi("Equipes Necessárias", dados_apc_dia['Equipes Necessárias'], "Demanda do dia", "#3498DB")
         with met_col2: exibir_kpi("Capacidade Atual", capacidade_diaria, "Headcount Fixo", "#95A5A6")
@@ -1159,7 +997,7 @@ if pagina == "🏠 Painel Operacional":
             st.plotly_chart(fig_canais, use_container_width=True)
 
         with col_tab:
-            st.markdown("**Cargas do Dia (👇 Clique em uma linha para inspecionar)**")
+            st.markdown("**Cargas do Dia (Clique em uma linha para inspecionar)**")
             df_tabela_dia = df_dia_critico[['Status', 'Canal', 'Linhas', 'Agenda_Texto', 'Fornecedor', 'Qtd Peças', 'Tempo_APC_Minutos']].rename(columns={'Agenda_Texto': 'Agenda', 'Tempo_APC_Minutos': 'APC (Min)'}).sort_values(by='APC (Min)', ascending=False).reset_index(drop=True)
 
             evento_agenda = st.dataframe(
@@ -1170,7 +1008,7 @@ if pagina == "🏠 Painel Operacional":
                 selection_mode="single-row"
             )
 
-        st.markdown("### 📦 Detalhamento da Carga")
+        st.markdown("### Detalhamento da Carga")
         linhas_sel = evento_agenda.selection.rows
 
         if linhas_sel:
@@ -1198,9 +1036,9 @@ if pagina == "🏠 Painel Operacional":
 
                     st.markdown(f"#### Resumo da Agenda: {agenda_limpa}")
                     kpi_c1, kpi_c2, kpi_c3 = st.columns(3)
-                    with kpi_c1: exibir_kpi("📦 Qtd de SKUs", f"{total_skus}", "Itens distintos", "#3498DB")
-                    with kpi_c2: exibir_kpi("🔢 Qtd Peças Totais", f"{total_pecas:,.0f}".replace(',', '.'), "Volume da carga", "#9B59B6")
-                    with kpi_c3: exibir_kpi("🏢 Fornecedor", f"{fornecedor_nome[:22]}", "Origem", "#F39C12")
+                    with kpi_c1: exibir_kpi("Qtd de SKUs", f"{total_skus}", "Itens distintos", "#3498DB")
+                    with kpi_c2: exibir_kpi("Qtd Peças Totais", f"{total_pecas:,.0f}".replace(',', '.'), "Volume da carga", "#9B59B6")
+                    with kpi_c3: exibir_kpi("Fornecedor", f"{fornecedor_nome[:22]}", "Origem", "#F39C12")
 
                     st.dataframe(resumo_itens, use_container_width=True, hide_index=True)
                 else: 
@@ -1208,23 +1046,22 @@ if pagina == "🏠 Painel Operacional":
             else:
                 st.warning("Base de Itens indisponível.")
         else:
-            st.info("👆 Selecione uma carga na tabela acima para ver os produtos dela.")
+            st.info("Selecione uma carga na tabela acima para ver os produtos dela.")
 
-    else: st.success("✅ A operação fluiu sem gargalos no período analisado!")
+    else: st.success("A operação fluiu sem gargalos no período analisado!")
 
 # ==============================================================================
 # 🎨 REESTRUTURAÇÃO COMPLETA: PÁGINA 1 - PREVISÃO DE AGENDAS (VISÃO DASHBOARD)
 # ==============================================================================
-elif pagina == "📅 Previsão de Agendas":
-    render_hero("Previsão de Agendas", "Leitura tática das cargas previstas para apoiar decisão operacional sem alterar a lógica atual do painel.", "Planejamento diário")
+elif pagina == "Previsão de Agendas":
     # 1. BARRA DE FILTROS SUPERIOR
     col_vaz_1, col_fil_data, col_vaz_2 = st.columns([2, 2, 2])
     with col_fil_data:
         data_padrao = ts_inicio.date() if 'ts_inicio' in locals() else pd.Timestamp.now().date()
-        data_consulta_dashboard = st.date_input("🗓️ Selecione o Dia para Previsão", data_padrao)
+        data_consulta_dashboard = st.date_input("Selecione o Dia para Previsão", data_padrao)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 🔍 TRATAMENTO DE DATA
+    # TRATAMENTO DE DATA
     data_alvo = data_consulta_dashboard 
 
     # 2. LOCALIZAÇÃO DA TABELA DE TRANSFERÊNCIA
@@ -1305,7 +1142,7 @@ elif pagina == "📅 Previsão de Agendas":
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        st.markdown(f"#### 🛒 1P ({tot_ag_main})")
+        st.markdown(f"#### 1P ({tot_ag_main})")
         if not df_1p_ia.empty and col_ct:
             st.plotly_chart(px.bar(df_1p_ia.groupby(col_ct).size().reset_index(name='Qtd'), y=col_ct, x='Qtd', orientation='h', height=250), use_container_width=True)
             with st.expander("Ver Agendas 1P"):
@@ -1322,7 +1159,7 @@ elif pagina == "📅 Previsão de Agendas":
         else: st.info("Sem dados Seller")
 
     with c3:
-        st.markdown(f"#### 📦 Transf ({tot_ag_tra})")
+        st.markdown(f"#### Transf ({tot_ag_tra})")
         if not df_transf_ia.empty:
             col_ct_t = next((c for c in df_transf_ia.columns if 'CAT' in str(c).upper() or 'LINHA' in str(c).upper() or 'TIPO' in str(c).upper()), None)
 
@@ -1332,18 +1169,17 @@ elif pagina == "📅 Previsão de Agendas":
             with st.expander("Ver Agendas Transf"):
                 st.dataframe(df_transf_ia, use_container_width=True, hide_index=True)
         else:
-            st.warning("⚠️ Sem transferências nesta data.")
+            st.warning("Sem transferências nesta data.")
             if st.checkbox("Debug: Ver base bruta Transf"):
                 st.write(base_transf.head(5) if not base_transf.empty else "Tabela Vazia")
 
 # ==============================================================================
 # PÁGINA 2.5: Simulador Cenário APC
 # ==============================================================================
-elif pagina == "📈 Simular Cenários":
-    render_hero("Simular Cenários", "Teste impactos de mudanças operacionais mantendo exatamente a mesma lógica do simulador atual.", "Simulação")
+elif pagina == "Simular Cenários":
     col_titulo, col_reset = st.columns([4, 1])
     with col_titulo:
-        st.title("📈 Simulador Cenário APC | Estresse de Malha")
+        st.title("Simulador Cenário APC | Estresse de Malha")
         st.markdown("Adicione novas cargas em múltiplos dias e veja o impacto cumulativo na semana inteira. O sistema **salva as suas adições** enquanto você navega pelas datas!")
 
     if 'simulador_cargas' not in st.session_state:
@@ -1351,7 +1187,7 @@ elif pagina == "📈 Simular Cenários":
 
     with col_reset:
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🗑️ Limpar Simulação", use_container_width=True):
+        if st.button("Limpar Simulação", use_container_width=True):
             st.session_state['simulador_cargas'] = {}
             st.rerun()
 
@@ -1359,7 +1195,7 @@ elif pagina == "📈 Simular Cenários":
 
     if not df_base_periodo.empty:
         st.markdown("---")
-        st.markdown("### 🎛️ Filtro de Cenário Base")
+        st.markdown("### Filtro de Cenário Base")
         canais_disponiveis = df_base_periodo['Canal'].unique().tolist()
         canais_selecionados = st.multiselect("Selecione quais canais você quer manter no cálculo ANTES de simular o estresse:", options=canais_disponiveis, default=canais_disponiveis)
 
@@ -1382,7 +1218,7 @@ elif pagina == "📈 Simular Cenários":
         col_painel, col_resumo = st.columns([2, 1])
 
         with col_painel:
-            st.markdown("### 🧪 Injetar Cargas por Dia")
+            st.markdown("### Injetar Cargas por Dia")
             dia_alvo = st.selectbox("Selecione o Dia para adicionar as cargas:", df_apc_base['Data_Str'].tolist())
 
             if dia_alvo not in st.session_state['simulador_cargas']:
@@ -1392,14 +1228,14 @@ elif pagina == "📈 Simular Cenários":
 
             c_in1, c_in2, c_in3 = st.columns(3)
             with c_in1:
-                val_mad = st.number_input("🪵 Madeira (+427m)", 0, 50, sim_dia['mad'])
-                val_ele = st.number_input("📺 Eletro (+95m)", 0, 50, sim_dia['ele'])
+                val_mad = st.number_input("Madeira (+427m)", 0, 50, sim_dia['mad'])
+                val_ele = st.number_input("Eletro (+95m)", 0, 50, sim_dia['ele'])
             with c_in2:
-                val_pne = st.number_input("🛞 Pneus (+240m)", 0, 50, sim_dia['pne'])
-                val_mer = st.number_input("🛒 Mercado (+150m)", 0, 50, sim_dia['mer'])
+                val_pne = st.number_input("Pneus (+240m)", 0, 50, sim_dia['pne'])
+                val_mer = st.number_input("Mercado (+150m)", 0, 50, sim_dia['mer'])
             with c_in3:
-                val_cof = st.number_input("🔒 Cofre/Img (+90m)", 0, 50, sim_dia['cof'])
-                val_div = st.number_input("📦 Div/Full (+60m)", 0, 100, sim_dia['div'])
+                val_cof = st.number_input("Cofre/Img (+90m)", 0, 50, sim_dia['cof'])
+                val_div = st.number_input("Div/Full (+60m)", 0, 100, sim_dia['div'])
 
             st.session_state['simulador_cargas'][dia_alvo] = {'mad': val_mad, 'ele': val_ele, 'pne': val_pne, 'mer': val_mer, 'cof': val_cof, 'div': val_div}
 
@@ -1417,7 +1253,7 @@ elif pagina == "📈 Simular Cenários":
         df_apc_simulado['Equipes_Simuladas'] = df_apc_simulado['Minutos_Simulados'].apply(lambda x: math.ceil(x / 427))
 
         with col_resumo:
-            st.markdown(f"### 🎯 Impacto no dia {dia_alvo}")
+            st.markdown(f"### Impacto no dia {dia_alvo}")
             linha_alvo = df_apc_simulado[df_apc_simulado['Data_Str'] == dia_alvo].iloc[0]
 
             min_injetados_hoje = linha_alvo['Minutos_Simulados'] - linha_alvo['Minutos_Originais']
@@ -1429,12 +1265,12 @@ elif pagina == "📈 Simular Cenários":
                 st.info("Nenhuma carga extra salva para este dia. Reflete a base atual.")
             else:
                 cor_alerta = "#E74C3C" if delta_eq > 0 else "#2ECC71"
-                txt_alerta = f"🚨 Requer +{int(delta_eq)} Equipe(s) extra" if delta_eq > 0 else "✅ Absorvido pela ociosidade"
+                txt_alerta = f"🚨 Requer +{int(delta_eq)} Equipe(s) extra" if delta_eq > 0 else "Absorvido pela ociosidade"
                 exibir_kpi("Novo Headcount Necessário", int(eq_simuladas), txt_alerta, cor_alerta)
                 exibir_kpi("Carga Horária Total", f"{linha_alvo['Minutos_Simulados']:,.0f} min", f"+{min_injetados_hoje} min adicionados", "#F39C12")
 
         st.markdown("---")
-        st.markdown("### 📈 Projeção da Semana (Com todos os dias simulados)")
+        st.markdown("### Projeção da Semana (Com todos os dias simulados)")
 
         fig_sim = px.bar(
             df_apc_simulado.sort_values(by='Data'), x='Data', y='Equipes_Simuladas', text='Equipes_Simuladas', 
@@ -1451,16 +1287,15 @@ elif pagina == "📈 Simular Cenários":
 # ==============================================================================
 # PÁGINA 3: PROVA DE SOBRECARGA (COMERCIAL)
 # ==============================================================================
-elif pagina == "👷 Simulador Mão de Obra":
-    render_hero("Simulador Mão de Obra", "Balanceie a distribuição das cargas do dia com leitura visual mais corporativa, sem mexer nas regras existentes.", "Capacity planning")
-    titulo_com_ari("⚖️ Análise de Mão de obra")
+elif pagina == "Simulador Mão de Obra":
+    titulo_com_ari("Análise de Mão de obra")
     st.markdown("Esta visão simula o cenário do dia selecionado, balanceando as cargas de acordo com a quantidade de equipes disponíveis.")
 
     dias_disponiveis = sorted(df[df['Data'].notna()]['Data'].dt.strftime('%d/%m/%Y').unique())
 
     if dias_disponiveis:
         st.sidebar.markdown("---")
-        st.sidebar.header("⚙️ Parâmetros da Simulação")
+        st.sidebar.header("Parâmetros da Simulação")
         dia_simulacao = st.sidebar.selectbox("Escolha um dia para balancear as cargas:", dias_disponiveis)
 
         total_equipes = st.sidebar.number_input("Total de Equipes Disponíveis", min_value=1, max_value=20, value=6)
@@ -1472,9 +1307,9 @@ elif pagina == "👷 Simulador Mão de Obra":
 
         tempo_equipes = {i: 0 for i in range(1, total_equipes + 1)}
         def nomear_equipe(i):
-            if i <= eq_transf: return f'Eq. {i} 👷 (Transf)'
-            elif i <= eq_transf + eq_madeira: return f'Eq. {i} 👷 (Madeira)'
-            else: return f'Eq. {i} 👷 Misto'
+            if i <= eq_transf: return f'Eq. {i} (Transf)'
+            elif i <= eq_transf + eq_madeira: return f'Eq. {i} (Madeira)'
+            else: return f'Eq. {i} Misto'
         nomes_equipes = {i: nomear_equipe(i) for i in range(1, total_equipes + 1)}
 
         cargas_alocadas = []
@@ -1537,7 +1372,7 @@ elif pagina == "👷 Simulador Mão de Obra":
 
             with col_ia_tropa_btn:
                 st.markdown("<br>", unsafe_allow_html=True)
-                btn_ia_tropa = st.button("✨ Sugerir Formação Ideal", use_container_width=True)
+                btn_ia_tropa = st.button("Sugerir Formação Ideal", use_container_width=True)
 
             if btn_ia_tropa:
                 # O A.R.I junta todos os pedaços de carga do dia para entender a guerra
@@ -1571,7 +1406,7 @@ elif pagina == "👷 Simulador Mão de Obra":
 
                 resposta_ia = consultar_ia_contextual(prompt_tropa, "🧠 Simulando milhares de combinações de equipes...")
 
-                st.info("💡 **Formação Tática sugerida pelo A.R.I.:**")
+                st.info("**Formação Tática sugerida pelo A.R.I.:**")
                 st.markdown(resposta_ia)
             # ====================================================================
 
@@ -1604,17 +1439,17 @@ elif pagina == "👷 Simulador Mão de Obra":
 # ==============================================================================
 # PÁGINA 4: MATRIZ DE PLANEJAMENTO (S&OP COMERCIAL)
 # ==============================================================================
-elif pagina == "🧩 Planejamento Lego":
-    st.title("🧩 Visão planejamento capacidade LEGO")
+elif pagina == "Planejamento Lego":
+    st.title("Visão planejamento capacidade LEGO")
 
     st.sidebar.markdown("---")
-    st.sidebar.header("⚙️ Parâmetros do Lego")
+    st.sidebar.header("Parâmetros do Lego")
     limite_agendas_1p = st.sidebar.number_input("Teto Agendas 1P/Dia", min_value=1, max_value=50, value=14)
 
     df_plan_filtrado = df_plan[(df_plan['data'] >= ts_inicio) & (df_plan['data'] <= ts_fim)].copy() if not df_plan.empty else pd.DataFrame()
 
     if not df_plan.empty:
-        st.markdown("### 🎯 Planejamento Mensal do Comercial")
+        st.markdown("### Planejamento Mensal do Comercial")
         st.write("Digite as vagas aprovadas (LEGO) e clique em Salvar. O sistema gravará na Nuvem (Google Sheets).")
 
         # 1. USA AS CATEGORIAS TRADUZIDAS PARA AS METAS E SALDO
@@ -1643,10 +1478,10 @@ elif pagina == "🧩 Planejamento Lego":
 
         df_metas_iniciais['LEGO (Meta)'] = df_metas_iniciais['LEGO (Meta)'].astype(int)
 
-        with st.expander("📝 CLIQUE AQUI PARA PREENCHER AS METAS DO MÊS", expanded=False):
+        with st.expander("CLIQUE AQUI PARA PREENCHER AS METAS DO MÊS", expanded=False):
             df_metas_editadas = st.data_editor(df_metas_iniciais, use_container_width=True, hide_index=True)
 
-            if st.button("💾 Salvar Metas na Nuvem"):
+            if st.button("Salvar Metas na Nuvem"):
                 try:
                     df_para_salvar = df_metas_editadas.copy()
                     df_para_salvar['LEGO (Meta)'] = df_para_salvar['LEGO (Meta)'].astype(str)
@@ -1661,7 +1496,7 @@ elif pagina == "🧩 Planejamento Lego":
                     try: ws_metas.update(values=dados_finais, range_name="A1")
                     except: ws_metas.update("A1", dados_finais)
 
-                    st.success("✅ Metas sincronizadas com sucesso no Google Sheets!")
+                    st.success("Metas sincronizadas com sucesso no Google Sheets!")
                 except Exception as e:
                     st.error(f"🚨 Erro ao salvar na nuvem: {e}")
 
@@ -1673,7 +1508,7 @@ elif pagina == "🧩 Planejamento Lego":
         df_executivo['VAGAS (Saldo)'] = df_executivo['LEGO (Meta)'] - df_executivo['CARROS (Realizado)']
 
         st.markdown("---")
-        st.markdown("### 📊 Balanço Geral do Período")
+        st.markdown("### Balanço Geral do Período")
 
         meta_total = df_executivo['LEGO (Meta)'].sum()
         realizado_total = df_executivo['CARROS (Realizado)'].sum()
@@ -1689,7 +1524,7 @@ elif pagina == "🧩 Planejamento Lego":
         with col_e4: exibir_kpi("Categorias Estouradas", estouradas, "Acima da Meta", "#E74C3C")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("#### 🔍 Fechamento por Categoria (Metas Agrupadas)")
+        st.markdown("#### Fechamento por Categoria (Metas Agrupadas)")
 
         df_executivo_limpo = df_executivo[(df_executivo['LEGO (Meta)'] > 0) | (df_executivo['CARROS (Realizado)'] > 0)]
 
@@ -1708,14 +1543,14 @@ elif pagina == "🧩 Planejamento Lego":
         st.markdown("---")
 
         # 3. MATRIZ DE ACOMPANHAMENTO DIÁRIO (ORIGINAL)
-        st.markdown("### 🧩 Distribuição Diária: Planejado x Realizado (Linhas Originais)")
+        st.markdown("### Distribuição Diária: Planejado x Realizado (Linhas Originais)")
 
         # Legenda do Heatmap de Cores
         st.markdown("""
         <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-            <div style="padding: 6px 12px; background-color: #FADBD8; color: #C0392B; border-radius: 6px; font-weight: bold; font-size: 13px;">🔴 Esgotado / Estourado (0 vagas)</div>
-            <div style="padding: 6px 12px; background-color: #FDEBD0; color: #D35400; border-radius: 6px; font-weight: bold; font-size: 13px;">🟡 Atenção (Apenas 1 vaga)</div>
-            <div style="padding: 6px 12px; background-color: #D5F5E3; color: #27AE60; border-radius: 6px; font-weight: bold; font-size: 13px;">🟢 Livre (2+ vagas disponíveis)</div>
+            <div style="padding: 6px 12px; background-color: #FADBD8; color: #C0392B; border-radius: 6px; font-weight: bold; font-size: 13px;">Esgotado / Estourado (0 vagas)</div>
+            <div style="padding: 6px 12px; background-color: #FDEBD0; color: #D35400; border-radius: 6px; font-weight: bold; font-size: 13px;">Atenção (Apenas 1 vaga)</div>
+            <div style="padding: 6px 12px; background-color: #D5F5E3; color: #27AE60; border-radius: 6px; font-weight: bold; font-size: 13px;">Livre (2+ vagas disponíveis)</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1780,7 +1615,7 @@ elif pagina == "🧩 Planejamento Lego":
 
                 with col_ia_btn:
                     st.markdown("<br>", unsafe_allow_html=True)
-                    btn_ia_lego = st.button("✨ Sugerir Redistribuição", use_container_width=True)
+                    btn_ia_lego = st.button("Sugerir Redistribuição", use_container_width=True)
 
                 if btn_ia_lego:
                     # 1. DADOS DO LEGO (Detalhado por Categoria e Vagas Livres)
@@ -1843,26 +1678,26 @@ elif pagina == "🧩 Planejamento Lego":
                     resposta_ia = consultar_ia_contextual(prompt_final, "🧠 Cruzando capacidade, Teto de agendas do mês, e Vagas no Lego...")
 
                     # Exibe a resposta
-                    st.info("💡 **Veredito da Inteligência Artificial:**")
+                    st.info("**Veredito da Inteligência Artificial:**")
                     st.markdown(resposta_ia)
             else:
                 st.info("Nenhuma vaga com valor preenchido no período selecionado.")
         else:
             st.info("Nenhum dado encontrado para o período filtrado.")
     else:
-        st.warning("⚠️ Planilha 'PLANEJAMENTO' vazia ou não encontrada no Google Sheets.")
+        st.warning("Planilha 'PLANEJAMENTO' vazia ou não encontrada no Google Sheets.")
 
 # ==============================================================================
 # PÁGINA 5: HISTÓRICO 325 (TRANSFERÊNCIAS)
 # ==============================================================================
-elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
-    st.title("🚛 Visão de Transferências")
+elif pagina == "Transferências" or pagina == "Histórico325":
+    st.title("Visão de Transferências")
 
     if not df_transf.empty:
         df_transf_periodo = df_transf[(df_transf['DATA_FILTRO'] >= ts_inicio) & (df_transf['DATA_FILTRO'] <= ts_fim)].copy()
 
         st.sidebar.markdown("---")
-        st.sidebar.header("🔍 Filtros de Transferência")
+        st.sidebar.header("Filtros de Transferência")
 
         opcoes_modal = sorted(df_transf_periodo['MODAL2'].dropna().unique()) if 'MODAL2' in df_transf_periodo.columns else []
         modal_selecionado = st.sidebar.multiselect("Tipo de Carga (Modal)", options=opcoes_modal, default=opcoes_modal)
@@ -1909,14 +1744,14 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
             total_skus = df_transf_periodo['PRODUTO'].nunique() if 'PRODUTO' in df_transf_periodo.columns else 0
             total_pecas = resumo_tabela['Peças'].sum()
 
-            st.markdown("### 📊 Indicadores de Transferência")
+            st.markdown("### Indicadores de Transferência")
             col_t1, col_t2, col_t3 = st.columns(3)
-            with col_t1: exibir_kpi("🚛 Cargas Esperadas", total_cargas, "Veículos de transf.", "#9B59B6") 
-            with col_t2: exibir_kpi("📦 Mix de Produtos", total_skus, "SKUs distintos", "#3498DB")         
-            with col_t3: exibir_kpi("🔢 Volume Físico", f"{total_pecas:,.0f}".replace(',', '.'), "Peças a receber", "#2ECC71")
+            with col_t1: exibir_kpi("Cargas Esperadas", total_cargas, "Veículos de transf.", "#9B59B6") 
+            with col_t2: exibir_kpi("Mix de Produtos", total_skus, "SKUs distintos", "#3498DB")         
+            with col_t3: exibir_kpi("Volume Físico", f"{total_pecas:,.0f}".replace(',', '.'), "Peças a receber", "#2ECC71")
 
             st.markdown("---")
-            st.markdown("### 📑 Tabela de Acompanhamento (Master)")
+            st.markdown("### Tabela de Acompanhamento (Master)")
             st.caption("👈 Clique em qualquer linha da tabela abaixo para ver os itens da carga.")
 
             evento_tabela = st.dataframe(
@@ -1934,7 +1769,7 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
                 id_selecionado = resumo_tabela.iloc[indice_clicado]['ID2900 (Carga)']
 
                 st.markdown("---")
-                st.markdown(f"### 📦 Inspecionar Itens: Carga {id_selecionado}")
+                st.markdown(f"### Inspecionar Itens: Carga {id_selecionado}")
 
                 df_detalhe = df_transf_periodo[df_transf_periodo['ID_CARGA_PCP'] == id_selecionado].copy()
 
@@ -1949,8 +1784,8 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
                     total_skus_id = df_detalhe[prod_col].nunique() if prod_col else 0
 
                     col_det1, col_det2 = st.columns(2)
-                    with col_det1: exibir_kpi("📦 SKUs Distintos", total_skus_id, "Mix de produtos", "#3498DB")
-                    with col_det2: exibir_kpi("🔢 Total de Peças", f"{total_pecas_id:,.0f}".replace(',', '.'), "Volume Físico", "#9B59B6")
+                    with col_det1: exibir_kpi("SKUs Distintos", total_skus_id, "Mix de produtos", "#3498DB")
+                    with col_det2: exibir_kpi("Total de Peças", f"{total_pecas_id:,.0f}".replace(',', '.'), "Volume Físico", "#9B59B6")
 
                     cols_to_show = []
                     rename_dict = {}
@@ -1969,10 +1804,10 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
                 else:
                     st.warning("Nenhum detalhe encontrado para esta carga.")
             else:
-                st.info("👆 Selecione uma carga na tabela acima para ver os detalhes dos produtos.")
+                st.info("Selecione uma carga na tabela acima para ver os detalhes dos produtos.")
 
             st.markdown("---")
-            st.markdown("### 📈 Análise de Fluxo")
+            st.markdown("### Análise de Fluxo")
 
             graf_col1, graf_col2 = st.columns([2, 1])
             with graf_col1:
@@ -1990,16 +1825,16 @@ elif pagina == "🚛 Transferências" or pagina == "🚛 Histórico325":
         else:
             st.warning("A coluna 'ID_CARGA_PCP' não foi encontrada na planilha de Transferências.")
     else:
-        st.warning("⚠️ Planilha de Transferências não carregou. O e-mail do robô está como Leitor nela?")
+        st.warning("Planilha de Transferências não carregou. O e-mail do robô está como Leitor nela?")
 
 # ==============================================================================
 # PÁGINA 6: REGISTRO DE SOLICITAÇÕES EXTRAS
 # ==============================================================================
-elif pagina == "📝 Solicitações Extras":
-    st.title("📝 Registro de Vagas Extras 1P")
+elif pagina == "Solicitações Extras":
+    st.title("Registro de Vagas Extras 1P")
     st.markdown("Utilize este canal para registrar exceções autorizadas pelo Comercial que justifiquem o estouro do Teto Diário de Agendas.")
 
-    st.markdown("### ➕ Nova Solicitação")
+    st.markdown("### Nova Solicitação")
     with st.form(key="form_excecao", clear_on_submit=True):
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -2010,11 +1845,11 @@ elif pagina == "📝 Solicitações Extras":
             qtd_pecas_extra = st.number_input("Quantidade Estimada de Peças", min_value=0, step=1)
             qtd_skus_extra = st.number_input("Quantidade Estimada de SKUs", min_value=0, step=1)
 
-        submit_excecao = st.form_submit_button("💾 Salvar Registro")
+        submit_excecao = st.form_submit_button("Salvar Registro")
 
         if submit_excecao:
             if not fornecedor_extra or not solicitante:
-                st.error("⚠️ Por favor, preencha o Fornecedor e o Solicitante.")
+                st.error("Por favor, preencha o Fornecedor e o Solicitante.")
             else:
                 try:
                     cliente_google = conectar_google()
@@ -2035,12 +1870,12 @@ elif pagina == "📝 Solicitações Extras":
                         pd.Timestamp.now(tz='America/Sao_Paulo').strftime("%d/%m/%Y %H:%M:%S")
                     ])
 
-                    st.success("✅ Vaga extra registrada com sucesso! Ela já justificará o Teto de Agendas no Painel Operacional.")
+                    st.success("Vaga extra registrada com sucesso! Ela já justificará o Teto de Agendas no Painel Operacional.")
                 except Exception as e:
                     st.error(f"🚨 Erro ao salvar na nuvem: {e}")
 
     st.markdown("---")
-    st.markdown("### 📚 Histórico de Exceções")
+    st.markdown("### Histórico de Exceções")
 
     if not df_excecoes.empty and 'Data da Vaga' in df_excecoes.columns:
         df_exibir = df_excecoes.copy()
@@ -2052,11 +1887,11 @@ elif pagina == "📝 Solicitações Extras":
 # ==============================================================================
 # PÁGINA 7: REGISTRO DE BACKLOG (SOBRAS DE DOCA)
 # ==============================================================================
-elif pagina == "📦 Registro de Backlog":
-    st.title("📦 Registro de Backlog Diário")
+elif pagina == "Registro de Backlog":
+    st.title("Registro de Backlog Diário")
     st.markdown("Registre aqui as cargas que não puderam ser descarregadas no dia previsto e precisaram ser roladas para o dia seguinte. Isso gerará um histórico de gargalos operacionais.")
 
-    st.markdown("### ➕ Novo Registro de Backlog")
+    st.markdown("### Novo Registro de Backlog")
     with st.form(key="form_backlog", clear_on_submit=True):
         col_b1, col_b2 = st.columns(2)
         with col_b1:
@@ -2071,11 +1906,11 @@ elif pagina == "📦 Registro de Backlog":
             )
             qtd_pecas_backlog = st.number_input("Quantidade de Peças (Opcional)", min_value=0, step=1)
 
-        submit_backlog = st.form_submit_button("💾 Salvar Backlog na Nuvem")
+        submit_backlog = st.form_submit_button("Salvar Backlog na Nuvem")
 
         if submit_backlog:
             if not agenda_backlog or not forn_backlog:
-                st.error("⚠️ Por favor, preencha pelo menos a Agenda e o Fornecedor.")
+                st.error("Por favor, preencha pelo menos a Agenda e o Fornecedor.")
             else:
                 try:
                     cliente_google = conectar_google()
@@ -2097,12 +1932,12 @@ elif pagina == "📦 Registro de Backlog":
                         int(qtd_pecas_backlog),
                         pd.Timestamp.now(tz='America/Sao_Paulo').strftime("%d/%m/%Y %H:%M:%S")
                     ])
-                    st.success("✅ Backlog registrado com sucesso! Os dados já estão na nuvem.")
+                    st.success("Backlog registrado com sucesso! Os dados já estão na nuvem.")
                 except Exception as e:
                     st.error(f"🚨 Erro ao salvar: {e}")
 
     st.markdown("---")
-    st.markdown("### 📚 Histórico de Backlogs Registrados")
+    st.markdown("### Histórico de Backlogs Registrados")
 
     # O robô lê a planilha de Backlog em tempo real para exibir na tela
     try:
@@ -2132,24 +1967,24 @@ elif pagina == "📦 Registro de Backlog":
         st.info("A planilha de BACKLOG será criada automaticamente assim que você registrar a primeira sobra acima.")
 
 # ==============================================================================
-# 🧩 NOVA PÁGINA: SLOTTING INTELIGENTE (VAGAS EXTRAS DO COMERCIAL)
+# NOVA PÁGINA: SLOTTING INTELIGENTE (VAGAS EXTRAS DO COMERCIAL)
 # ==============================================================================
-elif pagina == "🧩 Slotting (Vagas Extras)":
-    titulo_com_ari("🧩 Slotting Inteligente (S&OP)")
+elif pagina == "Slotting (Vagas Extras)":
+    titulo_com_ari("Slotting Inteligente (S&OP)")
     st.markdown("""
     Analise pedidos do Comercial e encontre o dia ideal para encaixe, respeitando a 
     **Matriz de Risco** e a operação de **Segunda a Sexta**.
     """)
 
     texto_comercial = st.text_area(
-        "📥 Cole o pedido do Comercial aqui:", 
+        "Cole o pedido do Comercial aqui:", 
         height=150, 
         placeholder="Ex: Preciso encaixar 2 carretas da Artely de madeira..."
     )
 
-    if st.button("✨ A.R.I. - Analisar e Sugerir Slotting", type="primary", use_container_width=True):
+    if st.button("A.R.I. - Analisar e Sugerir Slotting", type="primary", use_container_width=True):
         if not texto_comercial.strip():
-            st.warning("⚠️ Cole o texto antes de rodar.")
+            st.warning("Cole o texto antes de rodar.")
         else:
             with st.spinner("🧠 A.R.I. calculando janelas de oportunidade..."):
 
@@ -2162,7 +1997,7 @@ elif pagina == "🧩 Slotting (Vagas Extras)":
                 for d in dias_futuros:
                     # 🛡️ REGRA: 0=Segunda, 4=Sexta, 5=Sábado, 6=Domingo
                     if d.weekday() >= 5:
-                        mapa_capacidade.append(f"- {d.strftime('%d/%m/%Y')} ({d.strftime('%A')}): ⛔ FECHADO (Fim de Semana).")
+                        mapa_capacidade.append(f"- {d.strftime('%d/%m/%Y')} ({d.strftime('%A')}): FECHADO (Fim de Semana).")
                         continue
 
                     df_dia = df[pd.to_datetime(df['Data']).dt.date == d] if 'Data' in df.columns else pd.DataFrame()
@@ -2200,10 +2035,10 @@ elif pagina == "🧩 Slotting (Vagas Extras)":
                 {mapa_texto}
 
                 [REGRAS CRÍTICAS DE NEGÓCIO]:
-                1. 🗓️ OPERAÇÃO APENAS DE SEGUNDA A SEXTA. Nunca sugira sábado ou domingo (marcados como FECHADO no mapa).
-                2. 📈 LIMITE DE DIVERSOS/UD: Máximo de 4.000 peças acumuladas por dia nessas categorias.
+                1. OPERAÇÃO APENAS DE SEGUNDA A SEXTA. Nunca sugira sábado ou domingo (marcados como FECHADO no mapa).
+                2. LIMITE DE DIVERSOS/UD: Máximo de 4.000 peças acumuladas por dia nessas categorias.
                 3. 🚚 LIMITE DE AGENDAS: Máximo 30 agendas/dia (ou 35 se houver pouca carga de Fulfillment).
-                4. 🔍 ANÁLISE DE RISCO: Não coloque cargas complexas (Madeira/Pneu) em dias que já estão carregados.
+                4. ANÁLISE DE RISCO: Não coloque cargas complexas (Madeira/Pneu) em dias que já estão carregados.
 
                 [RESPOSTA]:
                 Explique sua decisão e forneça a tabela: Fornecedor | Categoria | Qtd Peças | Retorno CD | Justificativa.
@@ -2212,7 +2047,7 @@ elif pagina == "🧩 Slotting (Vagas Extras)":
                 resposta_ia = consultar_ia_contextual(prompt_slotting, "🧠 Analisando dias úteis e volumetria...")
 
                 st.markdown("---")
-                st.markdown("### 📋 Veredito de Slotting do A.R.I.")
+                st.markdown("### Veredito de Slotting do A.R.I.")
                 st.markdown(resposta_ia)
 
                 # Botão de Download (CSV)
@@ -2224,28 +2059,28 @@ elif pagina == "🧩 Slotting (Vagas Extras)":
                         for l in linhas_tabela:
                             linha_csv = ",".join([c.strip() for c in l.split('|') if c.strip()])
                             csv_buffer.write(linha_csv + "\n")
-                        st.download_button(label="📥 Baixar Retorno CD (Excel)", data=csv_buffer.getvalue().encode('utf-8-sig'), file_name="Slotting_ARI.csv", mime="text/csv")
+                        st.download_button(label="Baixar Retorno CD (Excel)", data=csv_buffer.getvalue().encode('utf-8-sig'), file_name="Slotting_ARI.csv", mime="text/csv")
                 except: pass
 
 # ==============================================================================
-# 📊 NOVA PÁGINA: GD (GESTÃO DIÁRIA) - STATUS, PRODUTIVIDADE E ARMAZENAGEM
+# NOVA PÁGINA: GD (GESTÃO DIÁRIA) - STATUS, PRODUTIVIDADE E ARMAZENAGEM
 # ==============================================================================
-elif pagina == "📊 GD (Gestão Diária)":
-    titulo_com_ari("📊 GD - Gestão Diária ")
+elif pagina == "GD (Gestão Diária)":
+    titulo_com_ari("GD - Gestão Diária ")
     st.markdown("Acompanhamento em tempo real do status das agendas, performance tática e pendências de armazenagem.")
 
     # 1. FILTROS DA GD (COM AJUSTE DINÂMICO E VISÃO GERAL)
     col_f1, col_f2, col_f3, col_f4 = st.columns([1.5, 1.5, 2, 2])
     with col_f1:
-        data_gd = st.date_input("🗓️ Data da Gestão Diária", pd.Timestamp.now().date())
+        data_gd = st.date_input("Data da Gestão Diária", pd.Timestamp.now().date())
     with col_f2:
         # Espaçamento invisível para alinhar o botão com as caixas de texto
         st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-        visao_geral = st.toggle("🌍 Visão Geral", value=False, help="Ative para ver TODAS as pendências. Desative para ver só os atrasados.")
+        visao_geral = st.toggle("Visão Geral", value=False, help="Ative para ver TODAS as pendências. Desative para ver só os atrasados.")
     with col_f3:
-        qtd_transf_gd = st.number_input("📦 Qtd Transferências (Hoje)", min_value=0, max_value=20, value=5)
+        qtd_transf_gd = st.number_input("Qtd Transferências (Hoje)", min_value=0, max_value=20, value=5)
     with col_f4:
-        equipes_fisicas_gd = st.number_input("👷 Equipes Físicas no Turno", min_value=1, max_value=30, value=5)
+        equipes_fisicas_gd = st.number_input("Equipes Físicas no Turno", min_value=1, max_value=30, value=5)
 
     st.markdown("---")
 
@@ -2313,7 +2148,7 @@ elif pagina == "📊 GD (Gestão Diária)":
 
     cor_ganho = "#27AE60" if ganho_pct >= 0 else "#E74C3C"
     sinal_ganho = "+" if ganho_pct >= 0 else ""
-    texto_saldo = f"📅 Histórico 30 dias (cargas entre 10 e 427 min)"
+    texto_saldo = f"Histórico 30 dias (cargas entre 10 e 427 min)"
 
     # --- 🧠 LÓGICA DE CÁLCULO REAL DO APC ---
     import math
@@ -2361,7 +2196,7 @@ elif pagina == "📊 GD (Gestão Diária)":
         if 'DT_CONFERENCIA' in df_pend.columns:
             df_pend['DT_CONF_DT'] = pd.to_datetime(df_pend['DT_CONFERENCIA'], errors='coerce').dt.date
 
-            # 💡 A MÁGICA DO BOTÃO: Só corta a data se a "Visão Geral" estiver DESLIGADA
+            # A MÁGICA DO BOTÃO: Só corta a data se a "Visão Geral" estiver DESLIGADA
             if not visao_geral:
                 df_pend = df_pend[df_pend['DT_CONF_DT'] < data_gd].copy()
 
@@ -2375,15 +2210,15 @@ elif pagina == "📊 GD (Gestão Diária)":
                 qtd_agrupada = df_pend[df_pend['TP_RECEBIMENTO'].astype(str).str.contains('AGRUPADA', na=False, case=False)].shape[0]
                 pct_agrupada = (qtd_agrupada / df_pend.shape[0]) * 100
 
-    st.markdown("### 📦 Status de Armazenagem")
+    st.markdown("### Status de Armazenagem")
 
-    # 💡 Aviso dinâmico na tela para o usuário saber o que está olhando
+    # Aviso dinâmico na tela para o usuário saber o que está olhando
     if visao_geral:
-        st.info("🌍 **Visão Geral ATIVADA:** Exibindo o volume TOTAL (incluindo as cargas conferidas hoje).")
+        st.info("**Visão Geral ATIVADA:** Exibindo o volume TOTAL (incluindo as cargas conferidas hoje).")
     else:
         st.info(f"⏳ **Visão Retroativa:** Exibindo APENAS o que foi conferido até o dia { (data_gd - pd.Timedelta(days=1)).strftime('%d/%m/%Y') }.")
 
-    # 🟢 AQUI ESTÃO OS KPIS QUE TINHAM SUMIDO!
+    # AQUI ESTÃO OS KPIS QUE TINHAM SUMIDO!
     st.markdown(f"""
     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
         <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #F39C12; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -2403,7 +2238,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     """, unsafe_allow_html=True)
 
     # ==========================================================================
-    # VISÃO 1: 🚀 IMPACTO NA TRANSFERÊNCIA (PRIORIDADES COM PEDIDO)
+    # VISÃO 1: IMPACTO NA TRANSFERÊNCIA (PRIORIDADES COM PEDIDO)
     # ==========================================================================
     st.markdown("### Prioridade de Armazenagem (Pedidos Travados)")
 
@@ -2440,14 +2275,14 @@ elif pagina == "📊 GD (Gestão Diária)":
                         hide_index=True, use_container_width=True
                     )
             else:
-                st.success("✅ Nenhuma pendência na visão atual possui pedidos (RTY).")
+                st.success("Nenhuma pendência na visão atual possui pedidos (RTY).")
         else:
-            st.info("⚠️ Coluna MODALIDADE não encontrada na base.")
+            st.info("Coluna MODALIDADE não encontrada na base.")
 
     # ==========================================================================
-    # VISÃO 2: 📋 LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM
+    # VISÃO 2: LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM
     # ==========================================================================
-    st.markdown("### 📋 Pendências de Armazenagem")
+    st.markdown("### Pendências de Armazenagem")
 
     if not df_pend.empty:
         # Agrupa tudo que está na base de pendência (respeitando o botão de Visão Geral/Retroativa)
@@ -2556,7 +2391,7 @@ elif pagina == "📊 GD (Gestão Diária)":
     st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
 
     # TABELA DETALHADA E FILTRO DE STATUS
-    st.markdown("### 🔍 Detalhamento das Agendas na Doca")
+    st.markdown("### Detalhamento das Agendas na Doca")
     if not df_status_dia.empty and col_st:
         status_unicos = df_status_dia[col_st].dropna().unique().tolist()
         status_selecionados = st.multiselect("Filtrar por Status:", options=status_unicos, default=status_unicos)
@@ -2565,10 +2400,10 @@ elif pagina == "📊 GD (Gestão Diária)":
     else:
         st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
 # ==========================================================================
-    # 🔍 NOVA VISÃO: PRODUTOS COM RESLOG (VISÃO CONSOLIDADA POR CARGA)
+    # NOVA VISÃO: PRODUTOS COM RESLOG (VISÃO CONSOLIDADA POR CARGA)
     # ==========================================================================
     st.markdown("---")
-    titulo_com_ari("📦 Resumo de Agendas com RESLOG (Restrição Logística)")
+    titulo_com_ari("Resumo de Agendas com RESLOG (Restrição Logística)")
 
     if not df_itens.empty:
         # Padronização da base
@@ -2648,8 +2483,8 @@ elif pagina == "📊 GD (Gestão Diária)":
                         hide_index=True
                     )
             else:
-                st.success(f"✅ Nenhuma restrição RESLOG identificada para o dia {data_gd.strftime('%d/%m/%Y')}.")
+                st.success(f"Nenhuma restrição RESLOG identificada para o dia {data_gd.strftime('%d/%m/%Y')}.")
         else:
-            st.error("⚠️ Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
+            st.error("Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
     else:
         st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
