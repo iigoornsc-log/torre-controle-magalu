@@ -2787,95 +2787,80 @@ elif pagina == "GD (Gestão Diária)":
 # NOVA PÁGINA: STATUS DAS AGENDAS
 # ==============================================================================
 elif pagina == "Status das Agendas":
-    df_status = df[(df['Data'] >= ts_inicio) & (df['Data'] <= ts_fim)].copy()
-
     render_hero(
         "Status das Agendas",
-        f"Visão simplificada das agendas no período de {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}.",
-        "Magalu • Visão Operacional"
+        "Visão simplificada do painel diário de status, usando a mesma base da GD.",
+        "Magalu • Status Diário"
     )
 
-    if df_status.empty:
-        st.info("Nenhuma agenda encontrada no período selecionado.")
+    # mesma data da GD
+    data_status = st.date_input("Data da Visão de Status", pd.Timestamp.now().date(), key="data_status_agendas")
+
+    df_status_dia = pd.DataFrame()
+    col_dt_s = None
+
+    if not df_status.empty:
+        df_status.columns = df_status.columns.astype(str).str.strip().str.upper()
+        col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in c), None)
+        if not col_dt_s:
+            col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
+
+        if col_dt_s:
+            df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
+            df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
+            if df_status['Data_Filtro'].isna().all():
+                df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], dayfirst=True, errors='coerce')
+
+            df_status['Data_Filtro'] = df_status['Data_Filtro'].dt.date
+            df_status_dia = df_status[df_status['Data_Filtro'] == data_status].copy()
+
+    mapa_status = {
+        'AUSENTE': ('AUSENTE', '#2C3E50'),
+        'LANÇAMENTO': ('AG LANÇAMENTO', '#E67E22'),
+        'COMERCIAL': ('COMERCIAL', '#C0392B'),
+        'P-EXTERNO': ('P-EXTERNO', '#16A085'),
+        'DOCA': ('EM DOCA', '#F39C12'),
+        'PROCESSO': ('EM PROCESSO', '#2980B9'),
+        'OK': ('FINALIZADA', '#27AE60'),
+        'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD')
+    }
+
+    col_st = next((c for c in df_status_dia.columns if 'STATUS' in str(c).upper()), None)
+
+    if df_status_dia.empty or not col_st:
+        st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
     else:
-        resumo_status = (
-            df_status.groupby("Status")
-            .agg(QTD=("Agenda_Texto", "nunique"))
-            .reset_index()
-        )
+        status_cards = []
+        total = 0
 
-        mapa_nomes = {
-            "Agendado": "Ag. Lançamento",
-            "Aguardando": "Pátio Externo",
-            "Em Descarga": "Em Doca",
-            "Recebido": "Finalizadas",
-            "No-Show": "Ausente"
-        }
+        for chave, (nome_exibicao, cor) in mapa_status.items():
+            df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
+            qtd_ag = df_filtro.shape[0]
+            total += qtd_ag
 
-        ordem_status = [
-            "Ausente",
-            "Devolvida",
-            "Diver. Comercial",
-            "Ag. Lançamento",
-            "Pátio Externo",
-            "Em Doca",
-            "Em Processo",
-            "Pend. Armazenagem",
-            "Finalizadas",
-        ]
+            status_cards.append((nome_exibicao, qtd_ag, cor))
 
-        cores_status = {
-            "Ausente": "#B0B7C3",
-            "Devolvida": "#9AA4B2",
-            "Diver. Comercial": "#8B949E",
-            "Ag. Lançamento": "#7C8796",
-            "Pátio Externo": "#FF00FF",
-            "Em Doca": "#FFD000",
-            "Em Processo": "#0066FF",
-            "Pend. Armazenagem": "#FF8800",
-            "Finalizadas": "#00C853",
-            "Total": "#FF2D2D",
-        }
-
-        resumo_status["Status_Exibicao"] = resumo_status["Status"].replace(mapa_nomes)
-        resumo_dict = resumo_status.groupby("Status_Exibicao")["QTD"].sum().to_dict()
+        status_cards.append(("TOTAL", total, "#1E293B"))
 
         def card_status(nome, qtd, cor):
-            icone = "local_shipping"
             return f"""
 <div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:14px;">
         <div style="display:flex; align-items:center; gap:12px;">
             <div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
-                <span class="icon-magalu" style="font-size:22px; color:{cor};">{icone}</span>
+                <span class="icon-magalu" style="font-size:22px; color:{cor};">local_shipping</span>
             </div>
-            <div style="font-size:17px; font-weight:800; color:#0F172A;">{nome.upper()}</div>
+            <div style="font-size:17px; font-weight:800; color:#0F172A;">{nome}</div>
         </div>
         <div style="font-size:28px; font-weight:900; color:#0F172A;">{qtd}</div>
     </div>
 </div>
 """
 
-        cards = []
-        total = 0
-        for status in ordem_status:
-            qtd = int(resumo_dict.get(status, 0))
-            total += qtd
-            cards.append(card_status(status, qtd, cores_status.get(status, "#64748B")))
-
-        cards.append(card_status("Total", total, cores_status["Total"]))
-
-        st.markdown("""
-<div style="margin-top:8px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center;">
-    <div style="font-size:26px; font-weight:900; color:#0F172A;">STATUS AGENDAS</div>
-    <div style="font-size:22px; font-weight:900; color:#0F172A;">QTD</div>
-</div>
-""", unsafe_allow_html=True)
-
-        for i in range(0, len(cards), 2):
+        for i in range(0, len(status_cards), 2):
             cols = st.columns(2)
             with cols[0]:
-                st.markdown(cards[i], unsafe_allow_html=True)
-            if i + 1 < len(cards):
+                st.markdown(card_status(*status_cards[i]), unsafe_allow_html=True)
+            if i + 1 < len(status_cards):
                 with cols[1]:
-                    st.markdown(cards[i + 1], unsafe_allow_html=True)
+                    st.markdown(card_status(*status_cards[i + 1]), unsafe_allow_html=True)
