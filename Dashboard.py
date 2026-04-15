@@ -2783,24 +2783,25 @@ elif pagina == "GD (Gestão Diária)":
     else:
         st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
 
-# ==============================================================================
-# NOVA PÁGINA: STATUS DAS AGENDAS
-# ==============================================================================
 elif pagina == "Status das Agendas":
     render_hero(
         "Status das Agendas",
-        "Visão simplificada do painel diário de status, usando a mesma base da GD.",
+        "Visão simplificada usando a mesma base do painel de status da doca.",
         "Magalu • Status Diário"
     )
 
-    # mesma data da GD
-    data_status = st.date_input("Data da Visão de Status", pd.Timestamp.now().date(), key="data_status_agendas")
+    data_status = st.date_input(
+        "Data da Visão de Status",
+        pd.Timestamp.now().date(),
+        key="data_status_agendas"
+    )
 
+    df_status = puxar_bases_gd_status()
     df_status_dia = pd.DataFrame()
-    col_dt_s = None
 
     if not df_status.empty:
         df_status.columns = df_status.columns.astype(str).str.strip().str.upper()
+
         col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in c), None)
         if not col_dt_s:
             col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
@@ -2808,6 +2809,7 @@ elif pagina == "Status das Agendas":
         if col_dt_s:
             df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
             df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
+
             if df_status['Data_Filtro'].isna().all():
                 df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], dayfirst=True, errors='coerce')
 
@@ -2817,7 +2819,7 @@ elif pagina == "Status das Agendas":
     mapa_status = {
         'AUSENTE': ('AUSENTE', '#2C3E50'),
         'LANÇAMENTO': ('AG LANÇAMENTO', '#E67E22'),
-        'COMERCIAL': ('COMERCIAL', '#C0392B'),
+        'COMERCIAL': ('COMERCIAL', '#COM0392B'),
         'P-EXTERNO': ('P-EXTERNO', '#16A085'),
         'DOCA': ('EM DOCA', '#F39C12'),
         'PROCESSO': ('EM PROCESSO', '#2980B9'),
@@ -2828,7 +2830,7 @@ elif pagina == "Status das Agendas":
     col_st = next((c for c in df_status_dia.columns if 'STATUS' in str(c).upper()), None)
 
     if df_status_dia.empty or not col_st:
-        st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
+        st.info("Nenhuma agenda localizada para esta data.")
     else:
         status_cards = []
         total = 0
@@ -2837,7 +2839,6 @@ elif pagina == "Status das Agendas":
             df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
             qtd_ag = df_filtro.shape[0]
             total += qtd_ag
-
             status_cards.append((nome_exibicao, qtd_ag, cor))
 
         status_cards.append(("TOTAL", total, "#1E293B"))
