@@ -2804,6 +2804,14 @@ elif pagina == "Status das Agendas":
             .reset_index()
         )
 
+        mapa_nomes = {
+            "Agendado": "Ag. Lançamento",
+            "Aguardando": "Pátio Externo",
+            "Em Descarga": "Em Doca",
+            "Recebido": "Finalizadas",
+            "No-Show": "Ausente"
+        }
+
         ordem_status = [
             "Ausente",
             "Devolvida",
@@ -2815,21 +2823,6 @@ elif pagina == "Status das Agendas":
             "Pend. Armazenagem",
             "Finalizadas",
         ]
-
-        mapa_nomes = {
-            "Agendado": "Ag. Lançamento",
-            "Aguardando": "Pátio Externo",
-            "Em Descarga": "Em Doca",
-            "Recebido": "Finalizadas",
-        }
-
-        resumo_status["Status_Exibicao"] = resumo_status["Status"].replace(mapa_nomes)
-
-        resumo_dict = (
-            resumo_status.groupby("Status_Exibicao")["QTD"]
-            .sum()
-            .to_dict()
-        )
 
         cores_status = {
             "Ausente": "#B0B7C3",
@@ -2844,73 +2837,45 @@ elif pagina == "Status das Agendas":
             "Total": "#FF2D2D",
         }
 
-        icone_svg = """
-        <svg width="34" height="22" viewBox="0 0 64 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2 8H36L48 20H62V30H56C54.8 34.2 51.1 37 46.5 37C41.9 37 38.2 34.2 37 30H23C21.8 34.2 18.1 37 13.5 37C8.9 37 5.2 34.2 4 30H2V8Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
-          <circle cx="13.5" cy="30.5" r="5.5" stroke="currentColor" stroke-width="3"/>
-          <circle cx="46.5" cy="30.5" r="5.5" stroke="currentColor" stroke-width="3"/>
-          <path d="M36 8V20H48" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M10 13H24" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-          <path d="M10 19H20" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-        """
+        resumo_status["Status_Exibicao"] = resumo_status["Status"].replace(mapa_nomes)
+        resumo_dict = resumo_status.groupby("Status_Exibicao")["QTD"].sum().to_dict()
 
-        linhas = []
+        def card_status(nome, qtd, cor):
+            icone = "local_shipping"
+            return f"""
+<div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
+                <span class="icon-magalu" style="font-size:22px; color:{cor};">{icone}</span>
+            </div>
+            <div style="font-size:17px; font-weight:800; color:#0F172A;">{nome.upper()}</div>
+        </div>
+        <div style="font-size:28px; font-weight:900; color:#0F172A;">{qtd}</div>
+    </div>
+</div>
+"""
+
+        cards = []
         total = 0
-
         for status in ordem_status:
             qtd = int(resumo_dict.get(status, 0))
             total += qtd
-            cor = cores_status.get(status, "#FFFFFF")
+            cards.append(card_status(status, qtd, cores_status.get(status, "#64748B")))
 
-            linhas.append(f"""
-                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px dotted rgba(255,255,255,0.18);">
-                    <div style="display:flex; align-items:center; gap:12px; min-width:0;">
-                        <div style="color:{cor}; display:flex; align-items:center; justify-content:center;">
-                            {icone_svg}
-                        </div>
-                        <div style="font-size:18px; font-weight:800; color:#FFFFFF; white-space:nowrap;">
-                            {status.upper()}
-                        </div>
-                    </div>
-                    <div style="font-size:22px; font-weight:900; color:#FFFFFF; min-width:40px; text-align:right;">
-                        {qtd}
-                    </div>
-                </div>
-            """)
+        cards.append(card_status("Total", total, cores_status["Total"]))
 
-        linhas.append(f"""
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 0 4px 0;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="color:{cores_status['Total']}; display:flex; align-items:center; justify-content:center;">
-                        {icone_svg}
-                    </div>
-                    <div style="font-size:19px; font-weight:900; color:#FFFFFF;">
-                        TOTAL
-                    </div>
-                </div>
-                <div style="font-size:24px; font-weight:900; color:#FFFFFF;">
-                    {total}
-                </div>
-            </div>
-        """)
+        st.markdown("""
+<div style="margin-top:8px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center;">
+    <div style="font-size:26px; font-weight:900; color:#0F172A;">STATUS AGENDAS</div>
+    <div style="font-size:22px; font-weight:900; color:#0F172A;">QTD</div>
+</div>
+""", unsafe_allow_html=True)
 
-        html_status = f"""
-        <div style="
-            background: linear-gradient(180deg, #05070B 0%, #0A0D14 100%);
-            border-radius: 24px;
-            padding: 26px 28px;
-            border: 1px solid rgba(255,255,255,0.06);
-            box-shadow: 0 18px 45px rgba(0,0,0,0.28);
-            max-width: 760px;
-            margin: 0 auto 20px auto;
-        ">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <div style="font-size:28px; font-weight:900; color:#FFFFFF; letter-spacing:-0.5px;">STATUS AGENDAS</div>
-                <div style="font-size:26px; font-weight:900; color:#FFFFFF;">QTD</div>
-            </div>
-            {''.join(linhas)}
-        </div>
-        """
-
-        st.markdown(html_status, unsafe_allow_html=True)
+        for i in range(0, len(cards), 2):
+            cols = st.columns(2)
+            with cols[0]:
+                st.markdown(cards[i], unsafe_allow_html=True)
+            if i + 1 < len(cards):
+                with cols[1]:
+                    st.markdown(cards[i + 1], unsafe_allow_html=True)
