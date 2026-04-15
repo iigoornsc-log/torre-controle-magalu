@@ -2693,100 +2693,10 @@ elif pagina == "GD (Gestão Diária)":
         st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
-# ==========================================================================
-    # NOVA VISÃO: PRODUTOS COM RESLOG (VISÃO CONSOLIDADA POR CARGA)
-    # ==========================================================================
-    st.markdown("---")
-    titulo_com_ari("Resumo de Agendas com RESLOG (Restrição Logística)")
-
-    if not df_itens.empty:
-        # Padronização da base
-        df_reslog = df_itens.copy()
-        df_reslog.columns = df_reslog.columns.str.strip().str.upper()
-        df_reslog = df_reslog.loc[:, ~df_reslog.columns.duplicated()]
-
-        # Buscador de colunas
-        col_agenda = next((c for c in df_reslog.columns if c in ['AGENDA', 'CODAGENDA']), None)
-        col_sku = next((c for c in df_reslog.columns if c in ['SKU', 'COMPITEM', 'ITEM', 'CÓDIGO', 'CODIGO']), None)
-        col_pecas = next((c for c in df_reslog.columns if c in ['QTD PEÇAS', 'QTAGENDA', 'QTCOMP', 'QTDE']), None)
-        col_dt = next((c for c in df_reslog.columns if c in ['DTAGENDA', 'DATA AGENDA', 'DATA']), None)
-        col_forn = next((c for c in df_reslog.columns if c in ['FORNE_PRINC', 'FORNECEDOR']), None)
-        col_linha = next((c for c in df_reslog.columns if c in ['LINHA', 'LINHAS', 'CATEGORIA']), None)
-
-        if col_dt and 'RESLOG' in df_reslog.columns:
-            df_reslog['DATA_FORMATADA'] = pd.to_datetime(df_reslog[col_dt], dayfirst=True, errors='coerce').dt.date
-            
-            # Filtro: Apenas o que tem RESLOG >= 1 na data selecionada
-            df_reslog_filtrado = df_reslog[
-                (df_reslog['DATA_FORMATADA'] == data_gd) & 
-                (pd.to_numeric(df_reslog['RESLOG'], errors='coerce').fillna(0) >= 1)
-            ].copy()
-
-            if not df_reslog_filtrado.empty:
-                # 🛡️ Força a coluna a ser número antes de qualquer conta!
-                if col_pecas:
-                    df_reslog_filtrado[col_pecas] = pd.to_numeric(df_reslog_filtrado[col_pecas], errors='coerce').fillna(0)
-
-                # 1. KPIs GERAIS (Soma total do dia)
-                qtd_agendas_reslog = int(df_reslog_filtrado[col_agenda].nunique()) if col_agenda else 0
-                qtd_skus_reslog = int(df_reslog_filtrado[col_sku].nunique()) if col_sku else 0
-                qtd_pecas_reslog = df_reslog_filtrado[col_pecas].sum() if col_pecas else 0
-                vol_pecas_str = f"{qtd_pecas_reslog:,.0f}".replace(",", ".")
-
-                # 3. Renderização dos KPIs (FORMATO COMPACTO)
-                st.markdown(f"""
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
-                    <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #E67E22; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Agendas Impactadas</div>
-                        <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{qtd_agendas_reslog}</div>
-                        <div style="font-size: 11px; color: #8395A7;">Total de veículos</div>
-                    </div>
-                    <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #3498DB; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Total de SKUs</div>
-                        <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{qtd_skus_reslog}</div>
-                        <div style="font-size: 11px; color: #8395A7;">Itens c/ restrição</div>
-                    </div>
-                    <div style="flex: 1; min-width: 180px; background-color: #FFFFFF; border-left: 5px solid #9B59B6; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <div style="font-size: 11px; color: #576574; font-weight: 800; text-transform: uppercase;">Volume de Peças</div>
-                        <div style="font-size: 24px; font-weight: 900; color: #1E272E;">{vol_pecas_str}</div>
-                        <div style="font-size: 11px; color: #8395A7;">Físico total</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # 4. TABELA AGRUPADA (Simplificada)
-                st.write("**Detalhamento de Cargas com Restrição:**")
-                
-                # Definimos as colunas para o agrupamento
-                group_cols = [c for c in [col_agenda, col_forn, col_linha] if c]
-                
-                if group_cols:
-                    # Agrupamos os dados
-                    df_resumo_cargas = df_reslog_filtrado.groupby(group_cols).agg({
-                        col_sku: 'nunique', # Conta quantos itens diferentes
-                        col_pecas: 'sum'    # Soma as peças totais da carga
-                    }).reset_index()
-
-                    # Renomeia colunas para a exibição ficar profissional
-                    novos_nomes = ['Agenda', 'Fornecedor', 'Linha/Categoria'][:len(group_cols)] + ['Qtd SKUs', 'Total Peças']
-                    df_resumo_cargas.columns = novos_nomes
-                    
-                    st.dataframe(
-                        df_resumo_cargas.sort_values(by='Total Peças', ascending=False),
-                        use_container_width=True,
-                        hide_index=True
-                    )
-            else:
-                st.success(f"Nenhuma restrição RESLOG identificada para o dia {data_gd.strftime('%d/%m/%Y')}.")
-        else:
-            st.error("Estrutura de colunas (DTAGENDA/RESLOG) não encontrada na base.")
-    else:
-        st.info("Aguardando carregamento da base de Itens para verificar RESLOG.")
-
 elif pagina == "Status das Agendas":
     render_hero(
         "Status das Agendas",
-        "Visão simplificada usando a mesma base do painel de status da doca.",
+        "Visão simplificada usando a mesma base da página Status das Agendas na Doca.",
         "Magalu • Status Diário"
     )
 
@@ -2796,17 +2706,23 @@ elif pagina == "Status das Agendas":
         key="data_status_agendas"
     )
 
-    df_status = puxar_bases_gd_status()
-    df_status_dia = pd.DataFrame()
+    with st.spinner("Carregando status das agendas..."):
+        df_prod, df_status, df_pend = puxar_bases_completas_gd()
 
-    if not df_status.empty:
+    if df_status.empty:
+        st.info("Nenhuma base de status foi carregada.")
+    else:
         df_status.columns = df_status.columns.astype(str).str.strip().str.upper()
 
         col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in c), None)
         if not col_dt_s:
             col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
 
-        if col_dt_s:
+        col_st = next((c for c in df_status.columns if 'STATUS' in c), None)
+
+        if not col_dt_s or not col_st:
+            st.warning("Não foi possível localizar as colunas de data/status na base.")
+        else:
             df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
             df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
 
@@ -2816,35 +2732,36 @@ elif pagina == "Status das Agendas":
             df_status['Data_Filtro'] = df_status['Data_Filtro'].dt.date
             df_status_dia = df_status[df_status['Data_Filtro'] == data_status].copy()
 
-    mapa_status = {
-        'AUSENTE': ('AUSENTE', '#2C3E50'),
-        'LANÇAMENTO': ('AG LANÇAMENTO', '#E67E22'),
-        'COMERCIAL': ('COMERCIAL', '#COM0392B'),
-        'P-EXTERNO': ('P-EXTERNO', '#16A085'),
-        'DOCA': ('EM DOCA', '#F39C12'),
-        'PROCESSO': ('EM PROCESSO', '#2980B9'),
-        'OK': ('FINALIZADA', '#27AE60'),
-        'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD')
-    }
+            if df_status_dia.empty:
+                st.info("Nenhuma agenda localizada para esta data.")
+            else:
+                mapa_status = {
+                    'AUSENTE': ('AUSENTE', '#34495E'),
+                    'DEVOLVIDO': ('DEVOLVIDA', '#8E44AD'),
+                    'COMERCIAL': ('DIVER. COMERCIAL', '#C0392B'),
+                    'LANÇAMENTO': ('AG. LANÇAMENTO', '#7F8C8D'),
+                    'P-EXTERNO': ('PÁTIO EXTERNO', '#FF00FF'),
+                    'DOCA': ('EM DOCA', '#F1C40F'),
+                    'PROCESSO': ('EM PROCESSO', '#0066FF'),
+                    'PEND': ('PEND. ARMAZENAGEM', '#FF8800'),
+                    'OK': ('FINALIZADAS', '#00C853'),
+                }
 
-    col_st = next((c for c in df_status_dia.columns if 'STATUS' in str(c).upper()), None)
+                status_cards = []
+                total = 0
 
-    if df_status_dia.empty or not col_st:
-        st.info("Nenhuma agenda localizada para esta data.")
-    else:
-        status_cards = []
-        total = 0
+                for chave, (nome_exibicao, cor) in mapa_status.items():
+                    df_filtro = df_status_dia[
+                        df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)
+                    ]
+                    qtd_ag = df_filtro.shape[0]
+                    total += qtd_ag
+                    status_cards.append((nome_exibicao, qtd_ag, cor))
 
-        for chave, (nome_exibicao, cor) in mapa_status.items():
-            df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
-            qtd_ag = df_filtro.shape[0]
-            total += qtd_ag
-            status_cards.append((nome_exibicao, qtd_ag, cor))
+                status_cards.append(("TOTAL", total, "#FF2D2D"))
 
-        status_cards.append(("TOTAL", total, "#1E293B"))
-
-        def card_status(nome, qtd, cor):
-            return f"""
+                def card_status(nome, qtd, cor):
+                    return f"""
 <div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:14px;">
         <div style="display:flex; align-items:center; gap:12px;">
@@ -2858,10 +2775,10 @@ elif pagina == "Status das Agendas":
 </div>
 """
 
-        for i in range(0, len(status_cards), 2):
-            cols = st.columns(2)
-            with cols[0]:
-                st.markdown(card_status(*status_cards[i]), unsafe_allow_html=True)
-            if i + 1 < len(status_cards):
-                with cols[1]:
-                    st.markdown(card_status(*status_cards[i + 1]), unsafe_allow_html=True)
+                for i in range(0, len(status_cards), 2):
+                    cols = st.columns(2)
+                    with cols[0]:
+                        st.markdown(card_status(*status_cards[i]), unsafe_allow_html=True)
+                    if i + 1 < len(status_cards):
+                        with cols[1]:
+                            st.markdown(card_status(*status_cards[i + 1]), unsafe_allow_html=True)
