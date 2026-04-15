@@ -272,9 +272,39 @@ st.markdown("""
 
     [data-baseweb="tab-border"] { display: none; }
 
-    div[data-baseweb="input"] > div, div[data-baseweb="select"] > div, textarea, input {
-        border-radius: 12px !important;
-    }
+    /* INPUTS SIDEBAR - FIX VISUAL */
+section[data-testid="stSidebar"] div[data-baseweb="input"] > div,
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
+    background-color: rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.18) !important;
+    border-radius: 12px !important;
+    color: #FFFFFF !important;
+}
+
+/* TEXTO DENTRO DOS INPUTS */
+section[data-testid="stSidebar"] input,
+section[data-testid="stSidebar"] textarea {
+    color: #FFFFFF !important;
+}
+
+/* PLACEHOLDER / TEXTO CLARO */
+section[data-testid="stSidebar"] input::placeholder {
+    color: rgba(255,255,255,0.5) !important;
+}
+
+/* MULTISELECT TAGS */
+section[data-testid="stSidebar"] span[data-baseweb="tag"] {
+    background: rgba(0,134,255,0.25) !important;
+    color: #FFFFFF !important;
+    border: 1px solid rgba(0,134,255,0.6) !important;
+}
+
+/* HOVER E FOCO */
+section[data-testid="stSidebar"] div[data-baseweb="input"]:focus-within,
+section[data-testid="stSidebar"] div[data-baseweb="select"]:focus-within {
+    border-color: #0086FF !important;
+    box-shadow: 0 0 0 2px rgba(0,134,255,0.25) !important;
+}
 
     span[data-baseweb="tag"] {
         background-color: #E6F2FF !important;
