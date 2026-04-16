@@ -2775,27 +2775,25 @@ elif pagina == "Status das Agendas":
                 status_cards.append(("TOTAL", tot_agendas_status, tot_pecas_status, "#FF2D2D"))
 
                 def card_status(nome, qtd_ag, qtd_pc, cor):
-                    return f"""
-<div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
-    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-        <div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
-            <span class="icon-magalu" style="font-size:22px; color:{cor};">local_shipping</span>
-        </div>
-        <div style="font-size:17px; font-weight:800; color:#0F172A;">{nome}</div>
-    </div>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
-            <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Agendas</div>
-            <div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_ag}</div>
-        </div>
-        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
-            <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Peças</div>
-            <div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_pc:,.0f}</div>
-        </div>
-    </div>
+    return f"""<div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
+<div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+<div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
+<span class="icon-magalu" style="font-size:22px; color:{cor};">local_shipping</span>
 </div>
-"""
+<div style="font-size:17px; font-weight:800; color:#0F172A;">{nome}</div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
+<div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Agendas</div>
+<div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_ag}</div>
+</div>
+<div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
+<div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Peças</div>
+<div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_pc:,.0f}</div>
+</div>
+</div>
+</div>"""
 
                 for i in range(0, len(status_cards), 2):
                     cols = st.columns(2)
