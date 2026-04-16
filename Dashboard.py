@@ -2540,7 +2540,7 @@ elif pagina == "GD (Gestão Diária)":
     if not df_pend.empty:
         if 'MODALIDADE' in df_pend.columns:
             # Filtra apenas o que tem pedido (RTY ou ABA)
-            filtro_modalidade = df_pend['MODALIDADE'].astype(str).str.upper().str.contains('RTY|RESLOG', na=False, regex=True)
+            filtro_modalidade = df_pend['MODALIDADE'].astype(str).str.upper().str.contains('RTY|RESLOG|ABA', na=False, regex=True)
             df_pedidos = df_pend[filtro_modalidade].copy()
 
             if not df_pedidos.empty:
