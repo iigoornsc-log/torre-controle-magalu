@@ -2742,11 +2742,12 @@ elif pagina == "Status das Agendas":
                 mapa_status = {
                     'AUSENTE': ('AUSENTE', '#34495E'),
                     'DEVOLVIDO': ('DEVOLVIDA', '#8E44AD'),
-                    'COMERCIAL': ('DIVER. COMERCIAL', '#FA2220'),
-                    'LANÇAMENTO': ('AG. LANÇAMENTO', '#FA9D20'),
-                    'P-EXTERNO': ('PÁTIO EXTERNO', '#20E0FA'),
+                    'COMERCIAL': ('DIVER. COMERCIAL', '#C0392B'),
+                    'LANÇAMENTO': ('AG. LANÇAMENTO', '#7F8C8D'),
+                    'P-EXTERNO': ('PÁTIO EXTERNO', '#FF00FF'),
                     'DOCA': ('EM DOCA', '#F1C40F'),
                     'PROCESSO': ('EM PROCESSO', '#0066FF'),
+                    'PEND': ('PEND. ARMAZENAGEM', '#FF8800'),
                     'OK': ('FINALIZADAS', '#00C853'),
                 }
 
@@ -2773,9 +2774,8 @@ elif pagina == "Status das Agendas":
 
                 status_cards.append(("TOTAL", tot_agendas, tot_pecas, "#FF2D2D"))
 
-                # 🔥 CARD CORRIGIDO (SEM BUG DE HTML)
                 def card_status(nome, qtd_ag, qtd_pc, cor):
-                    return f"""<div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
+                    return f"""<div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05); margin-bottom:14px;">
 <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
 <div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
 <span class="icon-magalu" style="font-size:22px; color:{cor};">local_shipping</span>
@@ -2796,11 +2796,31 @@ elif pagina == "Status das Agendas":
 </div>
 </div>"""
 
-                for i in range(0, len(status_cards), 2):
-                    cols = st.columns(2)
-                    with cols[0]:
-                        st.markdown(card_status(*status_cards[i]), unsafe_allow_html=True)
-                    if i + 1 < len(status_cards):
-                        with cols[1]:
-                            st.markdown(card_status(*status_cards[i + 1]), unsafe_allow_html=True)
-    
+                status_dict = {nome: (nome, qtd_ag, qtd_pc, cor) for nome, qtd_ag, qtd_pc, cor in status_cards}
+
+                coluna_esquerda = [
+                    "AUSENTE",
+                    "DIVER. COMERCIAL",
+                    "DEVOLVIDA",
+                    "AG. LANÇAMENTO",
+                    "FINALIZADAS",
+                ]
+
+                coluna_direita = [
+                    "PÁTIO EXTERNO",
+                    "EM DOCA",
+                    "EM PROCESSO",
+                    "TOTAL",
+                ]
+
+                col_esq, col_dir = st.columns(2)
+
+                with col_esq:
+                    for nome in coluna_esquerda:
+                        if nome in status_dict:
+                            st.markdown(card_status(*status_dict[nome]), unsafe_allow_html=True)
+
+                with col_dir:
+                    for nome in coluna_direita:
+                        if nome in status_dict:
+                            st.markdown(card_status(*status_dict[nome]), unsafe_allow_html=True)
