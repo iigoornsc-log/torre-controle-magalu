@@ -1495,7 +1495,6 @@ elif pagina == "Simular Cenários":
     render_hero("Simular Cenários", "Teste impactos de mudanças operacionais mantendo exatamente a mesma lógica do simulador atual.", "Simulação")
     col_titulo, col_reset = st.columns([4, 1])
     with col_titulo:
-        render_hero("Simulador Cenário APC", "Simulação de estresse de malha e impactos operacionais com visual executivo.", "Magalu • Cenários")
         st.markdown("Adicione novas cargas em múltiplos dias e veja o impacto cumulativo na semana inteira. O sistema **salva as suas adições** enquanto você navega pelas datas!")
 
     if 'simulador_cargas' not in st.session_state:
