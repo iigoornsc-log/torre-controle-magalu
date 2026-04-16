@@ -2752,10 +2752,10 @@ elif pagina == "Status das Agendas":
                 }
 
                 status_cards = []
-                tot_agendas_status = 0
-                tot_pecas_status = 0
+                tot_agendas = 0
+                tot_pecas = 0
 
-                for chave, (nome_exibicao, cor) in mapa_status.items():
+                for chave, (nome, cor) in mapa_status.items():
                     df_filtro = df_status_dia[
                         df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)
                     ]
@@ -2767,15 +2767,16 @@ elif pagina == "Status das Agendas":
                     else:
                         qtd_pc = 0
 
-                    tot_agendas_status += qtd_ag
-                    tot_pecas_status += qtd_pc
+                    tot_agendas += qtd_ag
+                    tot_pecas += qtd_pc
 
-                    status_cards.append((nome_exibicao, qtd_ag, qtd_pc, cor))
+                    status_cards.append((nome, qtd_ag, qtd_pc, cor))
 
-                status_cards.append(("TOTAL", tot_agendas_status, tot_pecas_status, "#FF2D2D"))
+                status_cards.append(("TOTAL", tot_agendas, tot_pecas, "#FF2D2D"))
 
+                # 🔥 CARD CORRIGIDO (SEM BUG DE HTML)
                 def card_status(nome, qtd_ag, qtd_pc, cor):
-    return f"""<div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
+                    return f"""<div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
 <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
 <div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
 <span class="icon-magalu" style="font-size:22px; color:{cor};">local_shipping</span>
@@ -2788,6 +2789,7 @@ elif pagina == "Status das Agendas":
 <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Agendas</div>
 <div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_ag}</div>
 </div>
+
 <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
 <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Peças</div>
 <div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_pc:,.0f}</div>
@@ -2802,6 +2804,4 @@ elif pagina == "Status das Agendas":
                     if i + 1 < len(status_cards):
                         with cols[1]:
                             st.markdown(card_status(*status_cards[i + 1]), unsafe_allow_html=True)
-
-
     
