@@ -2742,12 +2742,11 @@ elif pagina == "Status das Agendas":
                 mapa_status = {
                     'AUSENTE': ('AUSENTE', '#34495E'),
                     'DEVOLVIDO': ('DEVOLVIDA', '#8E44AD'),
-                    'COMERCIAL': ('DIVER. COMERCIAL', '#C0392B'),
-                    'LANÇAMENTO': ('AG. LANÇAMENTO', '#7F8C8D'),
-                    'P-EXTERNO': ('PÁTIO EXTERNO', '#FF00FF'),
+                    'COMERCIAL': ('DIVER. COMERCIAL', '#FA2220'),
+                    'LANÇAMENTO': ('AG. LANÇAMENTO', '#FA9D20'),
+                    'P-EXTERNO': ('PÁTIO EXTERNO', '#20E0FA'),
                     'DOCA': ('EM DOCA', '#F1C40F'),
                     'PROCESSO': ('EM PROCESSO', '#0066FF'),
-                    'PEND': ('PEND. ARMAZENAGEM', '#FF8800'),
                     'OK': ('FINALIZADAS', '#00C853'),
                 }
 
