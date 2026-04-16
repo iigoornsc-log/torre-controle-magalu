@@ -2720,6 +2720,7 @@ elif pagina == "Status das Agendas":
             col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
 
         col_st = next((c for c in df_status.columns if 'STATUS' in c), None)
+        col_pc_s = next((c for c in df_status.columns if 'PEÇA' in str(c).upper() or 'PECA' in str(c).upper()), None)
 
         if not col_dt_s or not col_st:
             st.warning("Não foi possível localizar as colunas de data/status na base.")
@@ -2750,28 +2751,44 @@ elif pagina == "Status das Agendas":
 
                 status_cards = []
                 total = 0
+                tot_pecas_status = 0
 
                 for chave, (nome_exibicao, cor) in mapa_status.items():
                     df_filtro = df_status_dia[
                         df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)
                     ]
                     qtd_ag = df_filtro.shape[0]
+
+                    if col_pc_s:
+                        qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').fillna(0).sum()
+                    else
+                        qtd_pc = 0
                     total += qtd_ag
-                    status_cards.append((nome_exibicao, qtd_ag, cor))
+                    tot_pecas_status += qtd_pc
+                    
+                    status_cards.append((nome_exibicao, qtd_ag, qtd_pc,  cor))
 
-                status_cards.append(("TOTAL", total, "#FF2D2D"))
+                status_cards.append(("TOTAL", tot_agendas_status, tot_pecas_status, "#FF2D2D"))
 
-                def card_status(nome, qtd, cor):
-                    return f"""
+                def card_status(nome, qtd_ag, qtd_pc, cor):
+    return f"""
 <div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
-    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px;">
-        <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
-                <span class="icon-magalu" style="font-size:22px; color:{cor};">local_shipping</span>
-            </div>
-            <div style="font-size:17px; font-weight:800; color:#0F172A;">{nome}</div>
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
+            <span class="icon-magalu" style="font-size:22px; color:{cor};">local_shipping</span>
         </div>
-        <div style="font-size:28px; font-weight:900; color:#0F172A;">{qtd}</div>
+        <div style="font-size:17px; font-weight:800; color:#0F172A;">{nome}</div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
+            <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Agendas</div>
+            <div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_ag}</div>
+        </div>
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
+            <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Peças</div>
+            <div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_pc:,.0f}</div>
+        </div>
     </div>
 </div>
 """
