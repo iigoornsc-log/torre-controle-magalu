@@ -2694,6 +2694,8 @@ elif pagina == "GD (Gestão Diária)":
         st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
     else:
         st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
+
+
 elif pagina == "Status das Agendas":
     render_hero(
         "Status das Agendas",
@@ -2750,28 +2752,30 @@ elif pagina == "Status das Agendas":
                 }
 
                 status_cards = []
-                total = 0
+                tot_agendas_status = 0
                 tot_pecas_status = 0
 
                 for chave, (nome_exibicao, cor) in mapa_status.items():
                     df_filtro = df_status_dia[
                         df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)
                     ]
+
                     qtd_ag = df_filtro.shape[0]
 
                     if col_pc_s:
                         qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').fillna(0).sum()
-                    else
+                    else:
                         qtd_pc = 0
-                    total += qtd_ag
+
+                    tot_agendas_status += qtd_ag
                     tot_pecas_status += qtd_pc
-                    
-                    status_cards.append((nome_exibicao, qtd_ag, qtd_pc,  cor))
+
+                    status_cards.append((nome_exibicao, qtd_ag, qtd_pc, cor))
 
                 status_cards.append(("TOTAL", tot_agendas_status, tot_pecas_status, "#FF2D2D"))
 
                 def card_status(nome, qtd_ag, qtd_pc, cor):
-    return f"""
+                    return f"""
 <div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05);">
     <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
         <div style="width:42px; height:42px; border-radius:14px; background:{cor}18; border:1px solid {cor}55; display:flex; align-items:center; justify-content:center;">
@@ -2800,3 +2804,6 @@ elif pagina == "Status das Agendas":
                     if i + 1 < len(status_cards):
                         with cols[1]:
                             st.markdown(card_status(*status_cards[i + 1]), unsafe_allow_html=True)
+
+
+    
