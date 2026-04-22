@@ -2611,95 +2611,100 @@ elif pagina == "GD (Gestão Diária)":
     else:
         st.info("Nenhuma pendência para exibir nesta visão.")
 
-    # ==========================================================================
+       # ==========================================================================
     # --- LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
     # ==========================================================================
     st.markdown("---")
     section_heading("Status das Agendas na Doca", level=3, icon="local_shipping")
-
+    
     df_status_dia = pd.DataFrame()
     col_dt_s = None
-
+    col_st = None
+    col_pc_s = None
+    
     if not df_status.empty:
         df_status.columns = df_status.columns.astype(str).str.strip().str.upper()
+        
+        # Procura a coluna de data
         col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in c), None)
         if not col_dt_s: col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
-
+        
         if col_dt_s:
-            df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
-            df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
-            if df_status['Data_Filtro'].isna().all():
-                df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], dayfirst=True, errors='coerce')
-
-            df_status['Data_Filtro'] = df_status['Data_Filtro'].dt.date
+            # BLINDAGEM DE DATAS: Força o Pandas a traduzir independente do formato do Google
+            df_status['Data_Filtro'] = pd.to_datetime(df_status[col_dt_s].astype(str).str.split(' ').str[0], errors='coerce', dayfirst=True).dt.date
+            
+            # Filtra o dia exato
             df_status_dia = df_status[df_status['Data_Filtro'] == data_gd].copy()
+            
+        col_st = next((c for c in df_status.columns if 'STATUS' in str(c).upper()), None)
+        col_pc_s = next((c for c in df_status.columns if 'PEÇA' in str(c).upper() or 'PECA' in str(c).upper()), None)
 
-    mapa_status = {
-        'AUSENTE': ('AUSENTE', '#2C3E50'),
-        'LANÇAMENTO': ('AG LANÇAMENTO', '#E67E22'),
-        'COMERCIAL': ('COMERCIAL', '#C0392B'),
-        'P-EXTERNO': ('P-EXTERNO', '#16A085'),
-        'DOCA': ('EM DOCA', '#F39C12'),
-        'PROCESSO': ('EM PROCESSO', '#2980B9'),
-        'OK': ('FINALIZADA', '#27AE60'),
-        'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD')
-    }
-
-    cards_html = ""
-    col_st = next((c for c in df_status_dia.columns if 'STATUS' in str(c).upper()), None)
-    col_ag_s = next((c for c in df_status_dia.columns if 'AGENDA' in str(c).upper() and 'WMS' not in str(c).upper()), df_status_dia.columns[0] if not df_status_dia.empty else None)
-    col_pc_s = next((c for c in df_status_dia.columns if 'PEÇA' in str(c).upper() or 'PECA' in str(c).upper()), None)
-
-    tot_agendas_status, tot_pecas_status = 0, 0
-
-    if not df_status_dia.empty and col_st:
-        for chave, (nome_exibicao, cor) in mapa_status.items():
-            df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
-            qtd_ag = df_filtro.shape[0] 
-            qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').sum() if col_pc_s else 0
-
-            tot_agendas_status += qtd_ag
-            tot_pecas_status += qtd_pc
-
-            cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
-<div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
-<div style="display: flex; border-bottom: 1px solid #E1E8ED;">
-<div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
-<div style="font-size: 10px; color: #8395A7;">AG.</div>
-<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_ag}</div>
-</div>
-<div style="flex: 1; padding: 8px 0;">
-<div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
-<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_pc:,.0f}</div>
-</div>
-</div>
-</div>"""
-
-    cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
-<div style="background-color: #1E272E; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
-<div style="display: flex; border-bottom: 1px solid #E1E8ED;">
-<div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
-<div style="font-size: 10px; color: #8395A7;">AG.</div>
-<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_agendas_status}</div>
-</div>
-<div style="flex: 1; padding: 8px 0;">
-<div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
-<div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_pecas_status:,.0f}</div>
-</div>
-</div>
-</div>"""
-
-    st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
-
-    # TABELA DETALHADA E FILTRO DE STATUS
-    section_heading("Detalhamento das Agendas na Doca", level=3, icon="search")
-    if not df_status_dia.empty and col_st:
-        status_unicos = df_status_dia[col_st].dropna().unique().tolist()
-        status_selecionados = st.multiselect("Filtrar por Status:", options=status_unicos, default=status_unicos)
-        df_exibicao = df_status_dia[df_status_dia[col_st].isin(status_selecionados)]
-        st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
+    if df_status_dia.empty:
+        st.warning(f"O painel de status não encontrou nenhuma agenda vinculada à data {data_gd.strftime('%d/%m/%Y')} na base de dados do Google Sheets.")
     else:
-        st.info("Nenhuma agenda localizada no Painel de Controle para esta data.")
+        mapa_status = {
+            'AUSENTE': ('AUSENTE', '#2C3E50'),
+            'LANÇAMENTO': ('AG LANÇAMENTO', '#E67E22'),
+            'COMERCIAL': ('COMERCIAL', '#C0392B'),
+            'P-EXTERNO': ('P-EXTERNO', '#16A085'),
+            'DOCA': ('EM DOCA', '#F39C12'),
+            'PROCESSO': ('EM PROCESSO', '#2980B9'),
+            'OK': ('FINALIZADA', '#27AE60'),
+            'DEVOLVIDO': ('DEVOLVIDO', '#8E44AD')
+        }
+        
+        cards_html = ""
+        tot_agendas_status, tot_pecas_status = 0, 0
+        
+        if col_st:
+            for chave, (nome_exibicao, cor) in mapa_status.items():
+                df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
+                qtd_ag = df_filtro.shape[0] 
+                qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').sum() if col_pc_s else 0
+                
+                tot_agendas_status += qtd_ag
+                tot_pecas_status += qtd_pc
+                
+                cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
+    <div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
+    <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
+    <div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
+    <div style="font-size: 10px; color: #8395A7;">AG.</div>
+    <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_ag}</div>
+    </div>
+    <div style="flex: 1; padding: 8px 0;">
+    <div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
+    <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{qtd_pc:,.0f}</div>
+    </div>
+    </div>
+    </div>"""
+            
+            # TOTAL GERAL CARD
+            cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
+    <div style="background-color: #1E272E; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
+    <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
+    <div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
+    <div style="font-size: 10px; color: #8395A7;">AG.</div>
+    <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_agendas_status}</div>
+    </div>
+    <div style="flex: 1; padding: 8px 0;">
+    <div style="font-size: 10px; color: #8395A7;">PEÇAS</div>
+    <div style="font-size: 16px; font-weight: bold; color: #1E272E;">{tot_pecas_status:,.0f}</div>
+    </div>
+    </div>
+    </div>"""
+            
+            st.markdown(f'<div style="display: flex; gap: 8px; flex-wrap: wrap;">{cards_html.replace(",", ".")}</div><br>', unsafe_allow_html=True)
+            
+            # TABELA DETALHADA E FILTRO DE STATUS
+            section_heading("Detalhamento das Agendas na Doca", level=3, icon="search")
+            status_unicos = df_status_dia[col_st].dropna().unique().tolist()
+            status_selecionados = st.multiselect("Filtrar por Status:", options=status_unicos, default=status_unicos)
+            df_exibicao = df_status_dia[df_status_dia[col_st].isin(status_selecionados)]
+            st.dataframe(df_exibicao, use_container_width=True, hide_index=True)
+        else:
+            st.warning("Não foi possível localizar a coluna de 'STATUS' na planilha de Controle.")
+
 
 
 elif pagina == "Status das Agendas":
