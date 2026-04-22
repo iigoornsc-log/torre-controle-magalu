@@ -2611,7 +2611,7 @@ elif pagina == "GD (Gestão Diária)":
     else:
         st.info("Nenhuma pendência para exibir nesta visão.")
 
-       # ==========================================================================
+        # ==========================================================================
     # --- LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
     # ==========================================================================
     st.markdown("---")
@@ -2630,9 +2630,21 @@ elif pagina == "GD (Gestão Diária)":
         if not col_dt_s: col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
         
         if col_dt_s:
-            # BLINDAGEM DE DATAS: Força o Pandas a traduzir independente do formato do Google
-            df_status['Data_Filtro'] = pd.to_datetime(df_status[col_dt_s].astype(str).str.split(' ').str[0], errors='coerce', dayfirst=True).dt.date
+            # BLINDAGEM DE DATAS DEFINITIVA: Força a conversão universal para extrair apenas a data pura
+            df_status['Data_Filtro'] = pd.to_datetime(
+                df_status[col_dt_s].astype(str).str.split(' ').str[0], 
+                errors='coerce', 
+                dayfirst=True
+            ).dt.date
             
+            # Fallback caso o Google tenha mandado formato americano (Year first)
+            mask_nat = df_status['Data_Filtro'].isna()
+            if mask_nat.any():
+                df_status.loc[mask_nat, 'Data_Filtro'] = pd.to_datetime(
+                    df_status.loc[mask_nat, col_dt_s].astype(str).str.split(' ').str[0], 
+                    errors='coerce'
+                ).dt.date
+
             # Filtra o dia exato
             df_status_dia = df_status[df_status['Data_Filtro'] == data_gd].copy()
             
@@ -2705,50 +2717,51 @@ elif pagina == "GD (Gestão Diária)":
         else:
             st.warning("Não foi possível localizar a coluna de 'STATUS' na planilha de Controle.")
 
-
-
 elif pagina == "Status das Agendas":
     render_hero(
         "Status das Agendas",
         "Visão simplificada usando a mesma base da página Status das Agendas na Doca.",
         "Magalu • Status Diário"
     )
-
     data_status = st.date_input(
         "Data da Visão de Status",
         pd.Timestamp.now().date(),
         key="data_status_agendas"
     )
-
     with st.spinner("Carregando status das agendas..."):
         df_prod, df_status, df_pend = puxar_bases_completas_gd()
-
+        
     if df_status.empty:
         st.info("Nenhuma base de status foi carregada.")
     else:
         df_status.columns = df_status.columns.astype(str).str.strip().str.upper()
-
         col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in c), None)
         if not col_dt_s:
             col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
-
         col_st = next((c for c in df_status.columns if 'STATUS' in c), None)
         col_pc_s = next((c for c in df_status.columns if 'PEÇA' in str(c).upper() or 'PECA' in str(c).upper()), None)
-
+        
         if not col_dt_s or not col_st:
             st.warning("Não foi possível localizar as colunas de data/status na base.")
         else:
-            df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
-            df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
+            # BLINDAGEM DE DATAS DEFINITIVA APLICADA AQUI TAMBÉM
+            df_status['Data_Filtro'] = pd.to_datetime(
+                df_status[col_dt_s].astype(str).str.split(' ').str[0], 
+                errors='coerce', 
+                dayfirst=True
+            ).dt.date
+            
+            mask_nat = df_status['Data_Filtro'].isna()
+            if mask_nat.any():
+                df_status.loc[mask_nat, 'Data_Filtro'] = pd.to_datetime(
+                    df_status.loc[mask_nat, col_dt_s].astype(str).str.split(' ').str[0], 
+                    errors='coerce'
+                ).dt.date
 
-            if df_status['Data_Filtro'].isna().all():
-                df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], dayfirst=True, errors='coerce')
-
-            df_status['Data_Filtro'] = df_status['Data_Filtro'].dt.date
             df_status_dia = df_status[df_status['Data_Filtro'] == data_status].copy()
-
+            
             if df_status_dia.empty:
-                st.info("Nenhuma agenda localizada para esta data.")
+                st.info(f"O painel de status não encontrou nenhuma agenda vinculada à data {data_status.strftime('%d/%m/%Y')} na base.")
             else:
                 mapa_status = {
                     'AUSENTE': ('AUSENTE', '#34495E'),
@@ -2761,30 +2774,27 @@ elif pagina == "Status das Agendas":
                     'PEND': ('PEND. ARMAZENAGEM', '#FF8800'),
                     'OK': ('FINALIZADAS', '#00C853'),
                 }
-
+                
                 status_cards = []
                 tot_agendas = 0
                 tot_pecas = 0
-
+                
                 for chave, (nome, cor) in mapa_status.items():
                     df_filtro = df_status_dia[
                         df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)
                     ]
-
                     qtd_ag = df_filtro.shape[0]
-
                     if col_pc_s:
                         qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').fillna(0).sum()
                     else:
                         qtd_pc = 0
-
+                        
                     tot_agendas += qtd_ag
                     tot_pecas += qtd_pc
-
                     status_cards.append((nome, qtd_ag, qtd_pc, cor))
-
+                    
                 status_cards.append(("TOTAL", tot_agendas, tot_pecas, "#FF2D2D"))
-
+                
                 def card_status(nome, qtd_ag, qtd_pc, cor):
                     return f"""<div style="background: rgba(255,255,255,0.96); border:1px solid #E8EEF7; border-radius:18px; padding:18px 20px; box-shadow:0 8px 24px rgba(15,23,42,0.05); margin-bottom:14px;">
 <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
@@ -2793,13 +2803,11 @@ elif pagina == "Status das Agendas":
 </div>
 <div style="font-size:17px; font-weight:800; color:#0F172A;">{nome}</div>
 </div>
-
 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
 <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
 <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Agendas</div>
 <div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_ag}</div>
 </div>
-
 <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:10px 12px;">
 <div style="font-size:11px; font-weight:800; color:#64748B; text-transform:uppercase;">Peças</div>
 <div style="font-size:24px; font-weight:900; color:#0F172A;">{qtd_pc:,.0f}</div>
@@ -2808,7 +2816,7 @@ elif pagina == "Status das Agendas":
 </div>"""
 
                 status_dict = {nome: (nome, qtd_ag, qtd_pc, cor) for nome, qtd_ag, qtd_pc, cor in status_cards}
-
+                
                 coluna_esquerda = [
                     "AUSENTE",
                     "DIVER. COMERCIAL",
@@ -2816,21 +2824,18 @@ elif pagina == "Status das Agendas":
                     "AG. LANÇAMENTO",
                     "FINALIZADAS",
                 ]
-
                 coluna_direita = [
                     "PÁTIO EXTERNO",
                     "EM DOCA",
                     "EM PROCESSO",
                     "TOTAL",
                 ]
-
+                
                 col_esq, col_dir = st.columns(2)
-
                 with col_esq:
                     for nome in coluna_esquerda:
                         if nome in status_dict:
                             st.markdown(card_status(*status_dict[nome]), unsafe_allow_html=True)
-
                 with col_dir:
                     for nome in coluna_direita:
                         if nome in status_dict:
