@@ -2611,7 +2611,7 @@ elif pagina == "GD (Gestão Diária)":
     else:
         st.info("Nenhuma pendência para exibir nesta visão.")
 
-        # ==========================================================================
+    # ==========================================================================
     # --- LÓGICA DE STATUS DA DOCA (PAINEL DE CONTROLE) ---
     # ==========================================================================
     st.markdown("---")
@@ -2630,21 +2630,13 @@ elif pagina == "GD (Gestão Diária)":
         if not col_dt_s: col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
         
         if col_dt_s:
-            # BLINDAGEM DE DATAS DEFINITIVA: Força a conversão universal para extrair apenas a data pura
-            df_status['Data_Filtro'] = pd.to_datetime(
-                df_status[col_dt_s].astype(str).str.split(' ').str[0], 
-                errors='coerce', 
-                dayfirst=True
-            ).dt.date
+            # Lógica Original Restaurada:
+            df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
+            df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
+            if df_status['Data_Filtro'].isna().all():
+                df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], dayfirst=True, errors='coerce')
+            df_status['Data_Filtro'] = df_status['Data_Filtro'].dt.date
             
-            # Fallback caso o Google tenha mandado formato americano (Year first)
-            mask_nat = df_status['Data_Filtro'].isna()
-            if mask_nat.any():
-                df_status.loc[mask_nat, 'Data_Filtro'] = pd.to_datetime(
-                    df_status.loc[mask_nat, col_dt_s].astype(str).str.split(' ').str[0], 
-                    errors='coerce'
-                ).dt.date
-
             # Filtra o dia exato
             df_status_dia = df_status[df_status['Data_Filtro'] == data_gd].copy()
             
@@ -2735,6 +2727,7 @@ elif pagina == "Status das Agendas":
         st.info("Nenhuma base de status foi carregada.")
     else:
         df_status.columns = df_status.columns.astype(str).str.strip().str.upper()
+        
         col_dt_s = next((c for c in df_status.columns if 'DATA AGENDA' in c), None)
         if not col_dt_s:
             col_dt_s = next((c for c in df_status.columns if 'DATA' in c), None)
@@ -2744,20 +2737,13 @@ elif pagina == "Status das Agendas":
         if not col_dt_s or not col_st:
             st.warning("Não foi possível localizar as colunas de data/status na base.")
         else:
-            # BLINDAGEM DE DATAS DEFINITIVA APLICADA AQUI TAMBÉM
-            df_status['Data_Filtro'] = pd.to_datetime(
-                df_status[col_dt_s].astype(str).str.split(' ').str[0], 
-                errors='coerce', 
-                dayfirst=True
-            ).dt.date
+            # Lógica Original Restaurada:
+            df_status['Data_Extraida'] = df_status[col_dt_s].astype(str).str.strip().str.split(' ').str[0]
+            df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], format='%d/%m/%Y', errors='coerce')
+            if df_status['Data_Filtro'].isna().all():
+                df_status['Data_Filtro'] = pd.to_datetime(df_status['Data_Extraida'], dayfirst=True, errors='coerce')
+            df_status['Data_Filtro'] = df_status['Data_Filtro'].dt.date
             
-            mask_nat = df_status['Data_Filtro'].isna()
-            if mask_nat.any():
-                df_status.loc[mask_nat, 'Data_Filtro'] = pd.to_datetime(
-                    df_status.loc[mask_nat, col_dt_s].astype(str).str.split(' ').str[0], 
-                    errors='coerce'
-                ).dt.date
-
             df_status_dia = df_status[df_status['Data_Filtro'] == data_status].copy()
             
             if df_status_dia.empty:
