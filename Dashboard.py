@@ -2660,14 +2660,16 @@ elif pagina == "GD (Gestão Diária)":
         cards_html = ""
         tot_agendas_status, tot_pecas_status = 0, 0
         
-        if col_st:
+                if col_st:
             for chave, (nome_exibicao, cor) in mapa_status.items():
                 df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
                 qtd_ag = df_filtro.shape[0] 
                 qtd_pc = pd.to_numeric(df_filtro[col_pc_s], errors='coerce').sum() if col_pc_s else 0
                 
-                tot_agendas_status += qtd_ag
-                tot_pecas_status += qtd_pc
+                # CORREÇÃO: Conta no card individual, mas só soma no TOTAL GERAL se o caminhão compareceu (Não é ausente)
+                if chave != 'AUSENTE':
+                    tot_agendas_status += qtd_ag
+                    tot_pecas_status += qtd_pc
                 
                 cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
     <div style="background-color: {cor}; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">{nome_exibicao}</div>
@@ -2683,9 +2685,9 @@ elif pagina == "GD (Gestão Diária)":
     </div>
     </div>"""
             
-            # TOTAL GERAL CARD
+            # TOTAL GERAL CARD (Agora refletindo apenas a operação real do CD)
             cards_html += f"""<div style="flex: 1; min-width: 110px; background-color: #FFFFFF; border: 1px solid #E1E8ED; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; margin-bottom: 10px;">
-    <div style="background-color: #1E272E; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL</div>
+    <div style="background-color: #1E272E; color: #FFFFFF; font-size: 11px; font-weight: bold; padding: 6px 0;">TOTAL (OPERAÇÃO)</div>
     <div style="display: flex; border-bottom: 1px solid #E1E8ED;">
     <div style="flex: 1; padding: 8px 0; border-right: 1px solid #E1E8ED;">
     <div style="font-size: 10px; color: #8395A7;">AG.</div>
