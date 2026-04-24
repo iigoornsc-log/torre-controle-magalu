@@ -2660,7 +2660,7 @@ elif pagina == "GD (Gestão Diária)":
         cards_html = ""
         tot_agendas_status, tot_pecas_status = 0, 0
         
-                if col_st:
+        if col_st:
             for chave, (nome_exibicao, cor) in mapa_status.items():
                 df_filtro = df_status_dia[df_status_dia[col_st].astype(str).str.upper().str.contains(chave, na=False)]
                 qtd_ag = df_filtro.shape[0] 
