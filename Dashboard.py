@@ -2581,32 +2581,54 @@ elif pagina == "GD (Gestão Diária)":
             st.info("Coluna MODALIDADE não encontrada na base.")
 
     # ==========================================================================
-    # VISÃO 2: LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM
+    # VISÃO 2: 📋 LISTA GERAL DE PENDÊNCIAS DE ARMAZENAGEM (COM CORES DE ALERTA)
     # ==========================================================================
-    section_heading("Pendências de Armazenagem", level=3, icon="assignment_late")
-
+    st.markdown("### 📋 Mapa Geral de Pendências de Armazenagem")
+    
     if not df_pend.empty:
-        # Agrupa tudo que está na base de pendência (respeitando o botão de Visão Geral/Retroativa)
-        df_geral_pend = df_pend.groupby(['CD_AGENDA', 'FORNECEDOR']).agg({
+        # 1. Preparação dos dados: Extrair apenas a DATA da conferência
+        df_pend['DATA_CONF_PURAS'] = pd.to_datetime(df_pend['DT_CONFERENCIA'], errors='coerce').dt.date
+
+        # 2. Agrupamento incluindo a Data como primeira coluna
+        df_geral_pend = df_pend.groupby(['DATA_CONF_PURAS', 'CD_AGENDA', 'FORNECEDOR']).agg({
             'NU_ETIQUETA': 'nunique',
             'QT_CONFERIDO': 'sum'
         }).reset_index().rename(columns={
-            'NU_ETIQUETA': 'Total_Etiquetas',
-            'QT_CONFERIDO': 'Total_Peças'
+            'DATA_CONF_PURAS': 'Data Conf.',
+            'CD_AGENDA': 'Agenda',
+            'FORNECEDOR': 'Fornecedor',
+            'NU_ETIQUETA': 'Etiquetas',
+            'QT_CONFERIDO': 'Peças'
         })
+        
+        # Ordena pelas datas mais antigas primeiro para destacar o gargalo
+        df_geral_pend = df_geral_pend.sort_values(by='Data Conf.', ascending=True)
+        
+        # 3. Função de colorização baseada na idade da pendência
+        def destacar_atraso(row):
+            # Compara a data da conferência com a data selecionada na Gestão Diária (data_gd)
+            diferenca = (data_gd - row['Data Conf.']).days
+            
+            # Mais de 2 dias = Vermelho (Crítico)
+            if diferenca >= 2:
+                return ['background-color: #FADBD8; color: #C0392B; font-weight: bold'] * len(row)
+            # Exatamente 1 dia = Laranja (Atenção)
+            elif diferenca == 1:
+                return ['background-color: #FDEBD0; color: #D35400; font-weight: bold'] * len(row)
+            # Dia atual ou futuro = Normal
+            return [''] * len(row)
 
-        # Ordena pelas agendas maiores primeiro
-        df_geral_pend = df_geral_pend.sort_values(by='Total_Peças', ascending=False)
-
+        # 4. Renderização com Estilo
+        st.write("💡 *Linhas em **Laranja**: 1 dia de atraso | Linhas em **Vermelho**: 2+ dias de atraso.*")
+        
+        # Aplicamos o estilo e formatamos os números
         st.dataframe(
-            df_geral_pend,
-            column_config={
-                "CD_AGENDA": "Agenda Pendente",
-                "FORNECEDOR": "Fornecedor",
-                "Total_Etiquetas": "Volume (Etiquetas/Paletes)",
-                "Total_Peças": "Peças a Guardar"
-            },
-            hide_index=True, use_container_width=True
+            df_geral_pend.style.apply(destacar_atraso, axis=1).format({
+                'Data Conf.': lambda x: x.strftime('%d/%m/%Y') if hasattr(x, 'strftime') else x,
+                'Peças': "{:,.0f}"
+            }),
+            use_container_width=True,
+            hide_index=True
         )
     else:
         st.info("Nenhuma pendência para exibir nesta visão.")
