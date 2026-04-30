@@ -2589,13 +2589,23 @@ elif pagina == "GD (Gestão Diária)":
         # 1. Preparação dos dados: Extrair apenas a DATA da conferência
         df_pend['DATA_CONF_PURAS'] = pd.to_datetime(df_pend['DT_CONFERENCIA'], errors='coerce').dt.date
 
+        # 🛡️ LIMPANDO A AGENDA PARA NÃO FICAR COM DECIMAL ESTRANHO
+        import re
+        def limpar_agenda_exibicao(val):
+            s = str(val).strip()
+            if '.' in s:
+                s = s.split('.')[0] # Tira tudo que vier depois do ponto (ex: 50010.0 vira 50010)
+            return re.sub(r'\D', '', s) # Garante que só fiquem números
+            
+        df_pend['CD_AGENDA_LIMPA'] = df_pend['CD_AGENDA'].apply(limpar_agenda_exibicao)
+
         # 2. Agrupamento incluindo a Data como primeira coluna
-        df_geral_pend = df_pend.groupby(['DATA_CONF_PURAS', 'CD_AGENDA', 'FORNECEDOR']).agg({
+        df_geral_pend = df_pend.groupby(['DATA_CONF_PURAS', 'CD_AGENDA_LIMPA', 'FORNECEDOR']).agg({
             'NU_ETIQUETA': 'nunique',
             'QT_CONFERIDO': 'sum'
         }).reset_index().rename(columns={
             'DATA_CONF_PURAS': 'Data Conf.',
-            'CD_AGENDA': 'Agenda',
+            'CD_AGENDA_LIMPA': 'Agenda',
             'FORNECEDOR': 'Fornecedor',
             'NU_ETIQUETA': 'Etiquetas',
             'QT_CONFERIDO': 'Peças'
